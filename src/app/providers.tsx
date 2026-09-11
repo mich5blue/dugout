@@ -47,7 +47,11 @@ interface DugoutContextValue {
   db: DugoutDatabase;
   /** False until the browser store has been read, to avoid hydration mismatch. */
   ready: boolean;
+  /** Every team on this device, oldest first. */
+  teams: Team[];
+  /** The team every page reads from. */
   team: Team | null;
+  setActiveTeam: (teamId: string) => void;
   players: Player[];
   activePlayers: Player[];
   games: Game[];
@@ -67,6 +71,7 @@ interface DugoutContextValue {
   seedDemoTeam: () => Promise<void>;
   resetEverything: () => void;
   saveTeam: (team: Team) => Promise<void>;
+  removeTeam: (teamId: string) => Promise<void>;
   savePlayer: (player: Player) => Promise<void>;
   savePlayers: (players: Player[]) => Promise<void>;
   removePlayer: (playerId: string) => Promise<void>;
@@ -98,7 +103,18 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
-  const team = db.teams[0] ?? null;
+  const teams = useMemo(
+    () => [...db.teams].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    [db.teams],
+  );
+
+  /*
+    Fall back to the first team rather than to null: a saved active id can point
+    at a team that was deleted on another tab, and a coach should land on a
+    working team instead of the empty first-run screen.
+  */
+  const team =
+    teams.find((candidate) => candidate.id === db.session?.activeTeamId) ?? teams[0] ?? null;
 
   const players = useMemo(
     () =>
@@ -147,7 +163,9 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
       store,
       db,
       ready,
+      teams,
       team,
+      setActiveTeam: (teamId) => store.setActiveTeam(teamId),
       players,
       activePlayers: players.filter((player) => player.active),
       games,
@@ -165,6 +183,7 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
       },
       resetEverything: () => store.replaceAll(emptyDatabase()),
       saveTeam: async (next) => void (await store.teams.save(next)),
+      removeTeam: async (teamId) => store.teams.remove(teamId),
       savePlayer: async (next) => void (await store.players.save(next)),
       savePlayers: async (next) => void (await store.players.saveMany(next)),
       removePlayer: async (playerId) => store.players.remove(playerId),
@@ -178,7 +197,7 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
         if (team) await store.flags.clearForTeam(team.id);
       },
     }),
-    [db, flags, games, goals, memberships, players, ready, role, store, team],
+    [db, flags, games, goals, memberships, players, ready, role, store, team, teams],
   );
 
   return <DugoutContext.Provider value={value}>{children}</DugoutContext.Provider>;

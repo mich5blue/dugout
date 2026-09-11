@@ -67,7 +67,14 @@ interface DraftPlayer {
 
 export default function SetupPage() {
   const router = useRouter();
-  const { ready, team, saveTeam, savePlayers } = useDugout();
+  const { ready, teams, saveTeam, savePlayers, setActiveTeam } = useDugout();
+
+  /*
+    The same wizard creates the first team and every one after it. It used to
+    refuse outright once a team existed, which made a second team impossible —
+    a coach with a rec team and a travel team had nowhere to go.
+  */
+  const adding = teams.length > 0;
 
   const [step, setStep] = useState<StepIndex>(0);
   const [saving, setSaving] = useState(false);
@@ -175,6 +182,9 @@ export default function SetupPage() {
         settings,
       });
       await saveTeam(newTeam);
+      // Switch to it immediately: a coach who just filled in a roster expects
+      // to land on that team, not on whichever one they were looking at.
+      setActiveTeam(newTeam.id);
 
       // Everyone starts able to play every position. Pitching and catching are
       // gated by the can-pitch / can-catch flags from the battery step, and any
@@ -200,35 +210,29 @@ export default function SetupPage() {
 
   if (!ready) return null;
 
-  if (team) {
-    return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="display text-4xl text-ink sm:text-5xl">
-          You already have a team
-        </h1>
-        <p className="mt-2 text-sm text-ink-muted">
-          {team.name} is set up and ready. You can change anything in Team Settings.
-        </p>
-        <div className="mt-6 flex justify-center gap-2">
-          <Link href="/">
-            <Button variant="primary">Go to dashboard</Button>
-          </Link>
-          <Link href="/settings">
-            <Button>Team settings</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-xl pb-28 sm:pb-10">
+      {adding ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="eyebrow text-ink-subtle">New team</p>
+            <p className="mt-0.5 text-sm text-ink-muted">
+              Your other {teams.length === 1 ? 'team stays' : 'teams stay'} exactly as
+              {teams.length === 1 ? ' it is' : ' they are'}.
+            </p>
+          </div>
+          <Link href="/">
+            <Button size="sm">Cancel</Button>
+          </Link>
+        </div>
+      ) : null}
+
       <Progress step={step} />
 
       <div className="mt-8">
         {step === 0 ? (
           <Step
-            title="Who are you coaching?"
+            title={adding ? 'Who else are you coaching?' : 'Who are you coaching?'}
             hint="You can change any of this later."
           >
             <div className="space-y-5">
@@ -509,7 +513,14 @@ export default function SetupPage() {
         ) : null}
 
         {step === 5 ? (
-          <Step title="You're ready" hint="Here's what Dugout will start with.">
+          <Step
+            title="You're ready"
+            hint={
+              adding
+                ? "Here's the new team. Switch between teams from the header."
+                : "Here's what Dugout will start with."
+            }
+          >
             <dl className="divide-y divide-border rounded-card border border-border">
               <Summary label="Team">
                 {name} · {sport === 'BASEBALL' ? 'Baseball' : 'Softball'}

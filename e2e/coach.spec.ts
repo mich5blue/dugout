@@ -677,3 +677,74 @@ test('marking a player out from the game page offers one rebalance', async ({ pa
   });
   await expect(page.getByRole('cell', { name: /Race Smith/ })).toHaveCount(0);
 });
+
+test('a coach can run two teams and switch between them', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  // The switcher is the way in — no hunting for a create-team URL.
+  await page.getByRole('button', { name: /Balsam Waters/ }).click();
+  await page.getByRole('link', { name: 'Add a team' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Who else are you coaching?' })).toBeVisible();
+  const continueButton = page.getByRole('button', { name: 'Continue' });
+  await page.getByLabel('Team name').fill('Ridge Hawks');
+  await page.getByRole('radio', { name: 'Softball' }).click();
+  await continueButton.click();
+
+  await page.getByPlaceholder(/Brody Borek/).fill(ROSTER.slice(0, 10).join('\n'));
+  await continueButton.click();
+  await page.getByRole('button', { name: /9 players/ }).first().click();
+  await continueButton.click();
+
+  // Battery.
+  const pitchers = page.getByRole('group', { name: 'Can pitch' });
+  const catchers = page.getByRole('group', { name: 'Can catch' });
+  for (const name of ['Brody', 'Race']) {
+    await pitchers.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  }
+  for (const name of ['Calvin', 'Vasil'] ) {
+    await catchers.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  }
+  await continueButton.click();
+
+  await page.getByRole('button', { name: /^Balanced/ }).click();
+  await continueButton.click();
+  await page.getByRole('button', { name: 'Finish' }).click();
+
+  // Landed on the new team, and it is the active one.
+  await expect(page.getByRole('heading', { name: 'Ridge Hawks' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText('10 players', { exact: false }).first()).toBeVisible();
+
+  // Both teams are listed, and the original still has its own roster.
+  await page.getByRole('button', { name: /Ridge Hawks/ }).click();
+  await expect(page.getByRole('menuitemradio', { name: /Ridge Hawks/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('menuitemradio', { name: /Balsam Waters/ }).click();
+  await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible();
+  await expect(page.getByText('11 players · 6-inning games')).toBeVisible();
+
+  /*
+    The choice is persisted, not just held in memory. A second page in the same
+    context reads the same localStorage — and unlike `page.reload()`, it does
+    not re-run this suite's storage-clearing init script.
+  */
+  const reopened = await page.context().newPage();
+  await reopened.goto('/');
+  await expect(reopened.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible();
+  await reopened.close();
+
+  // Deleting one team leaves the other intact.
+  await page.getByRole('link', { name: 'Team Settings' }).first().click();
+  await page.getByRole('button', { name: 'Delete Balsam Waters' }).click();
+  await page.getByRole('button', { name: 'Delete this team' }).click();
+  await page.getByRole('link', { name: 'Dashboard' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Ridge Hawks' })).toBeVisible();
+});

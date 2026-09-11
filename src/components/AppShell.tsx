@@ -1,6 +1,7 @@
 'use client';
 
 import { useDugout } from '@/app/providers';
+import { TeamSwitcher } from '@/components/TeamSwitcher';
 import { cn } from '@/lib/cn';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -37,16 +38,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     (pathname?.includes('/print') ?? false) || (pathname?.startsWith('/s/') ?? false);
   if (bare) return <>{children}</>;
 
+  /*
+    Setup is a focused flow with its own footer. Now that it is reachable while
+    a team already exists, the phone tab bar sat on top of its Continue button
+    — and tab navigation mid-wizard is a way to lose half-entered work anyway.
+  */
+  const focused = pathname?.startsWith('/setup') ?? false;
+  const showNav = Boolean(team) && !focused;
+
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur-xl print-hide">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="ring-focus flex items-center gap-2 rounded-md">
+          <Link href="/" className="ring-focus flex shrink-0 items-center gap-2 rounded-md">
             <HomePlateMark />
-            <span className="scoreboard text-2xl text-ink">Dugout</span>
+            {/* The wordmark gives up its space to the team name on a phone. */}
+            <span className="scoreboard hidden text-2xl text-ink sm:inline">Dugout</span>
           </Link>
 
-          {team ? (
+          <TeamSwitcher />
+
+          {showNav ? (
             <nav className="ml-auto hidden items-center gap-0.5 sm:flex">
               {NAV.map((item) => {
                 const active =
@@ -103,7 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:pb-10">{children}</main>
 
-      {team ? (
+      {showNav ? (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">
           <div className="grid grid-cols-5">
             {NAV.map((item) => {

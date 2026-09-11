@@ -30,10 +30,22 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 export default function SettingsPage() {
-  const { ready, team, db, saveTeam, saveFormation, resetEverything, seedDemoTeam, can } =
+  const {
+    ready,
+    team,
+    teams,
+    db,
+    saveTeam,
+    saveFormation,
+    removeTeam,
+    resetEverything,
+    seedDemoTeam,
+    can,
+  } =
     useDugout();
   const [editing, setEditing] = useState<Formation | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmDeleteTeam, setConfirmDeleteTeam] = useState(false);
 
   const formations = useMemo(() => {
     if (!team) return [];
@@ -265,6 +277,39 @@ export default function SettingsPage() {
             until then, printing or exporting before you clear browser data is wise.
           </Notice>
 
+          {teams.length > 1 ? (
+            confirmDeleteTeam ? (
+              <Notice
+                tone="critical"
+                title={`Delete ${team.name}?`}
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => setConfirmDeleteTeam(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={async () => {
+                        await removeTeam(team.id);
+                        setConfirmDeleteTeam(false);
+                      }}
+                    >
+                      Delete this team
+                    </Button>
+                  </div>
+                }
+              >
+                This removes {team.name}, its roster and its games. Your other{' '}
+                {teams.length === 2 ? 'team is' : 'teams are'} untouched.
+              </Notice>
+            ) : (
+              <Button onClick={() => setConfirmDeleteTeam(true)}>
+                Delete {team.name}
+              </Button>
+            )
+          ) : null}
+
           {confirmReset ? (
             <Notice
               tone="critical"
@@ -296,12 +341,13 @@ export default function SettingsPage() {
                 </div>
               }
             >
-              This removes your team, roster and every game on this device. It cannot be
-              undone.
+              This removes{' '}
+              {teams.length > 1 ? `all ${teams.length} teams` : 'your team'}, every
+              roster and every game on this device. It cannot be undone.
             </Notice>
           ) : (
             <Button variant="danger" onClick={() => setConfirmReset(true)}>
-              Reset all data
+              {teams.length > 1 ? 'Reset everything' : 'Reset all data'}
             </Button>
           )}
         </div>

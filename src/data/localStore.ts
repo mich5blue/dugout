@@ -35,8 +35,12 @@ export interface DugoutDatabase {
    * Until accounts exist, this device is the head coach. `previewRole` lets a
    * head coach see the app as an assistant sees it — a preview of the
    * restrictions, never a security boundary.
+   *
+   * `activeTeamId` is which team the app is currently showing. A coach often
+   * runs two teams — a rec team and a travel team, or two age groups — and
+   * every page reads from the active one.
    */
-  session: { previewRole: TeamRole };
+  session: { previewRole: TeamRole; activeTeamId?: string };
 }
 
 export function emptyDatabase(): DugoutDatabase {
@@ -176,6 +180,9 @@ export class LocalStore implements Repositories {
         db.goals = db.goals.filter((goal) => goal.teamId !== id);
         db.flags = db.flags.filter((flag) => flag.teamId !== id);
         db.memberships = db.memberships.filter((member) => member.teamId !== id);
+        if (db.session.activeTeamId === id) {
+          db.session = { ...db.session, activeTeamId: db.teams[0]?.id };
+        }
       });
     },
   };
@@ -281,7 +288,14 @@ export class LocalStore implements Repositories {
   /** Preview a different role without accounts. Not a security boundary. */
   setPreviewRole(role: TeamRole): void {
     this.update((db) => {
-      db.session = { previewRole: role };
+      db.session = { ...db.session, previewRole: role };
+    });
+  }
+
+  /** Switch which team every page reads from. */
+  setActiveTeam(teamId: string): void {
+    this.update((db) => {
+      db.session = { ...db.session, activeTeamId: teamId };
     });
   }
 
