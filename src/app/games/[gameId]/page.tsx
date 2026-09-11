@@ -2,9 +2,11 @@
 
 import { useDugout } from '@/app/providers';
 import { AssignmentPicker } from '@/components/game/AssignmentPicker';
+import { AttendanceBar } from '@/components/game/AttendanceBar';
 import { BattingOrderPanel } from '@/components/game/BattingOrderPanel';
 import { FieldView } from '@/components/game/FieldView';
 import { LiveView } from '@/components/game/LiveView';
+import { ShareActions } from '@/components/game/ShareActions';
 import { LineupGrid, PlayerGrid } from '@/components/game/LineupGrid';
 import {
   AvailabilityPanel,
@@ -21,7 +23,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  Notice,
   SegmentedControl,
   Select,
   Spinner,
@@ -210,6 +211,7 @@ export default function GamePage() {
         <div className="flex flex-wrap items-center gap-2">
           {hasLineup ? (
             <>
+              <ShareActions team={team} game={game} players={players} />
               <Link href={`/games/${game.id}/compare`}>
                 <Button size="sm">Compare</Button>
               </Link>
@@ -223,23 +225,21 @@ export default function GamePage() {
               </Link>
             </>
           ) : null}
-          {editsGame ? (
-          <Button
-            variant="primary"
-            size="md"
-            disabled={generating}
-            onClick={() => run(hasLineup ? game.optimizerSeed : undefined)}
-          >
-            {generating ? (
-              <>
-                <Spinner /> Working…
-              </>
-            ) : hasLineup ? (
-              'Rebalance'
-            ) : (
-              'Generate lineup'
-            )}
-          </Button>
+          {/*
+            Once a lineup exists, Rebalance lives in the attendance bar beside
+            the change that prompts it. A second one up here just made the coach
+            choose between two identical buttons.
+          */}
+          {editsGame && !hasLineup ? (
+            <Button variant="primary" size="md" disabled={generating} onClick={() => run()}>
+              {generating ? (
+                <>
+                  <Spinner /> Working…
+                </>
+              ) : (
+                'Generate lineup'
+              )}
+            </Button>
           ) : null}
         </div>
       </div>
@@ -254,20 +254,6 @@ export default function GamePage() {
 
       {result && result.ok ? (
         <ConflictList conflicts={result.conflicts} relaxations={[]} />
-      ) : null}
-
-      {stale && hasLineup ? (
-        <Notice
-          tone="caution"
-          title="You've made changes since this lineup was generated."
-          action={
-            <Button size="sm" variant="primary" disabled={generating} onClick={() => run(game.optimizerSeed)}>
-              Rebalance
-            </Button>
-          }
-        >
-          Rebalance keeps every locked assignment and re-optimizes the rest.
-        </Notice>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -317,6 +303,17 @@ export default function GamePage() {
             onChange={updateSettings}
           />
         </div>
+      ) : null}
+
+      {hasLineup && editsGame ? (
+        <AttendanceBar
+          game={game}
+          players={players}
+          busy={generating}
+          changed={stale}
+          onChange={update}
+          onRebalance={() => run(game.optimizerSeed)}
+        />
       ) : null}
 
       {hasLineup ? (

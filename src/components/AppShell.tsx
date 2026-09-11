@@ -31,8 +31,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { team, role, setPreviewRole } = useDugout();
 
-  // Print and game-day views own the whole screen.
-  const bare = pathname?.includes('/print') ?? false;
+  // Print and shared-lineup views own the whole screen: a parent opening a
+  // share link has no team, so team navigation would be dead ends.
+  const bare =
+    (pathname?.includes('/print') ?? false) || (pathname?.startsWith('/s/') ?? false);
   if (bare) return <>{children}</>;
 
   return (

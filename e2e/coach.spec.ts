@@ -587,3 +587,93 @@ test('an assistant coach can set positions and core players, and nothing else', 
   await expect(page.getByRole('button', { name: 'Rebalance' })).toBeHidden();
   await expect(page.getByRole('link', { name: 'Compare', exact: true })).toBeHidden();
 });
+
+test('a lineup can be shared as a read-only link that carries no private data', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await page.getByRole('link', { name: /Build lineup|Open lineup/ }).click();
+  await page.getByRole('button', { name: 'Generate lineup' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Defensive rotation' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  const link = page.getByLabel('Share link');
+  await expect(link).toBeVisible();
+  await expect(link).not.toHaveValue('');
+  const url = await link.inputValue();
+  expect(url).toContain('/s/');
+
+  // The link itself must not carry a coach's private evaluations.
+  for (const secret of ['CORE', 'DEVELOPING', 'NEVER', 'AVOID', 'debt']) {
+    expect(url).not.toContain(secret);
+  }
+
+  // Opening it as a stranger: no stored team, no navigation, no edit controls.
+  const parent = await context.newPage();
+  await parent.addInitScript(() => window.localStorage.clear());
+  await parent.goto(url);
+  await expect(parent.getByRole('heading', { name: /vs Cardinals/ })).toBeVisible();
+  await expect(parent.getByText('Batting order')).toBeVisible();
+  await expect(parent.getByRole('columnheader', { name: 'Inn 6', exact: true })).toBeVisible();
+  await expect(parent.getByText('Read-only')).toBeVisible();
+  await expect(parent.getByRole('button', { name: 'Generate lineup' })).toHaveCount(0);
+  await expect(parent.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+  await parent.close();
+});
+
+test('a broken share link explains itself instead of crashing', async ({ page }) => {
+  await page.goto('/s/not-a-real-token');
+  await expect(page.getByText(/isn't readable/)).toBeVisible();
+});
+
+test('the lineup can be shared as text for a group chat', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await page.getByRole('link', { name: /Build lineup|Open lineup/ }).click();
+  await page.getByRole('button', { name: 'Generate lineup' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Defensive rotation' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await page.getByRole('radio', { name: 'Text' }).click();
+  await expect(page.getByLabel('Lineup text')).not.toHaveValue('');
+  const text = await page.getByLabel('Lineup text').inputValue();
+  expect(text).toContain('Balsam Waters');
+  expect(text).toContain('INNING 1');
+  expect(text).toContain('BATTING');
+});
+
+test('marking a player out from the game page offers one rebalance', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await page.getByRole('link', { name: /Build lineup|Open lineup/ }).click();
+  await page.getByRole('button', { name: 'Generate lineup' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Defensive rotation' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await expect(page.getByText('11 here')).toBeVisible();
+  const chip = page.getByRole('button', { name: /Race Smith/ }).first();
+  await expect(chip).toHaveAttribute('aria-pressed', 'true');
+  await chip.click();
+  await expect(chip).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByText('10 here')).toBeVisible();
+  await expect(page.getByText('1 out')).toBeVisible();
+
+  // One Rebalance on the page, and it drops the absent player from the field.
+  const rebalance = page.getByRole('button', { name: 'Rebalance' });
+  await expect(rebalance).toHaveCount(1);
+  await expect(page.getByText('Keeps your locked spots.')).toBeVisible();
+  await rebalance.click();
+  await expect(page.getByText('Tap a name to mark them out.')).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole('cell', { name: /Race Smith/ })).toHaveCount(0);
+});
