@@ -177,3 +177,19 @@ export const GROUP_LABEL: Record<PositionGroup, string> = {
 };
 
 export const GROUP_ORDER: PositionGroup[] = ['BATTERY', 'INFIELD', 'OUTFIELD', 'BENCH'];
+
+/**
+ * What distinguishes one formation from another of the same size.
+ *
+ * Both ten-player baseball formations are four-outfielder setups differing only
+ * in what the middle two spots are called, so labelling both "Four outfielders"
+ * made them look like the same option listed twice.
+ */
+export function formationSubtitle(formation: Formation): string {
+  const outfield = formation.positions.filter((position) => position.group === 'OUTFIELD');
+  if (outfield.length <= 3) return 'Standard defense';
+  const middle = outfield.slice(1, -1).map((position) => position.code);
+  return middle.length > 0
+    ? `Four outfielders, called ${middle.join(' / ')}`
+    : 'Four outfielders';
+}

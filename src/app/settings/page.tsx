@@ -19,9 +19,11 @@ import {
 import { createId } from '@/domain/factories';
 import {
   deriveCustomFormation,
+  formationSubtitle,
   getSystemFormation,
   systemFormationsForSport,
 } from '@/domain/formations';
+import { FormationThumbnail } from '@/components/FormationThumbnail';
 import type { BattingFormat, Formation, Sport } from '@/domain/types';
 import { applyPhilosophy } from '@/domain/weights';
 import Link from 'next/link';
@@ -169,15 +171,24 @@ export default function SettingsPage() {
                 onClick={() => update({ defaultFormationId: formation.id })}
                 className="min-w-0 flex-1 border-0"
               >
-                <span className="min-w-0">
-                  <span className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-ink">
-                      {formation.positions.length} Players
+                <span className="flex min-w-0 items-center gap-3">
+                  <FormationThumbnail
+                    formation={formation}
+                    className="h-11 w-14 shrink-0 rounded-md"
+                  />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-ink">
+                        {formation.positions.length} players
+                      </span>
+                      {formation.isSystemPreset ? null : <Badge tone="brand">Custom</Badge>}
                     </span>
-                    {formation.isSystemPreset ? null : <Badge tone="brand">Custom</Badge>}
-                  </span>
-                  <span className="mt-0.5 block truncate text-sm text-ink-muted">
-                    {formation.positions.map((position) => position.code).join(' · ')}
+                    <span className="mt-0.5 block text-xs text-ink-muted">
+                      {formationSubtitle(formation)}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-ink-subtle">
+                      {formation.positions.map((position) => position.code).join(' · ')}
+                    </span>
                   </span>
                 </span>
               </Toggle>

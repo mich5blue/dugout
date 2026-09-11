@@ -12,7 +12,12 @@ import {
   Toggle,
 } from '@/components/ui';
 import { createGame } from '@/domain/factories';
-import { getSystemFormation, systemFormationsForSport } from '@/domain/formations';
+import {
+  formationSubtitle,
+  getSystemFormation,
+  systemFormationsForSport,
+} from '@/domain/formations';
+import { FormationThumbnail } from '@/components/FormationThumbnail';
 import { todayIso } from '@/lib/format';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -161,17 +166,26 @@ export default function NewGamePage() {
               onClick={() => setFormationId(formation.id)}
               className="w-full"
             >
-              <span>
-                <span className="block text-sm font-semibold text-ink">
-                  {formation.positions.length} Players
-                  {formation.id === team.defaultFormationId ? (
-                    <span className="ml-2 text-xs font-normal text-ink-muted">
-                      Team default
-                    </span>
-                  ) : null}
-                </span>
-                <span className="mt-0.5 block text-sm text-ink-muted">
-                  {formation.positions.map((position) => position.code).join(' · ')}
+              <span className="flex min-w-0 items-center gap-3">
+                <FormationThumbnail
+                  formation={formation}
+                  className="h-11 w-14 shrink-0 rounded-md"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-ink">
+                    {formation.positions.length} players
+                    {formation.id === team.defaultFormationId ? (
+                      <span className="ml-2 text-xs font-normal text-brand">
+                        Team default
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink-muted">
+                    {formationSubtitle(formation)}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-ink-subtle">
+                    {formation.positions.map((position) => position.code).join(' · ')}
+                  </span>
                 </span>
               </span>
             </Toggle>

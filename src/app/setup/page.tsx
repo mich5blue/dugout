@@ -16,10 +16,12 @@ import { RosterPhotoImport } from '@/components/RosterPhotoImport';
 import { toQuickAddText } from '@/lib/rosterImport';
 import {
   DEFAULT_FORMATION_BY_SPORT,
+  formationSubtitle,
   systemFormationsForSport,
 } from '@/domain/formations';
+import { FormationThumbnail } from '@/components/FormationThumbnail';
 import { createPlayer, createTeam, parseQuickAddRoster } from '@/domain/factories';
-import type { BattingFormat, Formation, Philosophy, Player, Sport } from '@/domain/types';
+import type { BattingFormat, Philosophy, Player, Sport } from '@/domain/types';
 import { applyPhilosophy, defaultTeamSettings } from '@/domain/weights';
 import { cn } from '@/lib/cn';
 import Link from 'next/link';
@@ -50,22 +52,6 @@ const DIVISIONS = [
   'Travel',
   'Other',
 ];
-
-/**
- * What distinguishes one formation from another of the same size.
- *
- * Both ten-player baseball formations are four-outfielder setups differing only
- * in what the middle two spots are called, so labelling both "Four outfielders"
- * made them look like the same option listed twice.
- */
-function formationSubtitle(formation: Formation): string {
-  const outfield = formation.positions.filter((position) => position.group === 'OUTFIELD');
-  if (outfield.length <= 3) return 'Standard defense';
-  const middle = outfield.slice(1, -1).map((position) => position.code);
-  return middle.length > 0
-    ? `Four outfielders, called ${middle.join(' / ')}`
-    : 'Four outfielders';
-}
 
 const STEPS = ['Team', 'Roster', 'Defense', 'Battery', 'Style', 'Ready'] as const;
 type StepIndex = 0 | 1 | 2 | 3 | 4 | 5;
@@ -384,15 +370,21 @@ export default function SetupPage() {
                       onClick={() => setFormationId(option.id)}
                       className="w-full"
                     >
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-ink">
-                          {option.positions.length} players
-                          <span className="ml-2 text-xs font-normal text-ink-muted">
+                      <span className="flex min-w-0 items-center gap-3">
+                        <FormationThumbnail
+                          formation={option}
+                          className="h-11 w-14 shrink-0 rounded-md"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-ink">
+                            {option.positions.length} players
+                          </span>
+                          <span className="mt-0.5 block text-xs text-ink-muted">
                             {formationSubtitle(option)}
                           </span>
-                        </span>
-                        <span className="mt-0.5 block truncate text-sm text-ink-muted">
-                          {option.positions.map((position) => position.code).join(' · ')}
+                          <span className="mt-0.5 block truncate text-xs text-ink-subtle">
+                            {option.positions.map((position) => position.code).join(' · ')}
+                          </span>
                         </span>
                       </span>
                     </Toggle>
