@@ -353,3 +353,51 @@ test('the diamond shows the field and supports tap and drag editing', async ({ p
   // The bench is a drop target for taking someone off the field.
   await expect(page.getByText('Bench', { exact: false }).first()).toBeVisible();
 });
+
+test('compare approaches shows three lineups and applies the chosen one', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('link', { name: /Build lineup|Open lineup/ }).click();
+  await page.getByRole('button', { name: 'Generate lineup' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Defensive rotation' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('link', { name: 'Compare approaches' }).click();
+  await expect(page.getByRole('heading', { name: 'Compare approaches' })).toBeVisible();
+
+  // All three approaches render with their metrics.
+  for (const name of ['Equal Playing Time', 'Balanced', 'Competitive']) {
+    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+  await expect(page.getByText('The trade-off')).toBeVisible();
+  await expect(page.getByText('Playing Time').first()).toBeVisible();
+  await expect(page.getByText('Defensive Strength').first()).toBeVisible();
+
+  // The table view exists so nothing is gated behind reading the meters.
+  await page.getByRole('radio', { name: 'Table' }).click();
+  await expect(page.getByRole('heading', { name: 'Side by side' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Competitive' })).toBeVisible();
+  await expect(page.getByRole('rowheader', { name: 'Innings played' })).toBeVisible();
+
+  // Applying an approach returns to the lineup and switches the philosophy.
+  await page.getByRole('radio', { name: 'Cards' }).click();
+  const competitiveCard = page.getByRole('region', { name: 'Competitive' });
+  await competitiveCard.getByRole('button', { name: 'Use this lineup' }).click();
+
+  await expect(page.getByRole('heading', { name: /vs Cardinals/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Defensive rotation' })).toBeVisible();
+
+  // Re-opening the comparison shows Competitive as the game's current approach,
+  // which confirms the settings were saved alongside the lineup.
+  await page.getByRole('link', { name: 'Compare approaches' }).click();
+  await expect(
+    page.getByRole('region', { name: 'Competitive' }).getByText('Current'),
+  ).toBeVisible({ timeout: 30_000 });
+});

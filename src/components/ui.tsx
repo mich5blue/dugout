@@ -367,3 +367,127 @@ export function Modal({
     </div>
   );
 }
+
+/**
+ * Meter for a 0..1 quality value.
+ *
+ * The unfilled track is a lighter step of the fill's own hue rather than a
+ * neutral gray, so the state reads across the whole bar. The fill carries
+ * severity and is always accompanied by a text rating — colour never carries
+ * the meaning on its own.
+ */
+export function Meter({
+  value,
+  tone = 'brand',
+  className,
+}: {
+  value: number;
+  tone?: 'positive' | 'brand' | 'caution' | 'critical';
+  className?: string;
+}) {
+  const hue = {
+    positive: 'var(--positive)',
+    brand: 'var(--brand)',
+    caution: 'var(--caution)',
+    critical: 'var(--critical)',
+  }[tone];
+
+  const pct = Math.max(0, Math.min(100, Math.round(value * 100)));
+
+  return (
+    <div
+      className={cn('h-1.5 w-full overflow-hidden rounded-full', className)}
+      style={{ backgroundColor: `color-mix(in srgb, ${hue} 16%, transparent)` }}
+      role="presentation"
+    >
+      <div
+        className="h-full rounded-r-[4px] transition-[width] duration-500 ease-out"
+        style={{ width: `${pct}%`, backgroundColor: hue }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Stat tile: label, value, optional hint.
+ *
+ * Large standalone values use the font's proportional figures — tabular-nums
+ * gives every digit the width of a zero, which reads loose at display sizes.
+ * Tabular figures are for columns that must align vertically.
+ */
+export function StatTile({
+  label,
+  value,
+  hint,
+  hero = false,
+  className,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+  hero?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn('min-w-0', className)}>
+      <p className="text-xs font-semibold tracking-wide text-ink-muted uppercase">{label}</p>
+      <p
+        className={cn(
+          'mt-1 font-semibold text-ink',
+          hero ? 'text-5xl leading-none tracking-tight' : 'text-2xl leading-tight',
+        )}
+      >
+        {value}
+      </p>
+      {hint ? <p className="mt-1 text-xs text-ink-subtle">{hint}</p> : null}
+    </div>
+  );
+}
+
+/** Jersey roundel plus name, the player's identity everywhere they appear. */
+export function PlayerChip({
+  name,
+  jerseyNumber,
+  size = 'md',
+  muted = false,
+  className,
+}: {
+  name: string;
+  jerseyNumber?: string;
+  size?: 'sm' | 'md';
+  muted?: boolean;
+  className?: string;
+}) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+
+  return (
+    <span className={cn('flex min-w-0 items-center gap-2', className)}>
+      <span
+        aria-hidden
+        className={cn(
+          'flex shrink-0 items-center justify-center rounded-full border font-semibold',
+          muted
+            ? 'border-border bg-surface-muted text-ink-subtle'
+            : 'border-brand/20 bg-brand-soft text-brand',
+          size === 'sm' ? 'size-6 text-[10px]' : 'size-8 text-xs',
+        )}
+      >
+        {jerseyNumber ? jerseyNumber : initials}
+      </span>
+      <span
+        className={cn(
+          'min-w-0 truncate font-medium',
+          muted ? 'text-ink-muted' : 'text-ink',
+          size === 'sm' ? 'text-sm' : 'text-sm',
+        )}
+      >
+        {name}
+      </span>
+    </span>
+  );
+}

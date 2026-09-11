@@ -171,6 +171,9 @@ export default function GamePage() {
         <div className="flex flex-wrap gap-2">
           {hasLineup ? (
             <>
+              <Link href={`/games/${game.id}/compare`}>
+                <Button>Compare approaches</Button>
+              </Link>
               <Link href={`/games/${game.id}/print`}>
                 <Button>Print</Button>
               </Link>

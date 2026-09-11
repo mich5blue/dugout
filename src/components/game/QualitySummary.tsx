@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge, Card, CardHeader, Notice } from '@/components/ui';
+import { Badge, Card, CardHeader, Meter, Notice } from '@/components/ui';
 import { RATING_LABEL, RATING_TONE, percent } from '@/lib/format';
 import type { Conflict, Explanation, LineupQuality, RelaxationSuggestion } from '@/optimizer';
 import { cn } from '@/lib/cn';
@@ -23,21 +23,11 @@ export function QualitySummary({ quality }: { quality: LineupQuality }) {
               <p className="mt-1 text-base font-semibold text-ink">
                 {RATING_LABEL[metric.rating]}
               </p>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
-                <div
-                  className={cn(
-                    'h-full rounded-full',
-                    metric.rating === 'EXCELLENT'
-                      ? 'bg-positive'
-                      : metric.rating === 'GOOD'
-                        ? 'bg-brand'
-                        : metric.rating === 'FAIR'
-                          ? 'bg-caution'
-                          : 'bg-critical',
-                  )}
-                  style={{ width: `${Math.round(metric.value * 100)}%` }}
-                />
-              </div>
+              <Meter
+                className="mt-1.5"
+                value={metric.value}
+                tone={RATING_TONE[metric.rating]}
+              />
               {metric.detail ? (
                 <p className="mt-1.5 text-xs text-ink-subtle">{metric.detail}</p>
               ) : null}

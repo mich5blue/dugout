@@ -83,6 +83,22 @@ equality.
 
 ---
 
+## Compare approaches
+
+One tap generates the same game three ways — Equal Playing Time, Balanced,
+Competitive — from the identical roster, availability, locks, pitching plan and
+seed, so every difference is attributable to the coaching philosophy and
+nothing else. The coach's own hard rules carry across all three: a required
+minimum of four innings stays required under Competitive. Each option reports
+its metrics, the range of innings played, and who plays least, plus one
+sentence naming the trade-off ("Competitive buys 21% more defensive strength at
+the same spread of playing time"). A table view is always available.
+
+The comparison meters use a single hue rather than severity colours. They
+compare magnitude between options the coach is choosing among, and a red bar
+would read as a defect when low defensive strength is exactly the trade Equal
+Playing Time makes on purpose.
+
 ## The optimizer
 
 This is a constraint optimization problem, and it is modelled as one — not as random
@@ -139,6 +155,38 @@ inputs. Nothing in the optimizer calls `Math.random()`; a seeded PRNG does all
 tie-breaking, and a tiny seed-derived tie-break term lets **Generate Another** return a
 genuinely different lineup of equal quality.
 
+### Metrics measure what is achievable
+
+Quality metrics are scored against the best a lineup could actually reach, never
+against a theoretical ideal the rules make impossible:
+
+- **Defensive strength** is measured against the strongest and weakest defence
+  reachable, found by solving each inning as an assignment problem. The earlier
+  version compared against "the best player at every position at once" — which
+  no lineup can reach, since a player occupies one position — so a mathematically
+  optimal lineup scored 47%, and all three compared approaches looked equally
+  mediocre.
+- **Playing time** is measured against the evenness whole innings allow. Eleven
+  players across ten positions is a fair share of 5.45 innings each, so the best
+  possible result is some players at five and some at six; scoring that against
+  a perfect 5.45 rated the optimum "Fair, 67%".
+- The dashboard reports the innings Dugout **owes** a player rather than the
+  spread of raw totals. A player who missed a game has fewer innings without
+  having been treated unfairly — which is the whole reason fairness is expected
+  versus actual.
+
+### Position-group colours are validated, not chosen by eye
+
+Position groups carry identity across the grids, the diamond and the season
+dashboard, so they are a categorical palette and are checked with the
+colour validator. The original green/blue pair was ΔE 8.0 in *normal* vision,
+meaning infield and outfield were near-indistinguishable in the inning grid — a
+distinction this product is built around. The current amber/teal/indigo set
+passes every check in both light and dark mode, with worst-case CVD ΔE 13.6
+against a target of 8. Bench is deliberately excluded from the categorical set:
+it is the absence of a defensive assignment, so it stays neutral and always
+carries a text label.
+
 ### Three bugs worth knowing about
 
 Found by simulating full seasons rather than single games, and each now has a
@@ -182,9 +230,10 @@ regression test:
   pitch, the coach rebalances, the game is called after five innings, and the next game
   accounts for it.
 
-`e2e/coach.spec.ts` drives the real browser through team creation, generation, a locked
-manual swap surviving a rebalance, recording a short game, and the print and game-day
-views.
+`e2e/coach.spec.ts` drives the real browser through the guided setup and both of
+its validation gates, generation, a locked manual swap surviving a rebalance,
+drag-and-tap editing on the diamond, the three-way comparison and applying one
+of its options, recording a short game, and the print and game-day views.
 
 ---
 

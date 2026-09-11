@@ -1,9 +1,20 @@
 'use client';
 
 import { useDugout } from './providers';
-import { Button, Card, CardHeader, EmptyState, Notice, Spinner } from '@/components/ui';
-import { getTeamSeasonFairness } from '@/services/fairness';
-import { formatDayAndDate, formatGameDate } from '@/lib/format';
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Meter,
+  Notice,
+  PlayerChip,
+  Spinner,
+  StatTile,
+} from '@/components/ui';
+import { getFairnessDebt, getTeamSeasonFairness } from '@/services/fairness';
+import { formatDayAndDate, formatGameDate, percent } from '@/lib/format';
 import { playerName } from '@/domain/factories';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -32,6 +43,27 @@ export default function DashboardPage() {
     () => (team ? getTeamSeasonFairness(games, players) : null),
     [games, players, team],
   );
+
+  const completedCount = useMemo(
+    () => games.filter((game) => game.status === 'COMPLETED').length,
+    [games],
+  );
+
+  /**
+   * The most innings Dugout currently owes any player.
+   *
+   * Deliberately not the spread of raw innings totals: a player who missed a
+   * game has fewer innings without having been treated unfairly, which is the
+   * whole reason fairness is measured as expected-versus-actual.
+   */
+  const mostOwed = useMemo(() => {
+    if (!team || completedCount === 0) return null;
+    const debts = getFairnessDebt(games, players);
+    const owed = activePlayers
+      .map((player) => ({ player, debt: debts[player.id]?.defensiveDebt ?? 0 }))
+      .sort((a, b) => b.debt - a.debt)[0];
+    return owed && owed.debt > 0.1 ? owed : null;
+  }, [activePlayers, completedCount, games, players, team]);
 
   if (!ready) {
     return (
@@ -122,6 +154,48 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {fairness && completedCount > 0 ? (
+        <Card>
+          <div className="grid gap-6 px-5 py-5 sm:grid-cols-[auto_1fr] sm:items-end sm:gap-10">
+            <div>
+              <StatTile
+                hero
+                label="Season balance"
+                value={percent(fairness.balanceScore)}
+                hint={
+                  fairness.balanceScore >= 0.8
+                    ? 'Playing time is even across the roster'
+                    : 'Dugout is still evening this out'
+                }
+              />
+              <Meter
+                className="mt-3 max-w-48"
+                value={fairness.balanceScore}
+                tone={fairness.balanceScore >= 0.8 ? 'positive' : 'caution'}
+              />
+            </div>
+
+            <dl className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+              <StatTile label="Games played" value={completedCount} />
+              <StatTile
+                label="Avg innings"
+                value={fairness.averageDefensiveInnings.toFixed(1)}
+                hint="Defensive innings per player"
+              />
+              <StatTile
+                label="Most owed"
+                value={mostOwed ? mostOwed.debt.toFixed(1) : '0'}
+                hint={
+                  mostOwed
+                    ? `Innings — ${mostOwed.player.firstName} next game`
+                    : 'Nobody is behind'
+                }
+              />
+            </dl>
+          </div>
+        </Card>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader title="Next game" />
@@ -202,23 +276,22 @@ export default function DashboardPage() {
           <ul className="divide-y divide-border">
             {fairness.alerts.slice(0, 4).map((alert) => {
               const player = players.find((entry) => entry.id === alert.playerId);
+              if (!player) return null;
               return (
-                <li key={alert.id} className="px-5 py-3 text-sm text-ink">
-                  {player ? (
-                    <Link
-                      href={`/roster/${player.id}`}
-                      className="ring-focus rounded font-medium underline decoration-border-strong underline-offset-2 hover:decoration-ink"
-                    >
-                      {playerName(player)}
-                    </Link>
-                  ) : null}
-                  <span className="text-ink-muted">
-                    {' '}
-                    {alert.message.replace(
-                      player ? `${playerName(player)} ` : '',
-                      '',
-                    )}
-                  </span>
+                <li key={alert.id}>
+                  <Link
+                    href={`/roster/${player.id}`}
+                    className="ring-focus flex items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-muted"
+                  >
+                    <PlayerChip
+                      name={playerName(player)}
+                      jerseyNumber={player.jerseyNumber}
+                      className="w-44 shrink-0"
+                    />
+                    <span className="min-w-0 flex-1 text-sm text-ink-muted">
+                      {alert.message.replace(`${playerName(player)} `, '')}
+                    </span>
+                  </Link>
                 </li>
               );
             })}
