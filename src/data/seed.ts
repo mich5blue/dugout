@@ -1,3 +1,4 @@
+import type { TeamMembership } from '@/domain/access';
 import { cloneFormation, getSystemFormation } from '@/domain/formations';
 import { createGame, createPlayer, createTeam } from '@/domain/factories';
 import type { Eligibility, Game, Player, Team } from '@/domain/types';
@@ -305,10 +306,22 @@ export async function buildDemoDatabase(): Promise<DugoutDatabase> {
     seed: 1,
   });
 
+  const headCoach: TeamMembership = {
+    id: 'mem_head_coach',
+    teamId: team.id,
+    userId: 'user_demo',
+    email: 'coach@balsamwaters.example',
+    name: 'Head Coach',
+    role: 'HEAD_COACH',
+    status: 'ACTIVE',
+    createdAt: team.createdAt,
+  };
+
   return {
     ...emptyDatabase(),
     teams: [team],
     players,
     games: [...games, upcoming],
+    memberships: [headCoach],
   };
 }

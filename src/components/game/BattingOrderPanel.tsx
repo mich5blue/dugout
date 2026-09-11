@@ -15,6 +15,7 @@ export function BattingOrderPanel({
   onPhilosophyChange,
   onRotate,
   canRotate,
+  readOnly = false,
 }: {
   game: Game;
   players: Player[];
@@ -23,6 +24,7 @@ export function BattingOrderPanel({
   onPhilosophyChange: (philosophy: BattingPhilosophy) => void;
   onRotate: (offset: number) => void;
   canRotate: boolean;
+  readOnly?: boolean;
 }) {
   const [dragging, setDragging] = useState<string | null>(null);
 
@@ -54,7 +56,7 @@ export function BattingOrderPanel({
         title="Batting order"
         description={`${order.length} ${order.length === 1 ? 'batter' : 'batters'}`}
         action={
-          canRotate ? (
+          canRotate && !readOnly ? (
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => onRotate(1)}>
                 Rotate +1
@@ -67,6 +69,7 @@ export function BattingOrderPanel({
         }
       />
 
+      {readOnly ? null : (
       <div className="border-b border-border px-5 py-3">
         <SegmentedControl<BattingPhilosophy>
           size="sm"
@@ -80,6 +83,7 @@ export function BattingOrderPanel({
           ]}
         />
       </div>
+      )}
 
       {order.length === 0 ? (
         <EmptyState
@@ -94,11 +98,11 @@ export function BattingOrderPanel({
             return (
               <li
                 key={entry.playerId}
-                draggable
-                onDragStart={() => setDragging(entry.playerId)}
+                draggable={!readOnly}
+                onDragStart={() => !readOnly && setDragging(entry.playerId)}
                 onDragEnd={() => setDragging(null)}
                 onDragOver={(event) => event.preventDefault()}
-                onDrop={() => dropOn(entry.playerId)}
+                onDrop={() => !readOnly && dropOn(entry.playerId)}
                 className={cn(
                   'flex items-center gap-3 px-5 py-2',
                   dragging === entry.playerId && 'opacity-50',
@@ -114,6 +118,7 @@ export function BattingOrderPanel({
                   ) : null}
                 </span>
 
+                {readOnly ? null : (
                 <button
                   type="button"
                   aria-label={entry.locked ? 'Unlock batting slot' : 'Lock batting slot'}
@@ -128,7 +133,9 @@ export function BattingOrderPanel({
                 >
                   {entry.locked ? '●' : '○'}
                 </button>
+                )}
 
+                {readOnly ? null : (
                 <span className="flex shrink-0 gap-1">
                   <button
                     type="button"
@@ -149,6 +156,7 @@ export function BattingOrderPanel({
                     ↓
                   </button>
                 </span>
+                )}
               </li>
             );
           })}

@@ -50,7 +50,7 @@ type ViewMode = 'inning' | 'player' | 'field' | 'live';
 
 export default function GamePage() {
   const params = useParams<{ gameId: string }>();
-  const { ready, team, players, games, saveGame, goals, flags } = useDugout();
+  const { ready, team, players, games, saveGame, goals, flags, can } = useDugout();
 
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -153,6 +153,8 @@ export default function GamePage() {
     .sort((a, b) => b.date.localeCompare(a.date))[0];
 
   const hasLineup = view.hasLineup;
+  /* An assistant can read every lineup but cannot change one. */
+  const editsGame = can('game:edit');
 
   return (
     <div className="space-y-6">
@@ -221,6 +223,7 @@ export default function GamePage() {
               </Link>
             </>
           ) : null}
+          {editsGame ? (
           <Button
             variant="primary"
             size="md"
@@ -237,6 +240,7 @@ export default function GamePage() {
               'Generate lineup'
             )}
           </Button>
+          ) : null}
         </div>
       </div>
 
@@ -267,9 +271,11 @@ export default function GamePage() {
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
+        {editsGame ? (
         <Button size="sm" variant="ghost" onClick={() => setSetupOpen((value) => !value)}>
           {setupOpen ? 'Hide game setup' : 'Game setup'}
         </Button>
+        ) : <span />}
 
         {hasLineup ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -301,7 +307,7 @@ export default function GamePage() {
         ) : null}
       </div>
 
-      {setupOpen ? (
+      {setupOpen && editsGame ? (
         <div className="space-y-4">
           <AvailabilityPanel game={game} players={players} onChange={update} />
           <PitchingPlanPanel game={game} players={players} onChange={update} />
@@ -336,7 +342,12 @@ export default function GamePage() {
               {mode === 'inning' ? (
                 <LineupGrid
                   view={view}
-                  onSelectCell={(inning, position) => setPicker({ inning, position })}
+                  onSelectCell={
+                    editsGame
+                      ? (inning, position) => setPicker({ inning, position })
+                      : undefined
+                  }
+                  readOnly={!editsGame}
                   onToggleLock={async (inning, position) => {
                     await saveGame(toggleLock(game, inning, position.id));
                   }}
@@ -377,6 +388,7 @@ export default function GamePage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <BattingOrderPanel
+              readOnly={!editsGame}
               game={game}
               players={players}
               canRotate={Boolean(previousGame)}
@@ -427,8 +439,12 @@ export default function GamePage() {
         <Card>
           <EmptyState
             title="No lineup yet"
-            description="Check who's playing, choose how you want to coach, then generate. It takes about a second."
-            action={
+            description={
+              editsGame
+                ? "Check who's playing, choose how you want to coach, then generate. It takes about a second."
+                : 'The head coach builds the lineup for this game.'
+            }
+            action={editsGame ? (
               <Button variant="primary" size="lg" disabled={generating} onClick={() => run()}>
                 {generating ? (
                   <>
@@ -438,7 +454,7 @@ export default function GamePage() {
                   'Generate lineup'
                 )}
               </Button>
-            }
+            ) : null}
           />
         </Card>
       )}

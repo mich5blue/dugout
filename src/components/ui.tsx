@@ -232,16 +232,24 @@ export function SegmentedControl<T extends string>({
   onChange,
   className,
   size = 'md',
+  label,
 }: {
   options: Array<{ value: T; label: string }>;
   value: T;
   onChange: (value: T) => void;
   className?: string;
   size?: 'sm' | 'md';
+  /**
+   * Names the group. Worth setting whenever two controls on a page share option
+   * labels — "Core" appears in both Defensive ability and Hitting, and without
+   * this they are indistinguishable to a screen reader.
+   */
+  label?: string;
 }) {
   return (
     <div
       role="radiogroup"
+      aria-label={label}
       className={cn(
         'inline-flex rounded-lg border border-border bg-bg/60 p-0.5',
         className,

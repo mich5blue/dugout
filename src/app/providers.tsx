@@ -7,6 +7,12 @@ import {
   type DugoutDatabase,
   type LocalStore,
 } from '@/data/localStore';
+import {
+  can as roleCan,
+  type Permission,
+  type TeamMembership,
+  type TeamRole,
+} from '@/domain/access';
 import type {
   DevelopmentGoal,
   Formation,
@@ -47,6 +53,17 @@ interface DugoutContextValue {
   games: Game[];
   goals: DevelopmentGoal[];
   flags: PriorityFlag[];
+  memberships: TeamMembership[];
+  /**
+   * The role this session acts as. Until accounts exist the device owner is the
+   * head coach, and this only changes when they preview the assistant view.
+   */
+  role: TeamRole;
+  /** Permission check. The server must apply the same table independently. */
+  can: (permission: Permission) => boolean;
+  setPreviewRole: (role: TeamRole) => void;
+  saveMembership: (membership: TeamMembership) => Promise<void>;
+  removeMembership: (id: string) => Promise<void>;
   seedDemoTeam: () => Promise<void>;
   resetEverything: () => void;
   saveTeam: (team: Team) => Promise<void>;
@@ -113,6 +130,18 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
     [db.flags, team],
   );
 
+  const memberships = useMemo(
+    () =>
+      team
+        ? (db.memberships ?? [])
+            .filter((member) => member.teamId === team.id)
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        : [],
+    [db.memberships, team],
+  );
+
+  const role: TeamRole = db.session?.previewRole ?? 'HEAD_COACH';
+
   const value = useMemo<DugoutContextValue>(
     () => ({
       store,
@@ -124,6 +153,12 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
       games,
       goals,
       flags,
+      memberships,
+      role,
+      can: (permission) => roleCan(role, permission),
+      setPreviewRole: (next) => store.setPreviewRole(next),
+      saveMembership: async (membership) => void (await store.memberships.save(membership)),
+      removeMembership: async (id) => store.memberships.remove(id),
       seedDemoTeam: async () => {
         const demo = await buildDemoDatabase();
         store.replaceAll(demo);
@@ -143,7 +178,7 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
         if (team) await store.flags.clearForTeam(team.id);
       },
     }),
-    [db, flags, games, goals, players, ready, store, team],
+    [db, flags, games, goals, memberships, players, ready, role, store, team],
   );
 
   return <DugoutContext.Provider value={value}>{children}</DugoutContext.Provider>;

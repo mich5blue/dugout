@@ -51,6 +51,31 @@ breaks.
 
 ---
 
+## Coaches and roles
+
+A head coach may add **two assistant coaches**. An assistant can set where
+players can and cannot play and mark core players; everything else — team
+settings, roster membership, building and recording games — is read-only for
+them.
+
+`src/domain/access.ts` is the whole authorization model: the permission table,
+the invite rules, and `permittedPlayerChanges()`, which narrows an update to the
+fields a role may change so an assistant's tier edit cannot smuggle a renamed
+player alongside it. The UI reads it to decide what to show. **Hiding a button
+is a courtesy, not a control** — when the backend lands it must apply the same
+table server-side.
+
+Accounts are **not connected yet**: the roles are enforced in the app, but there
+is nothing to sign in to. Coaches → *Preview the assistant view* switches the
+current session's role so you can see the restricted experience without
+accounts. `docs/accounts.md` has the schema, the Row Level Security policies
+that make the restriction real, the two-assistant cap as a database trigger, and
+the migration path off `localStorage`.
+
+Cost: nothing at this size. Supabase's free tier and Netlify's free tier both
+cover it comfortably. The only per-use cost in the product is the Claude API for
+roster photo import, which is optional.
+
 ## Deploying
 
 The site is configured for Netlify (`netlify.toml`: `npm run build`, publish

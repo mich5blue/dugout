@@ -1,3 +1,4 @@
+import type { TeamMembership } from '@/domain/access';
 import type {
   DevelopmentGoal,
   Formation,
@@ -56,6 +57,12 @@ export interface PriorityFlagRepository {
   clearForTeam(teamId: string): Promise<void>;
 }
 
+export interface MembershipRepository {
+  listByTeam(teamId: string): Promise<TeamMembership[]>;
+  save(membership: TeamMembership): Promise<TeamMembership>;
+  remove(id: string): Promise<void>;
+}
+
 export interface Repositories {
   teams: TeamRepository;
   players: PlayerRepository;
@@ -63,4 +70,5 @@ export interface Repositories {
   games: GameRepository;
   goals: DevelopmentGoalRepository;
   flags: PriorityFlagRepository;
+  memberships: MembershipRepository;
 }

@@ -15,6 +15,7 @@ import {
   Select,
   Toggle,
 } from '@/components/ui';
+import { permittedPlayerChanges } from '@/domain/access';
 import { createId, playerName } from '@/domain/factories';
 import { GROUP_LABEL } from '@/domain/formations';
 import type { AbilityTier, Eligibility, GoalType, Player } from '@/domain/types';
@@ -48,7 +49,7 @@ const TIER_OPTIONS: Array<{ value: AbilityTier; label: string }> = [
 export default function PlayerDetailPage() {
   const router = useRouter();
   const params = useParams<{ playerId: string }>();
-  const { ready, team, players, games, goals, savePlayer, removePlayer, saveGoal, removeGoal } =
+  const { ready, team, players, games, goals, savePlayer, removePlayer, saveGoal, removeGoal, can, role } =
     useDugout();
   const formation = useTeamFormation();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -87,7 +88,15 @@ export default function PlayerDetailPage() {
   const debt = debts[player.id];
   const batting = battingStats[player.id];
 
-  const update = (changes: Partial<Player>) => savePlayer({ ...player, ...changes });
+  /*
+    Filtered through the role, not merely hidden in the UI: an assistant's edit
+    cannot carry a renamed player or a flipped active flag alongside the
+    eligibility change it claims to be. The server must apply the same filter.
+  */
+  const update = (changes: Partial<Player>) =>
+    savePlayer({ ...player, ...permittedPlayerChanges(role, changes) });
+
+  const editsIdentity = can('player:editIdentity');
 
   const cycleEligibility = (positionId: string) => {
     const current = player.positionRatings[positionId]?.eligibility ?? 'ALLOWED';
@@ -127,17 +136,19 @@ export default function PlayerDetailPage() {
             ) : null}
           </h1>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={player.active ? 'secondary' : 'primary'}
-            onClick={() => update({ active: !player.active })}
-          >
-            {player.active ? 'Mark inactive' : 'Mark active'}
-          </Button>
-          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-            Remove
-          </Button>
-        </div>
+        {editsIdentity ? (
+          <div className="flex gap-2">
+            <Button
+              variant={player.active ? 'secondary' : 'primary'}
+              onClick={() => update({ active: !player.active })}
+            >
+              {player.active ? 'Mark inactive' : 'Mark active'}
+            </Button>
+            <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+              Remove
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {confirmDelete ? (
@@ -178,6 +189,7 @@ export default function PlayerDetailPage() {
                 <Input
                   id="first"
                   className="mt-1.5"
+                  disabled={!editsIdentity}
                   value={player.firstName}
                   onChange={(event) => update({ firstName: event.target.value })}
                 />
@@ -187,6 +199,7 @@ export default function PlayerDetailPage() {
                 <Input
                   id="last"
                   className="mt-1.5"
+                  disabled={!editsIdentity}
                   value={player.lastName}
                   onChange={(event) => update({ lastName: event.target.value })}
                 />
@@ -197,6 +210,7 @@ export default function PlayerDetailPage() {
                   id="jersey"
                   className="mt-1.5"
                   inputMode="numeric"
+                  disabled={!editsIdentity}
                   value={player.jerseyNumber ?? ''}
                   onChange={(event) => update({ jerseyNumber: event.target.value })}
                 />
@@ -206,6 +220,7 @@ export default function PlayerDetailPage() {
             <div>
               <Label>Defensive ability</Label>
               <SegmentedControl
+                label="Defensive ability"
                 className="mt-1.5"
                 value={player.overallTier}
                 onChange={(value) => update({ overallTier: value })}
@@ -213,9 +228,10 @@ export default function PlayerDetailPage() {
               />
             </div>
 
-            <div>
+            <div className={cn(!editsIdentity && 'pointer-events-none opacity-50')}>
               <Label>Hitting</Label>
               <SegmentedControl
+                label="Hitting"
                 className="mt-1.5"
                 value={player.offensiveTier}
                 onChange={(value) => update({ offensiveTier: value })}

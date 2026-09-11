@@ -1,3 +1,4 @@
+import type { TeamMembership, TeamRole } from '@/domain/access';
 import { SYSTEM_FORMATIONS } from '@/domain/formations';
 import type {
   DevelopmentGoal,
@@ -29,6 +30,13 @@ export interface DugoutDatabase {
   games: Game[];
   goals: DevelopmentGoal[];
   flags: PriorityFlag[];
+  memberships: TeamMembership[];
+  /**
+   * Until accounts exist, this device is the head coach. `previewRole` lets a
+   * head coach see the app as an assistant sees it — a preview of the
+   * restrictions, never a security boundary.
+   */
+  session: { previewRole: TeamRole };
 }
 
 export function emptyDatabase(): DugoutDatabase {
@@ -40,6 +48,8 @@ export function emptyDatabase(): DugoutDatabase {
     games: [],
     goals: [],
     flags: [],
+    memberships: [],
+    session: { previewRole: 'HEAD_COACH' },
   };
 }
 
@@ -73,7 +83,11 @@ function createLocalStorageBackend(): Backend {
     if (cache) return cache;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      cache = raw ? (JSON.parse(raw) as DugoutDatabase) : emptyDatabase();
+      // Older saved databases predate memberships and session, so fill them in
+      // rather than letting every read hit undefined.
+      cache = raw
+        ? { ...emptyDatabase(), ...(JSON.parse(raw) as DugoutDatabase) }
+        : emptyDatabase();
     } catch {
       // Corrupt or unavailable storage should never hard-fail the app.
       cache = emptyDatabase();
@@ -132,6 +146,8 @@ export class LocalStore implements Repositories {
       games: [...current.games],
       goals: [...current.goals],
       flags: [...current.flags],
+      memberships: [...(current.memberships ?? [])],
+      session: current.session ?? { previewRole: 'HEAD_COACH' },
     };
     mutate(next);
     this.backend.write(next);
@@ -159,6 +175,7 @@ export class LocalStore implements Repositories {
         db.formations = db.formations.filter((formation) => formation.teamId !== id);
         db.goals = db.goals.filter((goal) => goal.teamId !== id);
         db.flags = db.flags.filter((flag) => flag.teamId !== id);
+        db.memberships = db.memberships.filter((member) => member.teamId !== id);
       });
     },
   };
@@ -244,6 +261,29 @@ export class LocalStore implements Repositories {
       });
     },
   };
+
+  memberships = {
+    listByTeam: async (teamId: string): Promise<TeamMembership[]> =>
+      this.snapshot()
+        .memberships.filter((member) => member.teamId === teamId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    save: async (membership: TeamMembership): Promise<TeamMembership> => {
+      this.update((db) => LocalStore.upsert(db.memberships, membership));
+      return membership;
+    },
+    remove: async (id: string): Promise<void> => {
+      this.update((db) => {
+        db.memberships = db.memberships.filter((member) => member.id !== id);
+      });
+    },
+  };
+
+  /** Preview a different role without accounts. Not a security boundary. */
+  setPreviewRole(role: TeamRole): void {
+    this.update((db) => {
+      db.session = { previewRole: role };
+    });
+  }
 
   flags = {
     listByTeam: async (teamId: string): Promise<PriorityFlag[]> =>

@@ -9,6 +9,7 @@ const NAV = [
   { href: '/', label: 'Dashboard' },
   { href: '/roster', label: 'Roster' },
   { href: '/season', label: 'Season' },
+  { href: '/coaches', label: 'Coaches' },
   { href: '/settings', label: 'Team Settings' },
 ];
 
@@ -28,7 +29,7 @@ function HomePlateMark() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { team } = useDugout();
+  const { team, role, setPreviewRole } = useDugout();
 
   // Print and game-day views own the whole screen.
   const bare = pathname?.includes('/print') ?? false;
@@ -76,11 +77,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      {/*
+        A restricted session must never be mistaken for a broken one: if edit
+        controls are missing, the reason is on screen with a way out.
+      */}
+      {team && role === 'ASSISTANT' ? (
+        <div className="border-b border-caution/30 bg-caution-soft print-hide">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-2 sm:px-6">
+            <span className="text-sm text-ink">
+              Viewing as an <strong>assistant coach</strong> — you can set positions
+              and core players; everything else is read-only.
+            </span>
+            <button
+              type="button"
+              onClick={() => setPreviewRole('HEAD_COACH')}
+              className="ring-focus ml-auto rounded-md border border-border-strong px-2.5 py-1 text-xs font-medium text-ink hover:bg-surface"
+            >
+              Back to head coach
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <main className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:pb-10">{children}</main>
 
       {team ? (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">
-          <div className="grid grid-cols-4">
+          <div className="grid grid-cols-5">
             {NAV.map((item) => {
               const active =
                 item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);

@@ -497,3 +497,93 @@ test('photo import explains itself when the server has no API key', async ({ pag
   await expect(page.getByText('Not set up yet')).toBeVisible();
   await expect(page.getByText(/ANTHROPIC_API_KEY/)).toBeVisible();
 });
+
+test('a head coach can add two assistant coaches and no more', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await expect(page.getByRole('heading', { name: /Balsam Waters/ })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('link', { name: 'Coaches' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Coaches' })).toBeVisible();
+  await expect(page.getByText('2 spots left.')).toBeVisible();
+
+  await page.getByLabel('Name').fill('Jamie Rivera');
+  await page.getByLabel('Email').fill('jamie@example.com');
+  await page.getByRole('button', { name: 'Add assistant coach' }).click();
+  await expect(page.getByText('jamie@example.com')).toBeVisible();
+  await expect(page.getByText('1 spot left.')).toBeVisible();
+
+  await page.getByLabel('Name').fill('Sam Cole');
+  await page.getByLabel('Email').fill('sam@example.com');
+  await page.getByRole('button', { name: 'Add assistant coach' }).click();
+  await expect(page.getByText('Both spots are filled.')).toBeVisible();
+
+  // The cap is real: the control is spent, not merely discouraged.
+  await expect(page.getByRole('button', { name: 'Both spots filled' })).toBeDisabled();
+
+  // A duplicate is refused with a reason rather than silently added.
+  await page.getByRole('button', { name: 'Remove' }).first().click();
+  await page.getByLabel('Email').fill('sam@example.com');
+  await page.getByRole('button', { name: 'Add assistant coach' }).click();
+  await expect(page.getByText('That coach is already on this team.')).toBeVisible();
+});
+
+test('an assistant coach can set positions and core players, and nothing else', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await expect(page.getByRole('heading', { name: /Balsam Waters/ })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('link', { name: 'Coaches' }).first().click();
+  // Exact: "Add assistant coach" also matches loosely.
+  await page.getByRole('button', { name: 'Assistant coach', exact: true }).click();
+
+  // The restricted session says so, with a way back.
+  await expect(page.getByText(/Viewing as an/)).toBeVisible();
+
+  // Roster: no adding or importing players.
+  await page.getByRole('link', { name: 'Roster' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Roster' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add player' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Import from photo' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Quick add' })).toBeHidden();
+
+  // A player: identity is locked, the two delegated jobs are not.
+  await page.getByRole('link', { name: /Brody Borek/ }).click();
+  await expect(page.getByLabel('First name')).toBeDisabled();
+  await expect(page.getByLabel('Jersey')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Remove' })).toBeHidden();
+
+  // Core vs non-core is theirs to set. Scoped to the defensive group, since
+  // Hitting offers the same option labels and is head-coach only.
+  const ability = page.getByRole('radiogroup', { name: 'Defensive ability' });
+  await ability.getByRole('radio', { name: 'Core' }).click();
+  await expect(ability.getByRole('radio', { name: 'Core' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  // So is where a player can play: cycling a position sticks.
+  const shortstop = page.getByRole('button', { name: /^SS/ });
+  await shortstop.click();
+  await expect(shortstop).toContainText(/Allowed|Avoid|Never|Preferred/);
+
+  // Settings are the head coach's.
+  await page.getByRole('link', { name: 'Settings' }).first().click();
+  await expect(
+    page.getByText('Only the head coach can change team settings'),
+  ).toBeVisible();
+  await expect(page.getByLabel('Team name')).toBeHidden();
+
+  // Lineups are readable but not editable.
+  await page.getByRole('link', { name: 'Dashboard' }).first().click();
+  await page.getByRole('link', { name: /Build lineup|Open lineup/ }).click();
+  await expect(page.getByRole('button', { name: 'Generate lineup' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Rebalance' })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Compare', exact: true })).toBeHidden();
+});

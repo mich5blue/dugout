@@ -29,7 +29,7 @@ const TIER_LABEL: Record<AbilityTier, string> = {
 };
 
 export default function RosterPage() {
-  const { ready, team, players, savePlayer, savePlayers } = useDugout();
+  const { ready, team, players, savePlayer, savePlayers, can } = useDugout();
   const formation = useTeamFormation();
 
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -134,27 +134,36 @@ export default function RosterPage() {
             <span className="tnum">{players.length}</span> total
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setPhotoOpen(true)}>Import from photo</Button>
-          <Button onClick={() => setQuickAddOpen(true)}>Quick add</Button>
-          <Button variant="primary" onClick={() => setAddOpen(true)}>
-            Add player
-          </Button>
-        </div>
+        {/* Adding and importing players is the head coach's job. */}
+        {can('roster:add') ? (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setPhotoOpen(true)}>Import from photo</Button>
+            <Button onClick={() => setQuickAddOpen(true)}>Quick add</Button>
+            <Button variant="primary" onClick={() => setAddOpen(true)}>
+              Add player
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {players.length === 0 ? (
         <Card>
           <EmptyState
             title="Add your players"
-            description="Snap a photo of your lineup card, paste a screenshot, or type the names."
+            description={
+              can('roster:add')
+                ? 'Snap a photo of your lineup card, paste a screenshot, or type the names.'
+                : 'The head coach adds players to this team.'
+            }
             action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <Button variant="primary" onClick={() => setPhotoOpen(true)}>
-                  Import from photo
-                </Button>
-                <Button onClick={() => setQuickAddOpen(true)}>Paste names</Button>
-              </div>
+              can('roster:add') ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button variant="primary" onClick={() => setPhotoOpen(true)}>
+                    Import from photo
+                  </Button>
+                  <Button onClick={() => setQuickAddOpen(true)}>Paste names</Button>
+                </div>
+              ) : null
             }
           />
         </Card>

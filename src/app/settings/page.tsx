@@ -30,7 +30,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 export default function SettingsPage() {
-  const { ready, team, db, saveTeam, saveFormation, resetEverything, seedDemoTeam } =
+  const { ready, team, db, saveTeam, saveFormation, resetEverything, seedDemoTeam, can } =
     useDugout();
   const [editing, setEditing] = useState<Formation | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -66,6 +66,19 @@ export default function SettingsPage() {
       deriveCustomFormation(source, team.id, `${source.name} (custom)`, id),
     );
   };
+
+  if (!can('team:edit')) {
+    return (
+      <div className="space-y-6">
+        <h1 className="display text-4xl text-ink sm:text-5xl">Team settings</h1>
+        <Notice tone="caution" title="Only the head coach can change team settings">
+          You can see the roster and every lineup, and you can set where players
+          can play and who is a core player. Team name, formation, rules and
+          coaching philosophy belong to the head coach.
+        </Notice>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
