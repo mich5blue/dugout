@@ -1,0 +1,191 @@
+@import 'tailwindcss';
+
+/*
+  Dugout design tokens.
+
+  Calm, premium, athletic. Restrained sport cues only: position groups get a
+  quiet colour each, and nothing else is decorative. No gradients, no heavy
+  shadows, no stitching.
+*/
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-inverse: var(--ink-inverse);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+
+  --color-battery: var(--battery);
+  --color-battery-soft: var(--battery-soft);
+  --color-infield: var(--infield);
+  --color-infield-soft: var(--infield-soft);
+  --color-outfield: var(--outfield);
+  --color-outfield-soft: var(--outfield-soft);
+  --color-bench: var(--bench);
+  --color-bench-soft: var(--bench-soft);
+
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-caution: var(--caution);
+  --color-caution-soft: var(--caution-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+
+  --radius-card: 0.875rem;
+}
+
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-muted: #f2f2ef;
+  --border: #e5e4df;
+  --border-strong: #d2d1ca;
+
+  --ink: #191c1b;
+  --ink-muted: #5b6360;
+  --ink-subtle: #8b9390;
+  --ink-inverse: #ffffff;
+
+  --brand: #14503f;
+  --brand-hover: #0e3d30;
+  --brand-soft: #e7efec;
+  --accent: #b4562e;
+
+  --battery: #91581a;
+  --battery-soft: #f7efe2;
+  --infield: #14503f;
+  --infield-soft: #e7efec;
+  --outfield: #1d4e6b;
+  --outfield-soft: #e6eef3;
+  --bench: #6b7280;
+  --bench-soft: #f1f2f3;
+
+  --positive: #1a6b4d;
+  --positive-soft: #e6f2ec;
+  --caution: #8a6100;
+  --caution-soft: #fbf2dc;
+  --critical: #9b2c2c;
+  --critical-soft: #f9e9e9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101312;
+    --surface: #171b1a;
+    --surface-muted: #1e2321;
+    --border: #2a302e;
+    --border-strong: #3b4340;
+
+    --ink: #f2f3f2;
+    --ink-muted: #a3aca9;
+    --ink-subtle: #79827f;
+    --ink-inverse: #0f1211;
+
+    --brand: #4fa98e;
+    --brand-hover: #67bda3;
+    --brand-soft: #1a2a26;
+    --accent: #dd8a5f;
+
+    --battery: #d4a05c;
+    --battery-soft: #2a2317;
+    --infield: #4fa98e;
+    --infield-soft: #172723;
+    --outfield: #6aa8c9;
+    --outfield-soft: #17242b;
+    --bench: #8b9390;
+    --bench-soft: #1f2422;
+
+    --positive: #5cbb92;
+    --positive-soft: #16261f;
+    --caution: #d9ab4f;
+    --caution-soft: #28220f;
+    --critical: #e08585;
+    --critical-soft: #2a1a1a;
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numeric columns in every grid and table line up. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus ring used by every interactive element. */
+.ring-focus:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/*
+  Print: the dugout view. Large type, no chrome, no ink-hungry backgrounds,
+  and hard black on white so a cheap office printer produces something legible.
+*/
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-muted: #ffffff;
+    --border: #000000;
+    --border-strong: #000000;
+    --ink: #000000;
+    --ink-muted: #000000;
+    --ink-subtle: #333333;
+    --brand: #000000;
+    --brand-soft: #ffffff;
+    --battery-soft: #ffffff;
+    --infield-soft: #ffffff;
+    --outfield-soft: #ffffff;
+    --bench-soft: #ffffff;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+
+  .print-break {
+    break-after: page;
+  }
+
+  .print-plain {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+}

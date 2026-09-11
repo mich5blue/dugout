@@ -1,0 +1,203 @@
+'use client';
+
+import { useDugout } from '@/app/providers';
+import { Button, EmptyState, SegmentedControl } from '@/components/ui';
+import { playerName, playerShortName } from '@/domain/factories';
+import { formatGameDate } from '@/lib/format';
+import { buildGameView, UNAVAILABLE } from '@/lib/gameView';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+
+/**
+ * Print view (spec section 57). Large type, hard black on white, no navigation
+ * and no ink-hungry backgrounds. Compact mode fits a clipboard.
+ */
+export default function PrintPage() {
+  const params = useParams<{ gameId: string }>();
+  const { ready, team, players, games } = useDugout();
+  const [compact, setCompact] = useState(false);
+
+  const game = games.find((entry) => entry.id === params.gameId) ?? null;
+  const view = useMemo(
+    () => (game ? buildGameView(game, players, 'PLANNED') : null),
+    [game, players],
+  );
+
+  if (!ready) return null;
+
+  if (!team || !game || !view) {
+    return (
+      <EmptyState
+        title="Game not found"
+        action={
+          <Link href="/">
+            <Button variant="primary">Back to dashboard</Button>
+          </Link>
+        }
+      />
+    );
+  }
+
+  const battingOrder = view.battingOrder();
+  const cellPadding = compact ? 'px-1.5 py-1' : 'px-2 py-2';
+  const textSize = compact ? 'text-[11px]' : 'text-sm';
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 print:px-0 print:py-0">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 print-hide">
+        <Link href={`/games/${game.id}`}>
+          <Button size="sm">← Back to lineup</Button>
+        </Link>
+        <div className="flex items-center gap-2">
+          <SegmentedControl
+            size="sm"
+            value={compact ? 'compact' : 'full'}
+            onChange={(value) => setCompact(value === 'compact')}
+            options={[
+              { value: 'full', label: 'Full page' },
+              { value: 'compact', label: 'Compact' },
+            ]}
+          />
+          <Button size="sm" variant="primary" onClick={() => window.print()}>
+            Print
+          </Button>
+        </div>
+      </div>
+
+      <header className="mb-4 border-b-2 border-black pb-3">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h1 className={compact ? 'text-xl font-bold' : 'text-3xl font-bold'}>
+              {team.name} <span className="font-normal">vs</span> {game.opponent || 'TBD'}
+            </h1>
+            <p className={compact ? 'text-xs' : 'text-base'}>
+              {formatGameDate(game.date)} · {game.plannedInnings} innings
+            </p>
+          </div>
+          <p className={compact ? 'text-[10px]' : 'text-sm'}>
+            {game.formationSnapshot.positions.length} defenders
+          </p>
+        </div>
+      </header>
+
+      <div className={compact ? 'grid gap-4 lg:grid-cols-[200px_1fr]' : 'space-y-6'}>
+        <section>
+          <h2 className={compact ? 'mb-1 text-xs font-bold uppercase' : 'mb-2 text-sm font-bold uppercase'}>
+            Batting order
+          </h2>
+          <table className="w-full border-collapse">
+            <tbody>
+              {battingOrder.map((entry) => (
+                <tr key={entry.player.id} className="border-b border-black/30">
+                  <td className={`tnum w-6 font-bold ${cellPadding} ${textSize}`}>
+                    {entry.slot}
+                  </td>
+                  <td className={`${cellPadding} ${textSize} font-medium`}>
+                    {playerName(entry.player)}
+                  </td>
+                  <td className={`tnum w-10 text-right ${cellPadding} ${textSize}`}>
+                    {entry.player.jerseyNumber ? `#${entry.player.jerseyNumber}` : ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2 className={compact ? 'mb-1 text-xs font-bold uppercase' : 'mb-2 text-sm font-bold uppercase'}>
+            Defensive rotation
+          </h2>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b-2 border-black">
+                <th className={`text-left ${cellPadding} ${textSize} font-bold`}>Pos</th>
+                {view.innings.map((inning) => (
+                  <th key={inning} className={`${cellPadding} ${textSize} font-bold`}>
+                    {inning}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {view.positions.map((position) => (
+                <tr key={position.id} className="border-b border-black/30">
+                  <th
+                    scope="row"
+                    className={`text-left ${cellPadding} ${textSize} font-bold whitespace-nowrap`}
+                  >
+                    {position.code}
+                  </th>
+                  {view.innings.map((inning) => {
+                    const player = view.playerAt(inning, position.id);
+                    return (
+                      <td
+                        key={inning}
+                        className={`text-center ${cellPadding} ${textSize} whitespace-nowrap`}
+                      >
+                        {player ? playerShortName(player) : '—'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              <tr className="border-t-2 border-black">
+                <th scope="row" className={`text-left ${cellPadding} ${textSize} font-bold`}>
+                  Bench
+                </th>
+                {view.innings.map((inning) => (
+                  <td
+                    key={inning}
+                    className={`text-center ${cellPadding} ${textSize} whitespace-nowrap`}
+                  >
+                    {view.benchAt(inning).map(playerShortName).join(', ') || '—'}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        {!compact ? (
+          <section>
+            <h2 className="mb-2 text-sm font-bold uppercase">By player</h2>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b-2 border-black">
+                  <th className="px-2 py-2 text-left text-sm font-bold">Player</th>
+                  {view.innings.map((inning) => (
+                    <th key={inning} className="px-2 py-2 text-sm font-bold">
+                      {inning}
+                    </th>
+                  ))}
+                  <th className="px-2 py-2 text-right text-sm font-bold">Inn</th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.players.map((player) => (
+                  <tr key={player.id} className="border-b border-black/30">
+                    <th scope="row" className="px-2 py-1.5 text-left text-sm font-medium">
+                      {playerName(player)}
+                    </th>
+                    {view.innings.map((inning) => {
+                      const slot = view.slotOf(player.id, inning);
+                      return (
+                        <td key={inning} className="px-2 py-1.5 text-center text-sm">
+                          {slot === UNAVAILABLE ? '' : slot === null ? 'Bench' : slot.code}
+                        </td>
+                      );
+                    })}
+                    <td className="tnum px-2 py-1.5 text-right text-sm font-medium">
+                      {view.defensiveInnings(player.id)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        ) : null}
+      </div>
+    </div>
+  );
+}
