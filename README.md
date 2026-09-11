@@ -51,6 +51,38 @@ breaks.
 
 ---
 
+## Deploying
+
+The site is configured for Netlify (`netlify.toml`: `npm run build`, publish
+`.next`, Node 22). Netlify auto-detects the Next.js runtime, so the plugin is
+deliberately not pinned in config — pinning it lets the runtime version drift
+from the installed Next.js.
+
+**Deploy by connecting the GitHub repo**, not by uploading from a laptop. Netlify
+then builds server-side on every push to `main`. A corporate network that
+inspects traffic (Zscaler and similar) will block the CLI's function-bundle
+upload with a 403, and building on Netlify avoids the problem entirely.
+
+To enable roster photo import in production, set the key as a site environment
+variable:
+
+```bash
+netlify env:set ANTHROPIC_API_KEY sk-ant-...
+```
+
+Without it the app runs fine and photo import explains that it is unconfigured.
+
+### Protecting the import endpoint
+
+`/api/roster-import` spends the site owner's API credits, so it rejects requests
+whose `origin` is not the site itself. That is a speed bump, not authentication —
+an `origin` header is trivially forged. On a public production site, treat one of
+these as required if the key is set:
+
+- Netlify password protection / Identity on the site, or
+- leave `ANTHROPIC_API_KEY` unset and use the paste path, or
+- put a rate limit in front of the endpoint.
+
 ## Architecture
 
 ```

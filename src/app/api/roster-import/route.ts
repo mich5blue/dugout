@@ -33,7 +33,31 @@ function fail(error: string, status: number, extra: Partial<RosterImportResponse
   return NextResponse.json<RosterImportResponse>({ ok: false, error, ...extra }, { status });
 }
 
+/**
+ * Rejects requests that did not come from this site's own pages.
+ *
+ * On a public deployment this endpoint spends the owner's API credits, so a
+ * drive-by POST should not be free. This is a speed bump, not authentication —
+ * an `origin` header is trivially forged. Real protection is an account, a rate
+ * limit, or Netlify's password protection on the site; see the README.
+ */
+function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get('origin');
+  // Same-origin fetches from a browser omit `origin` on some navigations but
+  // always send it for POST, so a missing header here means a non-browser call.
+  if (!origin) return false;
+  try {
+    return new URL(origin).host === new URL(request.url).host;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
+  if (!isSameOrigin(request)) {
+    return fail('This endpoint only accepts requests from the Dugout app.', 403);
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return fail(
       'Photo import is not configured on this server. Set ANTHROPIC_API_KEY to enable it — you can still paste or type your roster.',

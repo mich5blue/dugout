@@ -1,0 +1,24 @@
+# Netlify build configuration.
+#
+# The Next.js runtime is auto-detected and applied by Netlify, so it is not
+# declared as a plugin here — declaring it explicitly pins a version that then
+# drifts from the installed Next.js.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next 15 needs a modern LTS; 22 is Netlify's current default LTS.
+  NODE_VERSION = "22"
+
+# Roster import reads an image through the Claude API, which takes longer than
+# a default function invocation allows.
+[functions]
+  included_files = []
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
