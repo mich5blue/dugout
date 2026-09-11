@@ -18,7 +18,13 @@ export default defineConfig({
   webServer: {
     command: `npx next start -p ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
-    reuseExistingServer: true,
+    /*
+      Always start a fresh server. Reusing whatever is already on this port
+      silently serves a stale `next build`, which produced runs that flapped
+      between 11 passing and 6 failing on identical code — the worst kind of
+      test failure, because it looks like a real regression.
+    */
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

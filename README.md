@@ -33,7 +33,7 @@ imbalance for the season-aware optimizer to work against.
 | `npm run build` / `npm start` | Production build and serve |
 | `npm test` | Unit, scenario and integration tests (Vitest) |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npx playwright install chromium && npx playwright test` | Browser end-to-end tests |
+| `npx playwright install chromium && npx playwright test` | Browser end-to-end tests (desktop + mobile) |
 
 Data is stored in the browser. There are no accounts yet, and the only thing that ever
 leaves the device is a roster photo you explicitly choose to import (see below).
@@ -323,7 +323,12 @@ regression test:
   pitch, the coach rebalances, the game is called after five innings, and the next game
   accounts for it.
 
-`e2e/coach.spec.ts` drives the real browser through the guided setup and both of
+`e2e/coach.spec.ts` runs against both a desktop and a Pixel 7 viewport, and
+starts its own server rather than reusing one already on the port — reusing it
+silently serves a stale build, which made runs flap between all-passing and
+six failures on identical code.
+
+It drives the real browser through the guided setup and both of
 its validation gates, generation, a locked manual swap surviving a rebalance,
 drag-and-tap editing on the diamond, the three-way comparison and applying one
 of its options, recording a short game, and the print and game-day views.
