@@ -2,8 +2,14 @@
 
 import { Badge, Button, Modal, Notice } from '@/components/ui';
 import { playerName } from '@/domain/factories';
-import type { Eligibility, Player, PositionDefinition } from '@/domain/types';
+import type { Player, PositionDefinition } from '@/domain/types';
 import { cn } from '@/lib/cn';
+import {
+  ROLE_BLOCKED,
+  eligibilityFor,
+  eligibilityRank,
+  type EditEligibility,
+} from '@/lib/eligibility';
 import { UNAVAILABLE, type GameView } from '@/lib/gameView';
 import { useState } from 'react';
 
@@ -34,31 +40,17 @@ export function AssignmentPicker({
   const current = view.playerAt(inning, position.id);
   const candidates = view.availableAt(inning);
 
-  const eligibilityOf = (player: Player): Eligibility | 'ROLE_BLOCKED' => {
-    if (position.role === 'PITCHER' && !player.canPitch) return 'ROLE_BLOCKED';
-    if (position.role === 'CATCHER' && !player.canCatch) return 'ROLE_BLOCKED';
-    const override = view.game.eligibilityOverrides.some(
-      (entry) => entry.playerId === player.id && entry.positionId === position.id,
-    );
-    if (override) return 'ALLOWED';
-    return player.positionRatings[position.id]?.eligibility ?? 'ALLOWED';
-  };
+  const eligibilityOf = (player: Player): EditEligibility =>
+    eligibilityFor(view.game, player, position);
 
   const ranked = [...candidates].sort((a, b) => {
-    const order: Record<string, number> = {
-      PREFERRED: 0,
-      ALLOWED: 1,
-      AVOID: 2,
-      NEVER: 3,
-      ROLE_BLOCKED: 4,
-    };
-    const diff = order[eligibilityOf(a)] - order[eligibilityOf(b)];
+    const diff = eligibilityRank(eligibilityOf(a)) - eligibilityRank(eligibilityOf(b));
     if (diff !== 0) return diff;
     return playerName(a).localeCompare(playerName(b));
   });
 
   if (pendingOverride) {
-    const blocked = eligibilityOf(pendingOverride) === 'ROLE_BLOCKED';
+    const blocked = eligibilityOf(pendingOverride) === ROLE_BLOCKED;
     return (
       <Modal
         open
@@ -113,7 +105,7 @@ export function AssignmentPicker({
           const eligibility = eligibilityOf(player);
           const isCurrent = current?.id === player.id;
           const slot = view.slotOf(player.id, inning);
-          const restricted = eligibility === 'NEVER' || eligibility === 'ROLE_BLOCKED';
+          const restricted = eligibility === 'NEVER' || eligibility === ROLE_BLOCKED;
 
           return (
             <li key={player.id}>
@@ -150,7 +142,7 @@ export function AssignmentPicker({
                 {eligibility === 'PREFERRED' ? <Badge tone="brand">Preferred</Badge> : null}
                 {eligibility === 'AVOID' ? <Badge tone="caution">Avoid</Badge> : null}
                 {eligibility === 'NEVER' ? <Badge tone="critical">Never</Badge> : null}
-                {eligibility === 'ROLE_BLOCKED' ? (
+                {eligibility === ROLE_BLOCKED ? (
                   <Badge tone="critical">
                     {position.role === 'PITCHER' ? 'Not a pitcher' : 'Not a catcher'}
                   </Badge>

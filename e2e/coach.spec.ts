@@ -9,46 +9,139 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
 });
 
-test('a new coach can create a team and add a roster', async ({ page }) => {
+const ROSTER = [
+  'Brody Borek #8',
+  'Race Smith #12',
+  'Weston Jones #4',
+  'Calvin Miller #7',
+  'Emerson Reed #2',
+  'Solomon Fisk',
+  'Finnegan Doyle',
+  'Vasil Petrov',
+  'Mehki Barnes',
+  'Ashur Haddad',
+  'Walter Nash',
+];
+
+test('the guided setup walks a new coach through a working team', async ({ page }) => {
   await page.goto('/');
   await expect(
     page.getByRole('heading', { name: /Smart lineups for youth baseball/i }),
   ).toBeVisible();
 
   await page.getByRole('link', { name: 'Create your team' }).click();
-  await expect(page.getByRole('heading', { name: 'Set up your team' })).toBeVisible();
 
+  // Step 1 — team. Continue is blocked until the team has a name.
+  await expect(page.getByText('Step 1 of 6')).toBeVisible();
+  const continueButton = page.getByRole('button', { name: 'Continue' });
+  await expect(continueButton).toBeDisabled();
   await page.getByLabel('Team name').fill('Balsam Waters');
   await page.getByRole('radio', { name: 'Baseball' }).click();
+  await expect(continueButton).toBeEnabled();
+  await continueButton.click();
 
-  // Ten-player, four-outfielder formation.
-  await page.getByRole('button', { name: /10 Players/ }).first().click();
+  // Step 2 — roster.
+  await expect(page.getByText('Step 2 of 6')).toBeVisible();
+  await expect(continueButton).toBeDisabled();
+  await page.getByPlaceholder(/Brody Borek/).fill(ROSTER.join('\n'));
+  await expect(page.getByText('11 players', { exact: true })).toBeVisible();
+  await continueButton.click();
 
-  await page
-    .getByPlaceholder('Brody Borek')
-    .fill(
-      [
-        'Brody Borek #8',
-        'Race Smith #12',
-        'Weston Jones #4',
-        'Calvin Miller #7',
-        'Emerson Reed #2',
-        'Solomon Fisk',
-        'Finnegan Doyle',
-        'Vasil Petrov',
-        'Mehki Barnes',
-        'Ashur Haddad',
-        'Walter Nash',
-      ].join('\n'),
-    );
-  await expect(page.getByText('11 players detected.')).toBeVisible();
+  // Step 3 — defense. Tells the coach the consequence of the formation.
+  await expect(page.getByText('Step 3 of 6')).toBeVisible();
+  await page.getByRole('button', { name: /10 players/ }).first().click();
+  await expect(page.getByText(/1 player sits each inning/)).toBeVisible();
+  await continueButton.click();
 
-  await page.getByRole('button', { name: 'Create team' }).click();
+  // Step 4 — battery. Blocked until there is a pitcher and a catcher.
+  await expect(page.getByText('Step 4 of 6')).toBeVisible();
+  await expect(continueButton).toBeDisabled();
+  await expect(page.getByText('Pick at least one of each')).toBeVisible();
 
-  await expect(page.getByRole('heading', { name: 'Roster' })).toBeVisible();
+  const pitchGroup = page.getByRole('group', { name: 'Can pitch' });
+  const catchGroup = page.getByRole('group', { name: 'Can catch' });
+  for (const name of ['Brody', 'Race', 'Weston']) {
+    await pitchGroup.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  }
+  for (const name of ['Calvin', 'Vasil', 'Mehki']) {
+    await catchGroup.getByRole('button', { name: new RegExp(`^${name}`) }).click();
+  }
+
+  await expect(page.getByText(/plenty to rotate/)).toBeVisible();
+  await expect(continueButton).toBeEnabled();
+  await continueButton.click();
+
+  // Step 5 — coaching style.
+  await expect(page.getByText('Step 5 of 6')).toBeVisible();
+  await page.getByRole('button', { name: /^Balanced/ }).click();
+  await continueButton.click();
+
+  // Step 6 — review, then create.
+  await expect(page.getByText('Step 6 of 6')).toBeVisible();
+  await expect(page.getByRole('heading', { name: "You're ready" })).toBeVisible();
+  await expect(page.getByText(/11 players · 3 can pitch · 3 can catch/)).toBeVisible();
+  await expect(page.getByText(/6 innings · 10 on defense/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Finish' }).click();
+
+  // The team exists and the roster came through.
+  await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible();
+  await page.getByRole('link', { name: 'Roster' }).first().click();
   await expect(page.getByText('11 active · 11 total')).toBeVisible();
   await expect(page.getByText('Brody Borek')).toBeVisible();
-  await expect(page.getByText('#8').first()).toBeVisible();
+});
+
+test('setup can go back without losing the battery choices', async ({ page }) => {
+  await page.goto('/setup');
+
+  await page.getByLabel('Team name').fill('Test Team');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByPlaceholder(/Brody Borek/).fill(ROSTER.join('\n'));
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  // Mark a pitcher, step back to the roster, add a player at the top, and
+  // confirm the pitcher is still marked.
+  await expect(page.getByText('Step 4 of 6')).toBeVisible();
+  await page
+    .getByRole('group', { name: 'Can pitch' })
+    .getByRole('button', { name: /^Race/ })
+    .click();
+  await expect(
+    page.getByRole('group', { name: 'Can pitch' }).getByText('1 selected'),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '← Back' }).click();
+  await page.getByRole('button', { name: '← Back' }).click();
+  await page.getByPlaceholder(/Brody Borek/).fill(['Newkid Jones', ...ROSTER].join('\n'));
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page.getByText('Step 4 of 6')).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Can pitch' }).getByText('1 selected'),
+  ).toBeVisible();
+});
+
+test('setup refuses a formation the roster cannot fill', async ({ page }) => {
+  await page.goto('/setup');
+
+  await page.getByLabel('Team name').fill('Small Squad');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByPlaceholder(/Brody Borek/).fill(ROSTER.slice(0, 9).join('\n'));
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  // Nine players cannot fill a ten-player formation.
+  await page.getByRole('button', { name: /10 players/ }).first().click();
+  await expect(
+    page.getByText('You have 9 players but this formation needs 10.'),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
+
+  // The offered one-tap fix unblocks it.
+  await page.getByRole('button', { name: 'Use 9 players' }).click();
+  await expect(page.getByText(/nobody sits/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
 });
 
 test('the demo team generates, edits and prints a lineup', async ({ page }) => {
@@ -194,9 +287,69 @@ test('game-day view walks innings and lists the changes', async ({ page }) => {
   });
 
   await page.getByRole('radio', { name: 'Game day' }).click();
-  await expect(page.getByText('Inning 1')).toBeVisible();
+  await expect(page.getByText('Inning 1', { exact: true })).toBeVisible();
   await expect(page.getByText('Next inning changes')).toBeVisible();
 
   await page.getByRole('button', { name: 'Next inning →' }).click();
-  await expect(page.getByText('Inning 2')).toBeVisible();
+  await expect(page.getByText('Inning 2', { exact: true })).toBeVisible();
+});
+
+test('the diamond shows the field and supports tap and drag editing', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Explore the demo team' }).click();
+  await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('link', { name: /Build lineup|Open lineup/ }).click();
+  await page.getByRole('button', { name: 'Generate lineup' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Defensive rotation' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('radio', { name: 'Diamond' }).click();
+
+  // All ten positions of the four-outfielder formation render on the field.
+  for (const name of [
+    'Pitcher',
+    'Catcher',
+    'First Base',
+    'Second Base',
+    'Third Base',
+    'Shortstop',
+    'Left Field',
+    'Left Center',
+    'Right Center',
+    'Right Field',
+  ]) {
+    await expect(page.getByTitle(name, { exact: true })).toBeVisible();
+  }
+
+  const shortstopCard = page.getByTitle('Shortstop');
+  const leftFieldCard = page.getByTitle('Left Field');
+  await expect(shortstopCard).toBeVisible();
+  await expect(leftFieldCard).toBeVisible();
+  await expect(page.getByText('Tap a player to swap them, or drag one card onto another.')).toBeVisible();
+
+  const ssBefore = (await shortstopCard.textContent()) ?? '';
+  const lfBefore = (await leftFieldCard.textContent()) ?? '';
+
+  // Drag shortstop onto left field: the two swap.
+  await shortstopCard.dragTo(leftFieldCard);
+  await expect(leftFieldCard).not.toHaveText(lfBefore);
+
+  const ssAfter = (await shortstopCard.textContent()) ?? '';
+  const lfAfter = (await leftFieldCard.textContent()) ?? '';
+  expect(ssAfter).not.toBe(ssBefore);
+  expect(lfAfter).not.toBe(lfBefore);
+
+  // Tapping a card opens the swap picker (the path that works on a phone).
+  await shortstopCard.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByText(/Inning 1 · Shortstop/)).toBeVisible();
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  // The bench is a drop target for taking someone off the field.
+  await expect(page.getByText('Bench', { exact: false }).first()).toBeVisible();
 });

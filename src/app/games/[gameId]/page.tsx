@@ -314,7 +314,21 @@ export default function GamePage() {
                       label: `Inn ${inning}`,
                     }))}
                   />
-                  <DiamondView view={view} inning={diamondInning} />
+                  <DiamondView
+                    view={view}
+                    inning={diamondInning}
+                    onSelectPosition={(position) =>
+                      setPicker({ inning: diamondInning, position })
+                    }
+                    onAssign={async (positionId, playerId) => {
+                      await update(
+                        setAssignment(game, diamondInning, positionId, playerId),
+                      );
+                    }}
+                    onBench={async (positionId) => {
+                      await update(setAssignment(game, diamondInning, positionId, null));
+                    }}
+                  />
                 </div>
               ) : null}
               {mode === 'gameday' ? (

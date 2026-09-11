@@ -34,6 +34,11 @@
   --color-bench: var(--bench);
   --color-bench-soft: var(--bench-soft);
 
+  --color-field-grass: var(--field-grass);
+  --color-field-infield: var(--field-infield);
+  --color-field-dirt: var(--field-dirt);
+  --color-field-line: var(--field-line);
+
   --color-positive: var(--positive);
   --color-positive-soft: var(--positive-soft);
   --color-caution: var(--caution);
@@ -74,6 +79,13 @@
   --bench: #6b7280;
   --bench-soft: #f1f2f3;
 
+  /* Field rendering: muted enough to sit behind the player cards, not a
+     cartoon ballpark. */
+  --field-grass: #dde8d7;
+  --field-infield: #d3e1cc;
+  --field-dirt: #ecdcc6;
+  --field-line: #ffffff;
+
   --positive: #1a6b4d;
   --positive-soft: #e6f2ec;
   --caution: #8a6100;
@@ -108,6 +120,11 @@
     --outfield-soft: #17242b;
     --bench: #8b9390;
     --bench-soft: #1f2422;
+
+    --field-grass: #1a271f;
+    --field-infield: #1f2e25;
+    --field-dirt: #2b2419;
+    --field-line: #46504a;
 
     --positive: #5cbb92;
     --positive-soft: #16261f;
@@ -169,6 +186,10 @@ body {
     --infield-soft: #ffffff;
     --outfield-soft: #ffffff;
     --bench-soft: #ffffff;
+    --field-grass: #ffffff;
+    --field-infield: #ffffff;
+    --field-dirt: #ffffff;
+    --field-line: #000000;
   }
 
   body {
