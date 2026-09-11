@@ -49,6 +49,8 @@ export interface EffectiveRules {
   minOutfieldInnings: number;
   maxConsecutiveOutfieldInnings: number;
   maxBenchInnings: number;
+  /** Innings a player should hold one position before rotating. 0 = off. */
+  continuityInnings: number;
   /** Infield innings the coach asked for, whether target or requirement. */
   infieldInnings: number;
   infieldRequired: boolean;
@@ -58,11 +60,22 @@ export interface EffectiveRules {
 export function effectiveRules(ctx: SolverContext): EffectiveRules {
   const s = ctx.settings;
   const infield = s.infieldOpportunity;
+  const continuityInnings = s.positionContinuityInnings ?? 0;
+
+  /*
+    Continuity and variety pull in opposite directions, so asking for two-inning
+    blocks must lift the consecutive-innings cap that the variety dial would
+    otherwise impose — at variety HIGH that cap is 2, which would fight a
+    three-inning block and silently win.
+  */
+  const consecutiveCap =
+    s.maxConsecutiveSamePosition ?? MAX_CONSECUTIVE_SAME_BY_VARIETY[s.variety];
+
   return {
     minUnique: s.minUniquePositions ?? MIN_UNIQUE_BY_VARIETY[s.variety],
     maxInningsSamePosition: s.maxInningsSamePosition ?? Number.POSITIVE_INFINITY,
-    maxConsecutiveSamePosition:
-      s.maxConsecutiveSamePosition ?? MAX_CONSECUTIVE_SAME_BY_VARIETY[s.variety],
+    maxConsecutiveSamePosition: Math.max(consecutiveCap, continuityInnings),
+    continuityInnings,
     maxOutfieldInnings: s.maxOutfieldInnings ?? Number.POSITIVE_INFINITY,
     minOutfieldInnings: s.minOutfieldInnings ?? 0,
     maxConsecutiveOutfieldInnings:
@@ -109,6 +122,7 @@ export function cost(
   let critical = 0;
   let development = 0;
   let consecutiveBench = 0;
+  let continuity = 0;
   let outfield = 0;
   let tieBreak = 0;
   let hard = 0;
@@ -210,9 +224,41 @@ export function cost(
     );
     variety += sq(shortfall(minUnique, s.unique));
 
+    /*
+      Position continuity: a player holding one spot for `continuityInnings` at
+      a time needs ceil(defensive / block) stints, so every stint beyond that is
+      a rotation the coach did not ask for. Counting stints rather than rewarding
+      adjacency means a forced move — a pitching change, a late arrival — costs
+      one unit instead of cascading.
+    */
+    if (rules.continuityInnings > 1 && s.defensive > 0) {
+      /*
+        The floor is per playing run, not per total: a bench inning splits a
+        block, so a player who sits mid-game legitimately needs an extra stint.
+        Charging them for it would make the objective chase something
+        unreachable and trade away real fairness to do it.
+      */
+      let floorStints = 0;
+      let run = 0;
+      for (let inning = 1; inning <= ctx.innings; inning++) {
+        if (solution.grid[inning].includes(i)) {
+          run++;
+        } else if (run > 0) {
+          floorStints += Math.ceil(run / rules.continuityInnings);
+          run = 0;
+        }
+      }
+      if (run > 0) floorStints += Math.ceil(run / rules.continuityInnings);
+
+      continuity += sq(Math.max(0, s.positionStints - floorStints));
+    }
+
     for (let pos = 0; pos < ctx.nPos; pos++) {
       const count = s.posCount[pos];
-      if (count > 1) repeated += sq(count - 1);
+      // With continuity on, innings inside one block are the point, so only
+      // repeats beyond a single block's worth are penalised.
+      const freeRepeats = rules.continuityInnings > 1 ? rules.continuityInnings : 1;
+      if (count > freeRepeats) repeated += sq(count - freeRepeats);
       if (count > rules.maxInningsSamePosition) {
         repeated += sq(count - rules.maxInningsSamePosition) * 4;
       }
@@ -293,6 +339,7 @@ export function cost(
   variety /= n;
   repeated /= n;
   groupBalance /= n;
+  continuity /= n;
   infieldOpportunity /= n;
   // Season term combines per-player inning debt with per-assignment position debt.
   seasonFairness = seasonPerPlayer + seasonFairness / slots;
@@ -301,6 +348,7 @@ export function cost(
     playingTimeEquality: w.playingTimeEquality * playingTime,
     seasonFairness: w.seasonFairness * seasonFairness,
     positionVariety: w.positionVariety * variety,
+    positionContinuity: w.positionContinuity * continuity,
     repeatedPositionPenalty: w.repeatedPositionPenalty * repeated,
     positionGroupBalance: w.positionGroupBalance * groupBalance,
     infieldOpportunity: w.infieldOpportunity * infieldOpportunity,

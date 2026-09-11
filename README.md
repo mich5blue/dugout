@@ -194,6 +194,28 @@ inputs. Nothing in the optimizer calls `Math.random()`; a seeded PRNG does all
 tie-breaking, and a tiny seed-derived tie-break term lets **Generate Another** return a
 genuinely different lineup of equal quality.
 
+### Position continuity
+
+The counterpart to position variety: **Position continuity** holds a player at
+one spot for two or three innings at a time before rotating them — for learning
+a position, and for doubleheaders where constant movement is punishing.
+
+Continuity and variety are contradictory instructions, so turning continuity on
+deliberately outranks the terms that fight it (within-game variety, position-group
+balance, the repeated-position penalty) and lifts the consecutive-innings cap
+that the variety dial would otherwise impose — at variety HIGH that cap is 2,
+which would silently defeat a three-inning block. Season-level fairness is
+untouched: continuity changes where a player stands, not how much they play, and
+required minimums and the pitching plan still hold.
+
+What it can reach depends on the roster. With ten players for ten positions
+nobody sits and everyone gets exact blocks. With eleven, one player sits each
+inning and the pitcher changes between blocks, so the substitution chain has to
+break somebody's block — the optimizer lands nearly everyone on clean pairs and
+never makes one player absorb more than one extra rotation. The quality summary
+reports the count ("Players hold a position for 2 innings at a time (10 of 11)")
+rather than claiming success or failure.
+
 ### Metrics measure what is achievable
 
 Quality metrics are scored against the best a lineup could actually reach, never

@@ -20,6 +20,12 @@ export interface PlayerStats {
   byGroup: Record<PositionGroup, number>;
   posCount: number[];
   unique: number;
+  /**
+   * Number of separate stints: each unbroken run of innings at one position
+   * counts once. A player who goes SS, SS, 2B, 2B has two stints across four
+   * defensive innings.
+   */
+  positionStints: number;
   /** Number of adjacent available-inning pairs where the player sat both. */
   consecutiveBenchPairs: number;
   longestBenchRun: number;
@@ -56,6 +62,7 @@ function emptyPlayerStats(nPos: number): PlayerStats {
     byGroup: { BATTERY: 0, INFIELD: 0, OUTFIELD: 0, BENCH: 0 },
     posCount: new Array<number>(nPos).fill(0),
     unique: 0,
+    positionStints: 0,
     consecutiveBenchPairs: 0,
     longestBenchRun: 0,
     longestSamePositionRun: 0,
@@ -135,7 +142,9 @@ export function computeStats(ctx: SolverContext, solution: Solution): SolutionSt
         if (inning === 1) stats.benchedFirstInning = true;
       } else {
         benchRun = 0;
-        samePosRun = previousAvailable && previousSlot === slot ? samePosRun + 1 : 1;
+        const continuingSameStint = previousAvailable && previousSlot === slot;
+        if (!continuingSameStint) stats.positionStints++;
+        samePosRun = continuingSameStint ? samePosRun + 1 : 1;
         if (samePosRun > stats.longestSamePositionRun) stats.longestSamePositionRun = samePosRun;
         if (isOutfield[slot]) {
           outfieldRun = outfieldRun + 1;

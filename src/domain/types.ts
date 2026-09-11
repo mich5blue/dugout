@@ -126,6 +126,13 @@ export interface RuleSettings {
   maxInningsSamePosition?: number;
   maxConsecutiveSamePosition?: number;
 
+  /**
+   * Keep a player at one position for this many innings at a time before
+   * rotating them — the counterpart to variety, for continuity and for
+   * doubleheaders. Undefined or 0 rotates freely.
+   */
+  positionContinuityInnings?: number;
+
   /** Position-group rules. */
   infieldOpportunity: InfieldOpportunity;
   maxOutfieldInnings?: number;
@@ -168,6 +175,7 @@ export type WeightKey =
   | 'playingTimeEquality'
   | 'seasonFairness'
   | 'positionVariety'
+  | 'positionContinuity'
   | 'positionGroupBalance'
   | 'infieldOpportunity'
   | 'playerPreferences'

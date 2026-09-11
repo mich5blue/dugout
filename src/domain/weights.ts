@@ -17,6 +17,7 @@ export const WEIGHT_LABEL: Record<WeightKey, string> = {
   playingTimeEquality: 'Playing Time Equality',
   seasonFairness: 'Season Fairness',
   positionVariety: 'Position Variety',
+  positionContinuity: 'Position Continuity',
   positionGroupBalance: 'Position Group Balance',
   infieldOpportunity: 'Infield Opportunity',
   playerPreferences: 'Player Preferences',
@@ -30,6 +31,7 @@ export const WEIGHT_LABEL: Record<WeightKey, string> = {
 };
 
 const EQUAL_PLAYING_TIME: Weights = {
+  positionContinuity: 70,
   playingTimeEquality: 100,
   seasonFairness: 100,
   positionVariety: 60,
@@ -46,6 +48,7 @@ const EQUAL_PLAYING_TIME: Weights = {
 };
 
 const DEVELOPMENT: Weights = {
+  positionContinuity: 70,
   playingTimeEquality: 100,
   seasonFairness: 95,
   positionVariety: 90,
@@ -62,6 +65,7 @@ const DEVELOPMENT: Weights = {
 };
 
 const BALANCED: Weights = {
+  positionContinuity: 80,
   playingTimeEquality: 90,
   seasonFairness: 90,
   positionVariety: 70,
@@ -78,6 +82,7 @@ const BALANCED: Weights = {
 };
 
 const COMPETITIVE: Weights = {
+  positionContinuity: 90,
   playingTimeEquality: 55,
   seasonFairness: 50,
   positionVariety: 35,
@@ -164,6 +169,24 @@ export function resolveWeights(settings: TeamSettings): Weights {
   weights.positionGroupBalance = base.positionGroupBalance * varietyMultiplier;
   weights.repeatedPositionPenalty = base.repeatedPositionPenalty * varietyMultiplier;
 
+  /*
+    Position continuity and within-game variety are contradictory instructions:
+    one says hold a player at one spot for a block of innings, the other says
+    spread them across positions and groups. When the coach explicitly asks for
+    continuity it has to outrank the terms that fight it, or the lineup ends up
+    honouring neither. Season-level fairness is untouched — continuity changes
+    where a player stands, not how much they play.
+  */
+  const continuityInnings = settings.positionContinuityInnings ?? 0;
+  if (continuityInnings > 1) {
+    weights.positionContinuity = base.positionContinuity * 2;
+    weights.positionVariety *= 0.4;
+    weights.positionGroupBalance *= 0.4;
+    weights.repeatedPositionPenalty *= 0.25;
+  } else {
+    weights.positionContinuity = 0;
+  }
+
   weights.criticalPositionStrength =
     base.criticalPositionStrength * CRITICAL_STRENGTH_MULTIPLIER[settings.criticalStrength];
 
@@ -201,6 +224,7 @@ export function defaultRuleSettings(): Omit<TeamSettings, 'philosophy' | 'battin
     minUniquePositions: 2,
     maxInningsSamePosition: undefined,
     maxConsecutiveSamePosition: undefined,
+    positionContinuityInnings: undefined,
     infieldOpportunity: { mode: 'TARGET', innings: 1 },
     maxOutfieldInnings: undefined,
     minOutfieldInnings: undefined,

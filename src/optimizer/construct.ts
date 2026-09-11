@@ -28,6 +28,8 @@ interface RunningState {
   catching: number[];
   catcherRun: number[];
   lastSlot: number[];
+  /** How many consecutive innings the player has held lastSlot. */
+  sameSlotRun: number[];
   posCount: number[][];
   groupCount: Array<Record<PositionGroup, number>>;
 }
@@ -41,6 +43,7 @@ function initialState(ctx: SolverContext): RunningState {
     catching: new Array(ctx.nPlayers).fill(0),
     catcherRun: new Array(ctx.nPlayers).fill(0),
     lastSlot: new Array(ctx.nPlayers).fill(NO_SLOT),
+    sameSlotRun: new Array(ctx.nPlayers).fill(0),
     posCount: ctx.players.map(() => new Array(ctx.nPos).fill(0)),
     groupCount: ctx.players.map(() => ({
       BATTERY: 0,
@@ -200,10 +203,23 @@ function cellCost(
     c -= w.consecutiveBenchPenalty * TUNING.firstInningBenchScale * player.usage.firstInningBenchGames;
   }
 
-  // ---- Variety -----------------------------------------------------------
-  c += w.repeatedPositionPenalty * 0.6 * state.posCount[playerIdx][pos];
-  if (state.lastSlot[playerIdx] === pos) c += w.repeatedPositionPenalty * 0.6;
-  if (state.posCount[playerIdx][pos] === 0) c -= w.positionVariety * 0.3;
+  // ---- Continuity and variety --------------------------------------------
+  const holdingThisSpot = state.lastSlot[playerIdx] === pos;
+  const runSoFar = holdingThisSpot ? state.sameSlotRun[playerIdx] : 0;
+
+  if (rules.continuityInnings > 1) {
+    // Mid-block: strongly prefer leaving the player where they are. Block
+    // complete: stop rewarding it so the rotation actually happens.
+    if (holdingThisSpot && runSoFar < rules.continuityInnings) {
+      c -= w.positionContinuity;
+    } else if (holdingThisSpot) {
+      c += w.positionContinuity * 0.5;
+    }
+  } else {
+    c += w.repeatedPositionPenalty * 0.6 * state.posCount[playerIdx][pos];
+    if (holdingThisSpot) c += w.repeatedPositionPenalty * 0.6;
+    if (state.posCount[playerIdx][pos] === 0) c -= w.positionVariety * 0.3;
+  }
 
   // ---- Position group balance -------------------------------------------
   // Shares come from the positions this player is eligible for, so restricted
@@ -290,10 +306,13 @@ function applyInning(
       state.groupCount[playerIdx].BENCH++;
       state.catcherRun[playerIdx] = 0;
       state.lastSlot[playerIdx] = EMPTY;
+      state.sameSlotRun[playerIdx] = 0;
       continue;
     }
     state.defensive[playerIdx]++;
     state.benchRun[playerIdx] = 0;
+    state.sameSlotRun[playerIdx] =
+      state.lastSlot[playerIdx] === pos ? state.sameSlotRun[playerIdx] + 1 : 1;
     state.posCount[playerIdx][pos]++;
     state.groupCount[playerIdx][ctx.groupOf[pos]]++;
     if (isPitcher.has(pos)) state.pitching[playerIdx]++;
@@ -312,6 +331,7 @@ function applyInning(
       state.benchRun[idx] = 0;
       state.catcherRun[idx] = 0;
       state.lastSlot[idx] = NO_SLOT;
+      state.sameSlotRun[idx] = 0;
     }
   }
 }

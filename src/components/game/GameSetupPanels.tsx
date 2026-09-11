@@ -294,6 +294,32 @@ export function RulesPanel({
           </div>
 
           <div>
+            <Label>Position continuity</Label>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <SegmentedControl
+                size="sm"
+                value={String(settings.positionContinuityInnings ?? 0)}
+                onChange={(value) =>
+                  set({
+                    positionContinuityInnings:
+                      Number(value) === 0 ? undefined : Number(value),
+                  })
+                }
+                options={[
+                  { value: '0', label: 'Rotate freely' },
+                  { value: '2', label: '2 innings' },
+                  { value: '3', label: '3 innings' },
+                ]}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-ink-subtle">
+              {(settings.positionContinuityInnings ?? 0) > 1
+                ? `Players stay at one spot for ${settings.positionContinuityInnings} innings before moving — good for learning a position, and for doubleheaders.`
+                : 'Players can move position every inning.'}
+            </p>
+          </div>
+
+          <div>
             <Label>Critical position strength</Label>
             <SegmentedControl<CriticalStrength>
               className="mt-1.5"

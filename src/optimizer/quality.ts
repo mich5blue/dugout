@@ -87,6 +87,38 @@ function abilityBounds(ctx: SolverContext): { best: number; worst: number } {
   return { best, worst };
 }
 
+/**
+ * The fewest stints a player could possibly have, given which innings they
+ * actually played.
+ *
+ * A bench inning splits a block in two, so ceil(total / block) is not reachable
+ * for anyone who sits mid-game: each unbroken run of played innings needs its
+ * own ceil(run / block) stints. Comparing against the total would report a
+ * perfectly continuous lineup as a failure.
+ */
+function minimumStints(
+  ctx: SolverContext,
+  solution: Solution,
+  playerIdx: number,
+  block: number,
+): number {
+  let minimum = 0;
+  let run = 0;
+
+  for (let inning = 1; inning <= ctx.innings; inning++) {
+    const playing = solution.grid[inning].includes(playerIdx);
+    if (playing) {
+      run++;
+    } else if (run > 0) {
+      minimum += Math.ceil(run / block);
+      run = 0;
+    }
+  }
+  if (run > 0) minimum += Math.ceil(run / block);
+
+  return minimum;
+}
+
 function rate(value: number): QualityRating {
   if (value >= 0.9) return 'EXCELLENT';
   if (value >= 0.75) return 'GOOD';
@@ -227,6 +259,21 @@ export function assessQuality(
         }
       }
     }
+  }
+
+  if (rules.continuityInnings > 1) {
+    const held = ctx.players.filter((player) => {
+      const s = stats.perPlayer[player.idx];
+      if (s.defensive === 0) return true;
+      return (
+        s.positionStints <=
+        minimumStints(ctx, solution, player.idx, rules.continuityInnings)
+      );
+    }).length;
+    checks.push({
+      ok: held === ctx.nPlayers,
+      label: `Players hold a position for ${rules.continuityInnings} innings at a time (${held} of ${ctx.nPlayers})`,
+    });
   }
 
   if (rules.infieldInnings > 0) {
