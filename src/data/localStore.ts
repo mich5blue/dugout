@@ -9,7 +9,10 @@ import type {
   Sport,
   Team,
 } from '@/domain/types';
-import type { Repositories } from './repositories';
+import { emptyDatabase, type DugoutDatabase, type DugoutStore } from './database';
+
+export { emptyDatabase };
+export type { DugoutDatabase };
 
 /**
  * Browser-local implementation of the repository contracts.
@@ -21,41 +24,6 @@ import type { Repositories } from './repositories';
  */
 
 const STORAGE_KEY = 'dugout.db.v1';
-
-export interface DugoutDatabase {
-  version: 1;
-  teams: Team[];
-  players: Player[];
-  formations: Formation[];
-  games: Game[];
-  goals: DevelopmentGoal[];
-  flags: PriorityFlag[];
-  memberships: TeamMembership[];
-  /**
-   * Until accounts exist, this device is the head coach. `previewRole` lets a
-   * head coach see the app as an assistant sees it — a preview of the
-   * restrictions, never a security boundary.
-   *
-   * `activeTeamId` is which team the app is currently showing. A coach often
-   * runs two teams — a rec team and a travel team, or two age groups — and
-   * every page reads from the active one.
-   */
-  session: { previewRole: TeamRole; activeTeamId?: string };
-}
-
-export function emptyDatabase(): DugoutDatabase {
-  return {
-    version: 1,
-    teams: [],
-    players: [],
-    formations: [],
-    games: [],
-    goals: [],
-    flags: [],
-    memberships: [],
-    session: { previewRole: 'HEAD_COACH' },
-  };
-}
 
 interface Backend {
   read(): DugoutDatabase;
@@ -117,7 +85,7 @@ function createLocalStorageBackend(): Backend {
   };
 }
 
-export class LocalStore implements Repositories {
+export class LocalStore implements DugoutStore {
   private backend: Backend;
 
   constructor(backend?: Backend) {

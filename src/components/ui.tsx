@@ -117,6 +117,7 @@ export function Input({
       className={cn(
         'ring-focus h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm text-ink',
         'placeholder:text-ink-subtle',
+        'disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-muted disabled:text-ink-muted',
         className,
       )}
       {...props}
@@ -133,6 +134,7 @@ export function Textarea({
       className={cn(
         'ring-focus w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm text-ink',
         'placeholder:text-ink-subtle',
+        'disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-muted disabled:text-ink-muted',
         className,
       )}
       {...props}
@@ -148,6 +150,7 @@ export function Select({
     <select
       className={cn(
         'ring-focus h-10 w-full rounded-lg border border-border-strong bg-surface px-3 text-sm text-ink',
+        'disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-muted disabled:text-ink-muted',
         className,
       )}
       {...props}

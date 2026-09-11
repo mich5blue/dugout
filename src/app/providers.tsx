@@ -1,12 +1,11 @@
 'use client';
 
 import { buildDemoDatabase } from '@/data/seed';
-import {
-  emptyDatabase,
-  getStore,
-  type DugoutDatabase,
-  type LocalStore,
-} from '@/data/localStore';
+import { emptyDatabase, type DugoutDatabase, type DugoutStore } from '@/data/database';
+import { FirestoreStore } from '@/data/firestoreStore';
+import { getStore } from '@/data/localStore';
+import { isFirebaseConfigured } from '@/lib/firebase';
+import { signOutNow, watchAccount, type Account } from '@/lib/auth';
 import {
   can as roleCan,
   type Permission,
@@ -42,8 +41,22 @@ import React, {
 /** Stable empty snapshot so server rendering and the first paint agree. */
 const SERVER_SNAPSHOT: DugoutDatabase = emptyDatabase();
 
+/** Which backing store the session is running on. */
+export type Backend = 'firebase' | 'local';
+
 interface DugoutContextValue {
-  store: LocalStore;
+  store: DugoutStore;
+  /**
+   * `firebase` when a project is configured: data lives in the account and is
+   * shared with assistant coaches. `local` is the no-backend fallback, used for
+   * development, the test suites and the demo team.
+   */
+  backend: Backend;
+  /** Null until sign-in, and always null on the local backend. */
+  account: Account | null;
+  /** False until the auth state is known, so nothing flashes the wrong screen. */
+  authReady: boolean;
+  signOut: () => Promise<void>;
   db: DugoutDatabase;
   /** False until the browser store has been read, to avoid hydration mismatch. */
   ready: boolean;
@@ -87,8 +100,41 @@ interface DugoutContextValue {
 const DugoutContext = createContext<DugoutContextValue | null>(null);
 
 export function DugoutProvider({ children }: { children: React.ReactNode }) {
-  const store = useMemo(() => getStore(), []);
+  const backend: Backend = isFirebaseConfigured() ? 'firebase' : 'local';
+
+  const [account, setAccount] = useState<Account | null>(null);
+  const [authReady, setAuthReady] = useState(backend === 'local');
   const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (backend === 'local') return;
+    return watchAccount((next) => {
+      setAccount(next);
+      setAuthReady(true);
+    });
+  }, [backend]);
+
+  /*
+    The store depends on who is signed in, because a Firestore store only knows
+    how to read the teams belonging to one account. Signing out therefore
+    replaces the store rather than clearing it — there is no shared mutable
+    state to leak into the next session.
+  */
+  const [firestoreStore, setFirestoreStore] = useState<FirestoreStore | null>(null);
+
+  useEffect(() => {
+    if (backend === 'local' || !account) {
+      setFirestoreStore(null);
+      return;
+    }
+    const next = new FirestoreStore(account.uid, account.email);
+    void next.start();
+    setFirestoreStore(next);
+    return () => next.stop();
+  }, [account, backend]);
+
+  const localStore = useMemo(() => getStore(), []);
+  const store: DugoutStore = firestoreStore ?? localStore;
 
   const subscribe = useCallback(
     (listener: () => void) => store.subscribe(listener),
@@ -156,11 +202,28 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
     [db.memberships, team],
   );
 
-  const role: TeamRole = db.session?.previewRole ?? 'HEAD_COACH';
+  /*
+    The real role comes from the team document, so an assistant cannot promote
+    themselves by editing local state. Without a backend there are no accounts
+    and the device owner is the head coach.
+    `previewRole` only ever narrows: a head coach may look at the app as an
+    assistant sees it, never the reverse.
+  */
+  const actualRole: TeamRole = team ? (db.roles?.[team.id] ?? 'HEAD_COACH') : 'HEAD_COACH';
+  const role: TeamRole =
+    actualRole === 'HEAD_COACH' && db.session?.previewRole === 'ASSISTANT'
+      ? 'ASSISTANT'
+      : actualRole;
 
   const value = useMemo<DugoutContextValue>(
     () => ({
       store,
+      backend,
+      account,
+      authReady,
+      signOut: async () => {
+        if (backend === 'firebase') await signOutNow();
+      },
       db,
       ready,
       teams,
@@ -181,7 +244,18 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
         const demo = await buildDemoDatabase();
         store.replaceAll(demo);
       },
-      resetEverything: () => store.replaceAll(emptyDatabase()),
+      resetEverything: () => {
+        /*
+          On the local backend the database is one document, so emptying it is
+          the reset. Against Firestore there is nothing to overwrite — the reset
+          is deleting the teams, which is also what revokes the assistants.
+        */
+        if (backend === 'firebase') {
+          void Promise.all(teams.map((entry) => store.teams.remove(entry.id)));
+          return;
+        }
+        store.replaceAll(emptyDatabase());
+      },
       saveTeam: async (next) => void (await store.teams.save(next)),
       removeTeam: async (teamId) => store.teams.remove(teamId),
       savePlayer: async (next) => void (await store.players.save(next)),
@@ -197,7 +271,22 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
         if (team) await store.flags.clearForTeam(team.id);
       },
     }),
-    [db, flags, games, goals, memberships, players, ready, role, store, team, teams],
+    [
+      account,
+      authReady,
+      backend,
+      db,
+      flags,
+      games,
+      goals,
+      memberships,
+      players,
+      ready,
+      role,
+      store,
+      team,
+      teams,
+    ],
   );
 
   return <DugoutContext.Provider value={value}>{children}</DugoutContext.Provider>;

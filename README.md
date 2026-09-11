@@ -34,9 +34,21 @@ imbalance for the season-aware optimizer to work against.
 | `npm test` | Unit, scenario and integration tests (Vitest) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npx playwright install chromium && npx playwright test` | Browser end-to-end tests (desktop + mobile) |
+| `npm run test:rules` | Security rules, against the Firestore emulator (needs Java) |
+| `npm run test:e2e:firebase` | The signed-in app, against the Firebase emulators |
+| `npm run test:all` | Unit tests plus the rules suite |
 
-Data is stored in the browser. There are no accounts yet, and the only thing that ever
-leaves the device is a roster photo you explicitly choose to import (see below).
+### Storage
+
+Teams are stored in **Firestore**, and coaches sign in with Firebase Auth — Google
+or a passwordless email link. Everything runs from the browser against Firestore
+directly under `firestore.rules`; there is no server to host and no Cloud Function,
+which is what keeps it on the free tier. See [docs/firebase.md](docs/firebase.md)
+for the one-time project setup.
+
+With no Firebase project configured the app falls back to browser storage. That is
+the mode `npm run dev` and both default test suites run in, so everything works
+with no backend attached and no network.
 
 ### Roster import from a photo
 
@@ -72,9 +84,10 @@ accounts. `docs/accounts.md` has the schema, the Row Level Security policies
 that make the restriction real, the two-assistant cap as a database trigger, and
 the migration path off `localStorage`.
 
-Cost: nothing at this size. Supabase's free tier and Netlify's free tier both
-cover it comfortably. The only per-use cost in the product is the Claude API for
-roster photo import, which is optional.
+Cost: nothing at this size. Firebase's Spark plan and Netlify's free tier both
+cover it comfortably, and Cloud Functions — the part that would require a paid
+plan — are deliberately not used. The only per-use cost in the product is the
+Claude API for roster photo import, which is optional.
 
 ## Deploying
 
@@ -82,6 +95,11 @@ The site is configured for Netlify (`netlify.toml`: `npm run build`, publish
 `.next`, Node 22). Netlify auto-detects the Next.js runtime, so the plugin is
 deliberately not pinned in config — pinning it lets the runtime version drift
 from the installed Next.js.
+
+Set the Firebase config as environment variables before the first deploy that
+needs accounts (`docs/firebase.md` has the four values and the commands). They are
+`NEXT_PUBLIC_`, so Next.js inlines them at build time: changing one needs a
+redeploy, not just a restart.
 
 **Deploy by connecting the GitHub repo**, not by uploading from a laptop. Netlify
 then builds server-side on every push to `main`. A corporate network that

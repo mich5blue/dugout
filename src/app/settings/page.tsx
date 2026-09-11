@@ -38,6 +38,7 @@ export default function SettingsPage() {
     saveTeam,
     saveFormation,
     removeTeam,
+    backend,
     resetEverything,
     seedDemoTeam,
     can,
@@ -270,12 +271,28 @@ export default function SettingsPage() {
       />
 
       <Card>
-        <CardHeader title="Data" description="Everything is stored on this device." />
+        <CardHeader
+          title="Data"
+          description={
+            backend === 'firebase'
+              ? 'Stored in your account.'
+              : 'Everything is stored on this device.'
+          }
+        />
         <div className="space-y-3 px-5 py-5">
-          <Notice tone="neutral">
-            Dugout keeps your team in this browser. Accounts and cloud sync are coming —
-            until then, printing or exporting before you clear browser data is wise.
-          </Notice>
+          {backend === 'firebase' ? (
+            <Notice tone="neutral">
+              Your team is saved to your account, so it follows you to any phone and
+              your assistant coaches see the same lineups. Changes you make with no
+              signal are queued and sync when you get one.
+            </Notice>
+          ) : (
+            <Notice tone="caution">
+              This copy of Dugout has no account attached, so your team lives in this
+              browser only — clearing browser data deletes it, and no other device can
+              see it. Print anything you would not want to lose.
+            </Notice>
+          )}
 
           {teams.length > 1 ? (
             confirmDeleteTeam ? (

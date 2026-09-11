@@ -1,6 +1,7 @@
 'use client';
 
 import { useDugout } from '@/app/providers';
+import { SignInScreen } from '@/components/SignInScreen';
 import { TeamSwitcher } from '@/components/TeamSwitcher';
 import { cn } from '@/lib/cn';
 import Link from 'next/link';
@@ -30,13 +31,23 @@ function HomePlateMark() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { team, role, setPreviewRole } = useDugout();
+  const { team, role, setPreviewRole, backend, account, authReady } = useDugout();
 
   // Print and shared-lineup views own the whole screen: a parent opening a
   // share link has no team, so team navigation would be dead ends.
   const bare =
     (pathname?.includes('/print') ?? false) || (pathname?.startsWith('/s/') ?? false);
   if (bare) return <>{children}</>;
+
+  /*
+    With a backend configured there is nothing to show before sign-in — the data
+    lives in the account. Shared lineups are already past this point, because a
+    parent opening a link has no account and needs none.
+  */
+  if (backend === 'firebase') {
+    if (!authReady) return null;
+    if (!account) return <SignInScreen />;
+  }
 
   /*
     Setup is a focused flow with its own footer. Now that it is reachable while

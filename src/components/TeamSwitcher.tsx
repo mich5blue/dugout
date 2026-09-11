@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
  * team is next to the name of the current one.
  */
 export function TeamSwitcher() {
-  const { team, teams, setActiveTeam } = useDugout();
+  const { team, teams, setActiveTeam, account, signOut } = useDugout();
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
 
@@ -125,6 +125,21 @@ export function TeamSwitcher() {
             </span>
             Add a team
           </Link>
+
+          {account ? (
+            <div className="border-t border-border px-3 py-2.5">
+              <p className="truncate text-xs text-ink-subtle">
+                {account.email || account.name}
+              </p>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="ring-focus mt-1 rounded text-sm font-medium text-ink hover:underline"
+              >
+                Sign out
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -1,3 +1,10 @@
+> **Superseded in part.** This document was written when the plan was Postgres
+> with row-level security. The shipped backend is Firebase — see
+> [firebase.md](firebase.md) for the schema, the rules and the setup steps. The
+> permission model below still holds exactly; only the storage technology
+> changed. Keep this file for the reasoning, and for the Postgres route if
+> Firestore ever stops fitting.
+
 # Accounts, roles and the move off localStorage
 
 Status: **planned, not connected.** The role model and every permission check

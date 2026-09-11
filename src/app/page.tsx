@@ -16,6 +16,7 @@ import {
 import { getFairnessDebt, getTeamSeasonFairness } from '@/services/fairness';
 import { formatDayAndDate, formatGameDate, percent } from '@/lib/format';
 import { playerName } from '@/domain/factories';
+import { MoveLocalData } from '@/components/MoveLocalData';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -77,6 +78,9 @@ export default function DashboardPage() {
   if (!team) {
     return (
       <div className="mx-auto max-w-2xl py-10">
+        <div className="mb-6 empty:hidden">
+          <MoveLocalData />
+        </div>
         <p className="eyebrow text-accent">Youth baseball &amp; softball</p>
         <h1 className="display mt-2 text-6xl text-ink sm:text-7xl">
           Smart lineups, <span className="text-accent">every inning.</span>
@@ -146,6 +150,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <MoveLocalData />
+
       <div>
         <p className="eyebrow text-accent">
           {team.seasonName}

@@ -1,0 +1,192 @@
+rules_version = '2';
+
+/*
+  Dugout access rules.
+
+  This file is the enforcement. `src/domain/access.ts` decides what the UI
+  offers, but hiding a button is a courtesy — anything that matters has to be
+  refused here, because a client can be edited.
+
+  The model: a team document owns everything about that team in its
+  subcollections. A head coach may change anything in their team's subtree. An
+  assistant coach may read all of it and change exactly four fields on a player
+  — where a player can play, and whether they are a core player. Nobody may
+  read a team they are not on.
+*/
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myUid() {
+      return request.auth.uid;
+    }
+
+    /*
+      Invitations are addressed to an email because an invited coach has no uid
+      until the first time they sign in. Lowercased on both sides: the app
+      normalizes before writing, and Google may hand back any casing.
+    */
+    function myEmail() {
+      return signedIn() && request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    function teamData(teamId) {
+      return get(/databases/$(database)/documents/teams/$(teamId)).data;
+    }
+
+    function isMemberOf(teamId) {
+      return signedIn() && myUid() in teamData(teamId).memberUids;
+    }
+
+    function roleOn(teamId) {
+      return teamData(teamId).roles[myUid()];
+    }
+
+    function isHeadCoachOf(teamId) {
+      return isMemberOf(teamId) && roleOn(teamId) == 'HEAD_COACH';
+    }
+
+    function isAssistantOf(teamId) {
+      return isMemberOf(teamId) && roleOn(teamId) == 'ASSISTANT';
+    }
+
+    match /teams/{teamId} {
+      function team() {
+        return resource.data;
+      }
+
+      function isMember() {
+        return signedIn() && myUid() in team().memberUids;
+      }
+
+      /* Invited by email but has not claimed a uid yet. */
+      function isInvited() {
+        return myEmail() != '' && myEmail() in team().assistantEmails;
+      }
+
+      function isHeadCoach() {
+        return isMember() && team().roles[myUid()] == 'HEAD_COACH';
+      }
+
+      /*
+        An invited assistant can read the team before claiming it, because
+        claiming is a write to this very document and they have to find it
+        first.
+      */
+      allow get, list: if isMember() || isInvited();
+
+      /*
+        A team is created owned by its creator, with nobody else on it. Without
+        this, a client could create a team that names someone else as owner or
+        grants itself a role on an existing coach's team.
+      */
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == myUid()
+        && request.resource.data.memberUids == [myUid()]
+        && request.resource.data.roles.keys().hasOnly([myUid()])
+        && request.resource.data.roles[myUid()] == 'HEAD_COACH'
+        && request.resource.data.assistantEmails.size() == 0;
+
+      allow update: if
+        /* The head coach may change the team, within the assistant cap. */
+        (
+          isHeadCoach()
+          && request.resource.data.ownerUid == team().ownerUid
+          && request.resource.data.assistantEmails.size() <= 2
+        )
+        ||
+        /*
+          An invited assistant may attach their own uid as an assistant, and
+          change nothing else — not the owner, not another coach's role, not
+          the team's settings.
+        */
+        (
+          isInvited()
+          && request.resource.data.diff(team()).affectedKeys()
+               .hasOnly(['memberUids', 'roles'])
+          && request.resource.data.memberUids.toSet() ==
+               team().memberUids.toSet().union([myUid()].toSet())
+          && request.resource.data.roles.diff(team().roles).affectedKeys()
+               .hasOnly([myUid()])
+          && request.resource.data.roles[myUid()] == 'ASSISTANT'
+        );
+
+      /* Only the owner can delete a team, never an assistant. */
+      allow delete: if isMember() && team().ownerUid == myUid();
+    }
+
+    /*
+      Players are the one place an assistant coach can write.
+
+      `affectedKeys().hasOnly(...)` is the whole point: an assistant's update
+      cannot smuggle a renamed player or a flipped active flag alongside the
+      eligibility change it claims to be. This list must stay identical to
+      ASSISTANT_EDITABLE_PLAYER_FIELDS in src/domain/access.ts, and a test
+      fails if it drifts.
+    */
+    match /teams/{teamId}/players/{playerId} {
+      allow read: if isMemberOf(teamId);
+      allow create, delete: if isHeadCoachOf(teamId);
+      allow update: if isHeadCoachOf(teamId)
+        || (
+          isAssistantOf(teamId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['positionRatings', 'overallTier', 'canPitch', 'canCatch'])
+        );
+    }
+
+    /*
+      Everything else about a team is the head coach's. An assistant reads it
+      all — they are coaching the same game — but changes none of it.
+    */
+    match /teams/{teamId}/games/{gameId} {
+      allow read: if isMemberOf(teamId);
+      allow write: if isHeadCoachOf(teamId);
+    }
+
+    match /teams/{teamId}/formations/{formationId} {
+      allow read: if isMemberOf(teamId);
+      allow write: if isHeadCoachOf(teamId);
+    }
+
+    match /teams/{teamId}/goals/{goalId} {
+      allow read: if isMemberOf(teamId);
+      allow write: if isHeadCoachOf(teamId);
+    }
+
+    match /teams/{teamId}/flags/{flagId} {
+      allow read: if isMemberOf(teamId);
+      allow write: if isHeadCoachOf(teamId);
+    }
+
+    /*
+      Memberships are the coach list. A head coach manages it; an assistant may
+      mark their own row claimed on first sign-in, which is how the coaches page
+      stops showing them as merely invited.
+    */
+    match /teams/{teamId}/memberships/{membershipId} {
+      allow read: if isMemberOf(teamId)
+        || (myEmail() != '' && myEmail() in teamData(teamId).assistantEmails);
+      allow create, delete: if isHeadCoachOf(teamId);
+      allow update: if isHeadCoachOf(teamId)
+        || (
+          myEmail() != ''
+          && resource.data.email.lower() == myEmail()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['userId', 'status'])
+          && request.resource.data.userId == myUid()
+        );
+    }
+
+    /* Anything not named above is denied. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
