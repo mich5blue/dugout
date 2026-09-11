@@ -12,6 +12,31 @@ const NAV = [
   { href: '/settings', label: 'Team Settings' },
 ];
 
+/**
+ * The wordmark's glyph: a home plate.
+ *
+ * A restrained sport cue — flat geometry in the brand colour, no stitching and
+ * no cartoon baseball, per the design direction.
+ */
+function HomePlateMark() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-5 text-brand" aria-hidden>
+      <path
+        d="M3 3.2h14v8.3L10 17.2 3 11.5Z"
+        fill="currentColor"
+        opacity="0.16"
+      />
+      <path
+        d="M3 3.2h14v8.3L10 17.2 3 11.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { team } = useDugout();
@@ -22,9 +47,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur print-hide">
+      <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl print-hide">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="ring-focus flex items-baseline gap-2 rounded-md">
+          <Link href="/" className="ring-focus flex items-center gap-2.5 rounded-md">
+            <HomePlateMark />
             <span className="text-lg font-semibold tracking-tight text-ink">Dugout</span>
           </Link>
 
@@ -38,10 +64,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'ring-focus rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                      'ring-focus relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                       active
-                        ? 'bg-surface text-ink shadow-sm'
-                        : 'text-ink-muted hover:text-ink',
+                        ? 'bg-brand-soft text-brand'
+                        : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
                     )}
                   >
                     {item.label}

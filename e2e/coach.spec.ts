@@ -168,7 +168,7 @@ test('the demo team generates, edits and prints a lineup', async ({ page }) => {
   for (const code of ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'LC', 'RC', 'RF']) {
     await expect(page.getByRole('rowheader', { name: code, exact: true })).toBeVisible();
   }
-  await expect(page.getByRole('columnheader', { name: '6', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Inn 6', exact: true })).toBeVisible();
 
   // Quality summary and explanations appear.
   await expect(page.getByRole('heading', { name: 'Lineup quality' })).toBeVisible();

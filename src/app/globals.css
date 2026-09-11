@@ -34,6 +34,7 @@
   --color-bench: var(--bench);
   --color-bench-soft: var(--bench-soft);
 
+  --color-header-tint: var(--header-tint);
   --color-field-grass: var(--field-grass);
   --color-field-infield: var(--field-infield);
   --color-field-dirt: var(--field-dirt);
@@ -47,8 +48,8 @@
   --color-critical-soft: var(--critical-soft);
 
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
 
   --radius-card: 1rem;
 
@@ -80,6 +81,8 @@
   --card-shadow:
     0 1px 2px 0 rgb(16 22 21 / 0.04),
     0 12px 28px -18px rgb(16 22 21 / 0.18);
+  /* Section headers sit on a tint rather than being divided by a bare line. */
+  --header-tint: #f7faf8;
 
   /*
     Position-group identity colours. These are a categorical palette — they
@@ -142,6 +145,7 @@
     --card-shadow:
       0 1px 2px 0 rgb(0 0 0 / 0.4),
       0 12px 28px -18px rgb(0 0 0 / 0.7);
+    --header-tint: #172220;
 
     /* Dark mode is stepped and validated separately against the dark surface,
        never an automatic flip: #bf8438,#12a594,#7078f0 passes all six checks. */
@@ -191,6 +195,45 @@ body {
   font-family: var(--font-sans);
   font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.02em;
+}
+
+/* Hero figures want tighter tracking still. */
+.display {
+  letter-spacing: -0.035em;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+/* A short accent rule used to anchor a hero figure. */
+.accent-rule::before {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  margin-bottom: 0.75rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Numeric columns in every grid and table line up. */

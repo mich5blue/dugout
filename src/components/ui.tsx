@@ -49,12 +49,15 @@ export function Button({
 
 export function Card({
   className,
+  interactive = false,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
   return (
     <div
       className={cn(
         'rounded-card border border-border bg-surface shadow-card print-plain',
+        interactive &&
+          'transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-lg',
         className,
       )}
       {...props}
@@ -76,7 +79,9 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4',
+        // A tinted band rather than a bare dividing line: it gives each card a
+        // readable top edge without adding another border.
+        'flex flex-wrap items-start justify-between gap-3 rounded-t-card border-b border-border bg-header-tint px-5 py-4',
         className,
       )}
     >
@@ -453,7 +458,7 @@ export function StatTile({
       <p
         className={cn(
           'mt-1 font-semibold text-ink',
-          hero ? 'text-5xl leading-none tracking-tight' : 'text-2xl leading-tight',
+          hero ? 'display text-6xl leading-none' : 'text-2xl leading-tight tracking-tight',
         )}
       >
         {value}

@@ -156,7 +156,7 @@ export default function GamePage() {
           <Link href="/" className="ring-focus text-sm text-ink-muted hover:text-ink">
             ← {team.name}
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="display mt-1 text-3xl font-semibold text-ink">
             vs {game.opponent || 'TBD'}
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
@@ -278,7 +278,7 @@ export default function GamePage() {
 
       {hasLineup ? (
         <>
-          <Card>
+          <Card className="rise">
             <CardHeader
               title="Defensive rotation"
               action={

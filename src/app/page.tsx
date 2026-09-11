@@ -157,7 +157,7 @@ export default function DashboardPage() {
       {fairness && completedCount > 0 ? (
         <Card>
           <div className="grid gap-6 px-5 py-5 sm:grid-cols-[auto_1fr] sm:items-end sm:gap-10">
-            <div>
+            <div className="accent-rule">
               <StatTile
                 hero
                 label="Season balance"
@@ -201,7 +201,7 @@ export default function DashboardPage() {
           <CardHeader title="Next game" />
           {upcoming ? (
             <div className="px-5 py-5">
-              <p className="text-2xl font-semibold tracking-tight text-ink">
+              <p className="display text-3xl font-semibold text-ink">
                 vs {upcoming.opponent || 'TBD'}
               </p>
               <p className="mt-1 text-sm text-ink-muted">{formatGameDate(upcoming.date)}</p>
@@ -235,7 +235,7 @@ export default function DashboardPage() {
           <CardHeader title="Last game" />
           {lastGame ? (
             <div className="px-5 py-5">
-              <p className="text-2xl font-semibold tracking-tight text-ink">
+              <p className="display text-3xl font-semibold text-ink">
                 vs {lastGame.opponent}
               </p>
               <p className="mt-1 text-sm text-ink-muted">
@@ -323,7 +323,7 @@ export default function DashboardPage() {
           { href: '/settings', label: 'Team Settings', hint: 'Formation, rules, philosophy' },
         ].map((item) => (
           <Link key={item.href} href={item.href} className="ring-focus rounded-card">
-            <Card className="h-full p-4 transition-colors hover:border-border-strong">
+            <Card interactive className="h-full p-4">
               <p className="text-sm font-semibold text-ink">{item.label}</p>
               <p className="mt-1 text-sm text-ink-muted">{item.hint}</p>
             </Card>
