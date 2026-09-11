@@ -203,7 +203,7 @@ export default function SetupPage() {
   if (team) {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="display text-4xl text-ink sm:text-5xl">
           You already have a team
         </h1>
         <p className="mt-2 text-sm text-ink-muted">

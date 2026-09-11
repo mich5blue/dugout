@@ -77,10 +77,11 @@ export default function DashboardPage() {
   if (!team) {
     return (
       <div className="mx-auto max-w-2xl py-10">
-        <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-          Smart lineups for youth baseball &amp; softball.
+        <p className="eyebrow text-accent">Youth baseball &amp; softball</p>
+        <h1 className="display mt-2 text-6xl text-ink sm:text-7xl">
+          Smart lineups, <span className="text-accent">every inning.</span>
         </h1>
-        <p className="mt-4 text-lg text-ink-muted">
+        <p className="mt-5 text-lg text-ink-muted">
           Pick who&apos;s playing, choose how you want to coach, and generate a full
           batting order and inning-by-inning defense. Dugout remembers what
           actually happened and makes the whole season fair.
@@ -130,9 +131,12 @@ export default function DashboardPage() {
               body: 'A kid drops out 45 minutes before first pitch? One tap fixes the whole game.',
             },
           ].map((item) => (
-            <Card key={item.title} className="p-4">
-              <p className="text-sm font-semibold text-ink">{item.title}</p>
-              <p className="mt-1 text-sm text-ink-muted">{item.body}</p>
+            <Card
+              key={item.title}
+              className="border-t-2 border-t-accent/50 p-4 pt-3.5"
+            >
+              <p className="eyebrow text-ink">{item.title}</p>
+              <p className="mt-1.5 text-sm text-ink-muted">{item.body}</p>
             </Card>
           ))}
         </div>
@@ -143,20 +147,27 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-medium tracking-wide text-ink-muted uppercase">
+        <p className="eyebrow text-accent">
           {team.seasonName}
           {team.division ? ` · ${team.division}` : ''}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">{team.name}</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          {activePlayers.length} {activePlayers.length === 1 ? 'player' : 'players'} ·{' '}
-          {team.defaultInnings}-inning games
+        <h1 className="display mt-1.5 text-5xl text-ink sm:text-6xl">{team.name}</h1>
+        <p className="mt-2 text-sm text-ink-muted">
+          <span className="tnum">{activePlayers.length}</span>{' '}
+          {activePlayers.length === 1 ? 'player' : 'players'} ·{' '}
+          <span className="tnum">{team.defaultInnings}</span>-inning games
         </p>
       </div>
 
+      {/*
+        The season scoreboard. The balance figure is the headline number of the
+        whole product, so it gets the largest type on the page and a divider
+        separating it from the supporting three — previously all four figures
+        were the same size and the hierarchy was flat.
+      */}
       {fairness && completedCount > 0 ? (
-        <Card>
-          <div className="grid gap-6 px-5 py-5 sm:grid-cols-[auto_1fr] sm:items-end sm:gap-10">
+        <Card className="overflow-hidden">
+          <div className="grid gap-6 px-5 py-6 sm:grid-cols-[minmax(0,auto)_1fr] sm:items-center sm:gap-10">
             <div className="accent-rule">
               <StatTile
                 hero
@@ -175,7 +186,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            <dl className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-5 border-border sm:grid-cols-3 sm:border-l sm:pl-10">
               <StatTile label="Games played" value={completedCount} />
               <StatTile
                 label="Avg innings"
@@ -201,10 +212,13 @@ export default function DashboardPage() {
           <CardHeader title="Next game" />
           {upcoming ? (
             <div className="px-5 py-5">
-              <p className="display text-3xl font-semibold text-ink">
-                vs {upcoming.opponent || 'TBD'}
+              <p className="flex flex-wrap items-baseline gap-2">
+                <span className="scoreboard text-xl text-ink-subtle">vs</span>
+                <span className="display text-4xl text-ink">
+                  {upcoming.opponent || 'TBD'}
+                </span>
               </p>
-              <p className="mt-1 text-sm text-ink-muted">{formatGameDate(upcoming.date)}</p>
+              <p className="mt-2 text-sm text-ink-muted">{formatGameDate(upcoming.date)}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link href={`/games/${upcoming.id}`}>
                   <Button variant="primary" size="lg">
@@ -235,12 +249,16 @@ export default function DashboardPage() {
           <CardHeader title="Last game" />
           {lastGame ? (
             <div className="px-5 py-5">
-              <p className="display text-3xl font-semibold text-ink">
-                vs {lastGame.opponent}
+              <p className="flex flex-wrap items-baseline gap-2">
+                <span className="scoreboard text-xl text-ink-subtle">vs</span>
+                <span className="display text-4xl text-ink">{lastGame.opponent}</span>
               </p>
-              <p className="mt-1 text-sm text-ink-muted">
+              <p className="mt-2 text-sm text-ink-muted">
                 {formatDayAndDate(lastGame.date)} ·{' '}
-                {lastGame.actualInnings ?? lastGame.plannedInnings} innings played
+                <span className="tnum">
+                  {lastGame.actualInnings ?? lastGame.plannedInnings}
+                </span>{' '}
+                innings played
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Link href={`/games/${lastGame.id}`}>
@@ -323,8 +341,11 @@ export default function DashboardPage() {
           { href: '/settings', label: 'Team Settings', hint: 'Formation, rules, philosophy' },
         ].map((item) => (
           <Link key={item.href} href={item.href} className="ring-focus rounded-card">
-            <Card interactive className="h-full p-4">
-              <p className="text-sm font-semibold text-ink">{item.label}</p>
+            <Card
+              interactive
+              className="h-full border-l-2 border-l-border-strong p-4 transition-colors hover:border-l-accent"
+            >
+              <p className="scoreboard text-xl text-ink">{item.label}</p>
               <p className="mt-1 text-sm text-ink-muted">{item.hint}</p>
             </Card>
           </Link>

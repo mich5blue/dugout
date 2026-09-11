@@ -9,11 +9,15 @@ import type { GameView } from '@/lib/gameView';
 import { useState } from 'react';
 
 /**
- * Diamond view (spec section 49).
+ * Field view — the "field first" direction.
+ *
+ * The diamond is the interface here, not an illustration of one: the field is
+ * the primary surface, the inning scrubber belongs to it, and assignments are
+ * made directly on it.
  *
  * Positions are placed from the coordinates the formation provides, so a
  * four-outfielder or custom formation renders correctly without any
- * position-specific code here.
+ * position-specific code in this file.
  *
  * Editing works two ways on purpose. Tapping a card opens the swap picker,
  * which is the only thing that works on a phone — where a coach actually uses
@@ -26,9 +30,10 @@ type DragSource =
   | { kind: 'position'; positionId: string; playerId: string }
   | { kind: 'bench'; playerId: string };
 
-export function DiamondView({
+export function FieldView({
   view,
   inning,
+  onInningChange,
   onSelectPosition,
   onAssign,
   onBench,
@@ -36,6 +41,7 @@ export function DiamondView({
 }: {
   view: GameView;
   inning: number;
+  onInningChange: (inning: number) => void;
   onSelectPosition?: (position: PositionDefinition) => void;
   /** Put `playerId` at `positionId`, swapping or benching as needed. */
   onAssign?: (positionId: string, playerId: string) => void;
@@ -73,11 +79,50 @@ export function DiamondView({
     setHover(null);
   };
 
+  const dropStateFor = (position: PositionDefinition): DropState => {
+    if (!drag) return 'idle';
+    if (!isValidTarget(position)) return 'invalid';
+    return hover === position.id ? 'over' : 'valid';
+  };
+
   return (
     <div className="space-y-3">
+      {/*
+        Inning scrubber. Big condensed figures rather than a row of "Inn 3"
+        chips: this is the control a coach hits mid-game with cold hands, so
+        the targets are deliberately oversized.
+      */}
+      <div
+        role="radiogroup"
+        aria-label="Inning"
+        className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-bg/60 p-1"
+      >
+        {view.innings.map((value) => {
+          const active = value === inning;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onInningChange(value)}
+              className={cn(
+                'ring-focus flex min-w-14 flex-1 flex-col items-center rounded-lg px-3 py-1.5 transition-colors',
+                active
+                  ? 'bg-brand text-ink-inverse'
+                  : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
+              )}
+            >
+              <span className="eyebrow opacity-70">Inn</span>
+              <span className="scoreboard text-2xl">{value}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Taller than 4:3 on a phone: the infield positions are only ~14% apart
           vertically, which collides once the field gets narrow. */}
-      <div className="relative mx-auto aspect-square w-full max-w-2xl sm:aspect-4/3">
+      <div className="relative mx-auto aspect-square w-full max-w-3xl overflow-hidden rounded-xl border border-border sm:aspect-4/3">
         <FieldBackdrop />
 
         {positioned.map((position) => (
@@ -92,15 +137,7 @@ export function DiamondView({
               position={position}
               editable={editable}
               dragging={drag?.kind === 'position' && drag.positionId === position.id}
-              dropState={
-                !drag
-                  ? 'idle'
-                  : isValidTarget(position)
-                    ? hover === position.id
-                      ? 'over'
-                      : 'valid'
-                    : 'invalid'
-              }
+              dropState={dropStateFor(position)}
               onSelect={() => onSelectPosition?.(position)}
               onDragStart={(playerId) =>
                 setDrag({ kind: 'position', positionId: position.id, playerId })
@@ -126,15 +163,7 @@ export function DiamondView({
               position={position}
               editable={editable}
               dragging={drag?.kind === 'position' && drag.positionId === position.id}
-              dropState={
-                !drag
-                  ? 'idle'
-                  : isValidTarget(position)
-                    ? hover === position.id
-                      ? 'over'
-                      : 'valid'
-                    : 'invalid'
-              }
+              dropState={dropStateFor(position)}
               onSelect={() => onSelectPosition?.(position)}
               onDragStart={(playerId) =>
                 setDrag({ kind: 'position', positionId: position.id, playerId })
@@ -164,14 +193,16 @@ export function DiamondView({
         className={cn(
           'rounded-xl border px-3 py-2.5 transition-colors',
           drag?.kind === 'position' && onBench
-            ? 'border-brand border-dashed bg-brand-soft'
+            ? 'border-accent border-dashed bg-accent-soft'
             : 'border-border bg-bench-soft',
         )}
       >
-        <p className="text-[10px] font-semibold tracking-wide text-bench uppercase">
+        <p className="eyebrow text-bench">
           Bench
           {drag?.kind === 'position' && onBench ? (
-            <span className="ml-2 font-normal text-brand">drop here to sit</span>
+            <span className="ml-2 font-normal text-accent normal-case">
+              drop here to sit
+            </span>
           ) : null}
         </p>
 
@@ -192,7 +223,7 @@ export function DiamondView({
                 disabled={!editable}
                 className={cn(
                   'ring-focus rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm font-medium text-ink',
-                  editable && 'cursor-grab active:cursor-grabbing hover:border-brand',
+                  editable && 'cursor-grab active:cursor-grabbing hover:border-accent',
                   drag?.kind === 'bench' && drag.playerId === player.id && 'opacity-40',
                 )}
               >
@@ -218,7 +249,7 @@ export function DiamondView({
 }
 
 /**
- * The field itself: flat geometry, no gradients, no stitching.
+ * The field itself: flat, saturated geometry.
  *
  * Drawn in a 100x100 box with preserveAspectRatio="none" so a y value here is
  * the same percentage the position cards are placed at. The container is wider
@@ -242,8 +273,27 @@ function FieldBackdrop() {
         </clipPath>
       </defs>
 
+      {/* Foul ground, so the corners of the frame are not dead space. */}
+      <rect x="0" y="0" width="100" height="100" fill="var(--field-grass)" opacity="0.45" />
+
       {/* Grass, from home plate out to the fence. */}
       <path d={FAIR_TERRITORY} fill="var(--field-grass)" />
+
+      {/*
+        Mown stripes: alternating wedges fanning from home plate, the one piece
+        of texture the field gets and the cue that reads most immediately as a
+        real ballpark.
+
+        The fan is divided evenly across the 83° between the two foul lines and
+        every wedge overshoots the fence, letting the fair-territory clip cut
+        the outer edge. Hand-placed wedges read as stray gray triangles instead
+        of mowing, because uneven spacing has no physical explanation.
+      */}
+      <g clipPath="url(#dugout-fair-territory)" opacity="0.07">
+        <path d="M 50 84 L -29.7 -5.7 L -5.8 -22.3 Z" fill="var(--field-line)" />
+        <path d="M 50 84 L 21.3 -32.5 L 50 -36 Z" fill="var(--field-line)" />
+        <path d="M 50 84 L 78.7 -32.5 L 105.8 -22.3 Z" fill="var(--field-line)" />
+      </g>
 
       {/*
         Infield skin, built from the same diamond geometry as the base paths
@@ -264,14 +314,16 @@ function FieldBackdrop() {
         d="M 50 82 L 72 57 L 50 32 L 28 57 Z"
         fill="none"
         stroke="var(--field-line)"
-        strokeWidth="0.7"
+        strokeWidth="0.6"
+        opacity="0.8"
       />
 
       {/* Foul lines. */}
       <path
         d="M 50 84 L 2 30 M 50 84 L 98 30"
         stroke="var(--field-line)"
-        strokeWidth="0.7"
+        strokeWidth="0.6"
+        opacity="0.8"
         fill="none"
       />
 
@@ -351,22 +403,27 @@ function PositionCard({
       }}
       title={`${position.displayName}${player ? '' : ' — unfilled'}`}
       className={cn(
-        // Deliberately compact: the field has to stay readable behind the cards.
-        'ring-focus relative w-16 rounded-md border bg-surface/95 px-1 py-1 text-center shadow-sm backdrop-blur-[1px] transition-all sm:w-[4.25rem]',
+        /*
+          A solid card on a group-coloured top rail. On a saturated field a
+          tinted fill loses against the grass, so the group colour moves to a
+          hard edge and the card itself stays opaque for legibility.
+        */
+        'ring-focus relative w-[4.5rem] overflow-hidden rounded-lg border border-t-2 bg-surface/95 px-1 pt-1 pb-1.5 text-center shadow-sm backdrop-blur-[2px] transition-all sm:w-20',
         'border-border',
-        editable && 'cursor-grab active:cursor-grabbing hover:border-brand hover:shadow',
+        style.ring,
+        editable && 'cursor-grab active:cursor-grabbing hover:border-accent hover:shadow',
         dragging && 'opacity-40',
-        dropState === 'valid' && 'border-brand/60 ring-2 ring-brand/20',
-        dropState === 'over' && 'scale-110 border-brand ring-2 ring-brand',
+        dropState === 'valid' && 'border-accent/60 ring-2 ring-accent/25',
+        dropState === 'over' && 'scale-110 border-accent ring-2 ring-accent',
         dropState === 'invalid' && 'opacity-30',
       )}
     >
       <span className="flex items-center justify-center gap-0.5">
-        <span className={cn('text-[9px] leading-none font-bold uppercase', style.text)}>
+        <span className={cn('scoreboard text-[11px] leading-none', style.text)}>
           {position.code}
         </span>
         {assignment?.locked ? (
-          <span className="text-[8px] leading-none text-brand" aria-label="Locked">
+          <span className="text-[8px] leading-none text-accent" aria-label="Locked">
             ●
           </span>
         ) : null}
@@ -375,7 +432,7 @@ function PositionCard({
         {player ? playerShortName(player) : '—'}
       </span>
       {player?.jerseyNumber ? (
-        <span className="block text-[9px] leading-none text-ink-subtle">
+        <span className="tnum block text-[9px] leading-none text-ink-subtle">
           #{player.jerseyNumber}
         </span>
       ) : null}

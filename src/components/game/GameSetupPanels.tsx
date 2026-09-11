@@ -60,14 +60,27 @@ export function AvailabilityPanel({
         title="Who's playing?"
         description={`${availableCount} of ${game.gamePlayers.length} available. Tap to toggle anyone who isn't here.`}
       />
-      <div className="space-y-2 px-5 py-5">
+      {/*
+        A grid, not a stack. Eleven full-width rows left roughly 600px of dead
+        space per row on a laptop and pushed the rest of game setup below the
+        fold; three columns fits a typical roster in one screen. An expanded
+        row spans the full width so its inning selects still have room.
+      */}
+      <div className="grid gap-2 px-5 py-5 sm:grid-cols-2 xl:grid-cols-3">
         {game.gamePlayers.map((gp) => {
           const player = players.find((entry) => entry.id === gp.playerId);
           if (!player) return null;
           const partial = gp.arrivalInning !== undefined || gp.departureInning !== undefined;
+          const open = expanded === gp.playerId && gp.available;
 
           return (
-            <div key={gp.playerId} className="rounded-xl border border-border">
+            <div
+              key={gp.playerId}
+              className={cn(
+                'self-start rounded-xl border border-border',
+                open && 'sm:col-span-2 xl:col-span-3',
+              )}
+            >
               <div className="flex items-center gap-2 p-2">
                 <button
                   type="button"
@@ -116,12 +129,12 @@ export function AvailabilityPanel({
                       setExpanded((current) => (current === gp.playerId ? null : gp.playerId))
                     }
                   >
-                    {expanded === gp.playerId ? 'Done' : 'Partial'}
+                    {open ? 'Done' : 'Partial'}
                   </Button>
                 ) : null}
               </div>
 
-              {expanded === gp.playerId && gp.available ? (
+              {open ? (
                 <div className="grid gap-3 border-t border-border px-3 py-3 sm:grid-cols-2">
                   <div>
                     <Label htmlFor={`arrival-${gp.playerId}`}>Arrives</Label>

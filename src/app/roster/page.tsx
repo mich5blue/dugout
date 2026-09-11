@@ -128,10 +128,10 @@ export default function RosterPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">Roster</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            {players.filter((p) => p.active).length} active ·{' '}
-            {players.length} total
+          <h1 className="display text-4xl text-ink sm:text-5xl">Roster</h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            <span className="tnum">{players.filter((p) => p.active).length}</span> active ·{' '}
+            <span className="tnum">{players.length}</span> total
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -164,18 +164,30 @@ export default function RosterPage() {
             title="Players"
             description="Tap a player to set positions, ability and pitching or catching."
           />
-          <ul className="divide-y divide-border">
-            {players.map((player) => {
+          {/*
+            Two columns from `sm` up. A roster is short but the rows are, so a
+            single full-width column spent most of a laptop screen on empty
+            space and pushed the position setup below the fold.
+          */}
+          <ul className="grid sm:grid-cols-2">
+            {players.map((player, index) => {
               const restricted = formation
                 ? formation.positions.filter((position) => !isEligibleAt(player, position.id))
                 : [];
               return (
-                <li key={player.id}>
+                <li
+                  key={player.id}
+                  className={cn(
+                    'border-b border-border',
+                    // The right column keeps a divider between the two halves.
+                    index % 2 === 0 && 'sm:border-r',
+                  )}
+                >
                   <Link
                     href={`/roster/${player.id}`}
-                    className="ring-focus flex items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-muted"
+                    className="ring-focus group flex h-full items-center gap-3 px-5 py-3 transition-colors hover:bg-surface-muted"
                   >
-                    <span className="tnum w-9 shrink-0 text-sm font-semibold text-ink-subtle">
+                    <span className="tnum scoreboard w-9 shrink-0 text-lg text-ink-subtle">
                       {player.jerseyNumber ? `#${player.jerseyNumber}` : '—'}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -185,7 +197,7 @@ export default function RosterPage() {
                           <span className="ml-2 text-xs text-ink-subtle">Inactive</span>
                         ) : null}
                       </span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      <span className="mt-1 flex flex-wrap items-center gap-1.5">
                         <Badge tone={player.overallTier === 'CORE' ? 'brand' : 'neutral'}>
                           {TIER_LABEL[player.overallTier]}
                         </Badge>
@@ -200,7 +212,9 @@ export default function RosterPage() {
                         )}
                       </span>
                     </span>
-                    <span className="text-sm text-ink-subtle">Edit</span>
+                    <span className="text-sm text-ink-subtle transition-colors group-hover:text-accent">
+                      Edit
+                    </span>
                   </Link>
                 </li>
               );

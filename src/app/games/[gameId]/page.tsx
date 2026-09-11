@@ -3,8 +3,8 @@
 import { useDugout } from '@/app/providers';
 import { AssignmentPicker } from '@/components/game/AssignmentPicker';
 import { BattingOrderPanel } from '@/components/game/BattingOrderPanel';
-import { DiamondView } from '@/components/game/DiamondView';
-import { GameDayView } from '@/components/game/GameDayView';
+import { FieldView } from '@/components/game/FieldView';
+import { LiveView } from '@/components/game/LiveView';
 import { LineupGrid, PlayerGrid } from '@/components/game/LineupGrid';
 import {
   AvailabilityPanel,
@@ -41,7 +41,12 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-type ViewMode = 'inning' | 'player' | 'diamond' | 'gameday';
+/**
+ * The four ways to read a lineup. `field` and `live` are the two alternative
+ * directions the redesign kept as first-class options: `field` puts the
+ * diamond in charge, `live` is the phone-in-the-dugout surface.
+ */
+type ViewMode = 'inning' | 'player' | 'field' | 'live';
 
 export default function GamePage() {
   const params = useParams<{ gameId: string }>();
@@ -51,7 +56,7 @@ export default function GamePage() {
   const [generating, setGenerating] = useState(false);
   const [stale, setStale] = useState(false);
   const [mode, setMode] = useState<ViewMode>('inning');
-  const [diamondInning, setDiamondInning] = useState(1);
+  const [fieldInning, setFieldInning] = useState(1);
   const [setupOpen, setSetupOpen] = useState(true);
   const [frozenInnings, setFrozenInnings] = useState(0);
   const [picker, setPicker] = useState<{ inning: number; position: PositionDefinition } | null>(
@@ -151,34 +156,66 @@ export default function GamePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <Link href="/" className="ring-focus text-sm text-ink-muted hover:text-ink">
             ← {team.name}
           </Link>
-          <h1 className="display mt-1 text-3xl font-semibold text-ink">
-            vs {game.opponent || 'TBD'}
+          {/*
+            The matchup as a scoreboard title: a quiet "vs" against the
+            opponent's name at display size, so the page announces which game
+            it is from across a room.
+          */}
+          {/*
+            aria-label because the visual gap between the two spans is flex
+            spacing, not whitespace: without it the accessible name computes as
+            "vsCardinals" and is announced that way.
+          */}
+          <h1
+            aria-label={`vs ${game.opponent || 'TBD'}`}
+            className="mt-1.5 flex flex-wrap items-baseline gap-2"
+          >
+            <span className="scoreboard text-2xl text-ink-subtle">vs</span>
+            <span className="display text-4xl text-ink sm:text-5xl">
+              {game.opponent || 'TBD'}
+            </span>
           </h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            {formatGameDate(game.date)} · {game.plannedInnings} innings ·{' '}
-            {game.formationSnapshot.positions.length} defenders
-            {game.status === 'COMPLETED'
-              ? ` · ${game.actualInnings} played`
-              : ''}
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
+            <span>{formatGameDate(game.date)}</span>
+            <span aria-hidden className="text-ink-subtle">
+              ·
+            </span>
+            <span className="tnum">{game.plannedInnings} innings</span>
+            <span aria-hidden className="text-ink-subtle">
+              ·
+            </span>
+            <span className="tnum">
+              {game.formationSnapshot.positions.length} defenders
+            </span>
+            {game.status === 'COMPLETED' ? (
+              <span className="eyebrow rounded bg-positive-soft px-1.5 py-0.5 text-positive">
+                {game.actualInnings} played
+              </span>
+            ) : null}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/*
+          One filled action. The rest are links to other surfaces, so they read
+          as secondary — the old header gave four chips equal weight and hid
+          which one the coach was meant to press.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
           {hasLineup ? (
             <>
               <Link href={`/games/${game.id}/compare`}>
-                <Button>Compare approaches</Button>
+                <Button size="sm">Compare</Button>
               </Link>
               <Link href={`/games/${game.id}/print`}>
-                <Button>Print</Button>
+                <Button size="sm">Print</Button>
               </Link>
               <Link href={`/games/${game.id}/record`}>
-                <Button>
+                <Button size="sm">
                   {game.status === 'COMPLETED' ? 'Edit results' : 'Record results'}
                 </Button>
               </Link>
@@ -289,8 +326,8 @@ export default function GamePage() {
                   options={[
                     { value: 'inning', label: 'By inning' },
                     { value: 'player', label: 'By player' },
-                    { value: 'diamond', label: 'Diamond' },
-                    { value: 'gameday', label: 'Game day' },
+                    { value: 'field', label: 'Field' },
+                    { value: 'live', label: 'Live' },
                   ]}
                 />
               }
@@ -306,37 +343,27 @@ export default function GamePage() {
                 />
               ) : null}
               {mode === 'player' ? <PlayerGrid view={view} /> : null}
-              {mode === 'diamond' ? (
-                <div className="space-y-3 px-2 py-1">
-                  <SegmentedControl
-                    size="sm"
-                    value={String(diamondInning)}
-                    onChange={(value) => setDiamondInning(Number(value))}
-                    options={view.innings.map((inning) => ({
-                      value: String(inning),
-                      label: `Inn ${inning}`,
-                    }))}
-                  />
-                  <DiamondView
+              {mode === 'field' ? (
+                <div className="px-2 py-1">
+                  <FieldView
                     view={view}
-                    inning={diamondInning}
+                    inning={fieldInning}
+                    onInningChange={setFieldInning}
                     onSelectPosition={(position) =>
-                      setPicker({ inning: diamondInning, position })
+                      setPicker({ inning: fieldInning, position })
                     }
                     onAssign={async (positionId, playerId) => {
-                      await update(
-                        setAssignment(game, diamondInning, positionId, playerId),
-                      );
+                      await update(setAssignment(game, fieldInning, positionId, playerId));
                     }}
                     onBench={async (positionId) => {
-                      await update(setAssignment(game, diamondInning, positionId, null));
+                      await update(setAssignment(game, fieldInning, positionId, null));
                     }}
                   />
                 </div>
               ) : null}
-              {mode === 'gameday' ? (
+              {mode === 'live' ? (
                 <div className="px-2 py-1">
-                  <GameDayView view={view} />
+                  <LiveView view={view} />
                 </div>
               ) : null}
             </div>

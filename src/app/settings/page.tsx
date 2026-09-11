@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">Team settings</h1>
+      <h1 className="display text-4xl text-ink sm:text-5xl">Team settings</h1>
 
       <Card>
         <CardHeader title="Team" />

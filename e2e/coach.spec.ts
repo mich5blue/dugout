@@ -26,7 +26,7 @@ const ROSTER = [
 test('the guided setup walks a new coach through a working team', async ({ page }) => {
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: /Smart lineups for youth baseball/i }),
+    page.getByRole('heading', { name: /Smart lineups, every inning/i }),
   ).toBeVisible();
 
   await page.getByRole('link', { name: 'Create your team' }).click();
@@ -184,7 +184,7 @@ test('the demo team generates, edits and prints a lineup', async ({ page }) => {
   await expect(page.getByRole('columnheader', { name: 'Innings' })).toBeVisible();
 
   // Diamond view renders the four outfielders.
-  await page.getByRole('radio', { name: 'Diamond' }).click();
+  await page.getByRole('radio', { name: 'Field' }).click();
   await expect(page.getByText('Bench', { exact: true }).first()).toBeVisible();
 
   // Print view.
@@ -273,7 +273,7 @@ test('recording a short game keeps the unplayed inning out of the season', async
   await expect(page.getByRole('heading', { name: 'Position breakdown' })).toBeVisible();
 });
 
-test('game-day view walks innings and lists the changes', async ({ page }) => {
+test('live view walks innings and lists the changes', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Explore the demo team' }).click();
   await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible({
@@ -286,15 +286,19 @@ test('game-day view walks innings and lists the changes', async ({ page }) => {
     timeout: 30_000,
   });
 
-  await page.getByRole('radio', { name: 'Game day' }).click();
+  await page.getByRole('radio', { name: 'Live' }).click();
   await expect(page.getByText('Inning 1', { exact: true })).toBeVisible();
-  await expect(page.getByText('Next inning changes')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Next inning →' }).click();
+  await page.getByRole('button', { name: /Start inning 2/ }).click();
   await expect(page.getByText('Inning 2', { exact: true })).toBeVisible();
+
+  // No separate "what changed" panel by design: each player who moved carries
+  // their previous spot inline, so the list reads as instructions in one pass.
+  // Inning 1 has no previous inning, so this only exists from inning 2 on.
+  await expect(page.getByText('was', { exact: false }).first()).toBeVisible();
 });
 
-test('the diamond shows the field and supports tap and drag editing', async ({ page }) => {
+test('the field view shows the diamond and supports tap and drag editing', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Explore the demo team' }).click();
   await expect(page.getByRole('heading', { name: 'Balsam Waters' })).toBeVisible({
@@ -307,7 +311,7 @@ test('the diamond shows the field and supports tap and drag editing', async ({ p
     timeout: 30_000,
   });
 
-  await page.getByRole('radio', { name: 'Diamond' }).click();
+  await page.getByRole('radio', { name: 'Field' }).click();
 
   // All ten positions of the four-outfielder formation render on the field.
   for (const name of [
@@ -367,7 +371,7 @@ test('compare approaches shows three lineups and applies the chosen one', async 
     timeout: 30_000,
   });
 
-  await page.getByRole('link', { name: 'Compare approaches' }).click();
+  await page.getByRole('link', { name: 'Compare', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Compare approaches' })).toBeVisible();
 
   // All three approaches render with their metrics.
@@ -396,7 +400,7 @@ test('compare approaches shows three lineups and applies the chosen one', async 
 
   // Re-opening the comparison shows Competitive as the game's current approach,
   // which confirms the settings were saved alongside the lineup.
-  await page.getByRole('link', { name: 'Compare approaches' }).click();
+  await page.getByRole('link', { name: 'Compare', exact: true }).click();
   await expect(
     page.getByRole('region', { name: 'Competitive' }).getByText('Current'),
   ).toBeVisible({ timeout: 30_000 });

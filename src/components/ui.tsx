@@ -11,9 +11,9 @@ type ButtonSize = 'sm' | 'md' | 'lg';
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand text-ink-inverse hover:bg-brand-hover disabled:hover:bg-brand border border-transparent',
+    'bg-brand text-ink-inverse font-semibold hover:bg-brand-hover disabled:hover:bg-brand border border-transparent',
   secondary:
-    'bg-surface text-ink border border-border-strong hover:bg-surface-muted',
+    'bg-surface-raised text-ink border border-border-strong hover:border-accent/50 hover:bg-surface-muted',
   ghost: 'bg-transparent text-ink-muted hover:text-ink hover:bg-surface-muted border border-transparent',
   danger: 'bg-surface text-critical border border-critical/40 hover:bg-critical-soft',
 };
@@ -36,8 +36,9 @@ export function Button({
   return (
     <button
       className={cn(
-        'ring-focus inline-flex items-center justify-center gap-2 font-medium transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'ring-focus inline-flex items-center justify-center gap-2 font-medium',
+        'transition-[background-color,border-color,color,transform] active:scale-[0.98]',
+        'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
         BUTTON_VARIANT[variant],
         BUTTON_SIZE[size],
         className,
@@ -80,13 +81,15 @@ export function CardHeader({
     <div
       className={cn(
         // A tinted band rather than a bare dividing line: it gives each card a
-        // readable top edge without adding another border.
-        'flex flex-wrap items-start justify-between gap-3 rounded-t-card border-b border-border bg-header-tint px-5 py-4',
+        // readable top edge without adding another border. The accent rail on
+        // the left is the broadcast cue that ties a panel to the palette.
+        'relative flex flex-wrap items-start justify-between gap-3 overflow-hidden rounded-t-card border-b border-border bg-header-tint px-5 py-3.5',
+        'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-accent before:content-[""]',
         className,
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-sm font-semibold tracking-wide text-ink uppercase">{title}</h2>
+        <h2 className="eyebrow text-ink">{title}</h2>
         {description ? (
           <p className="mt-1 text-sm text-ink-muted">{description}</p>
         ) : null}
@@ -101,10 +104,7 @@ export function Label({
   ...props
 }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
-    <label
-      className={cn('block text-xs font-semibold tracking-wide text-ink-muted uppercase', className)}
-      {...props}
-    />
+    <label className={cn('eyebrow block text-ink-muted', className)} {...props} />
   );
 }
 
@@ -243,7 +243,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       className={cn(
-        'inline-flex rounded-lg border border-border bg-surface-muted p-0.5',
+        'inline-flex rounded-lg border border-border bg-bg/60 p-0.5',
         className,
       )}
     >
@@ -255,11 +255,11 @@ export function SegmentedControl<T extends string>({
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            'ring-focus rounded-md font-medium transition-colors',
+            'ring-focus rounded-md font-semibold tracking-wide transition-colors',
             size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
             value === option.value
-              ? 'bg-brand text-ink-inverse shadow-sm'
-              : 'text-ink-muted hover:bg-surface hover:text-ink',
+              ? 'bg-brand text-ink-inverse'
+              : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
           )}
         >
           {option.label}
@@ -269,11 +269,51 @@ export function SegmentedControl<T extends string>({
   );
 }
 
-export const GROUP_STYLE: Record<PositionGroup, { chip: string; text: string; dot: string }> = {
-  BATTERY: { chip: 'bg-battery-soft', text: 'text-battery', dot: 'bg-battery' },
-  INFIELD: { chip: 'bg-infield-soft', text: 'text-infield', dot: 'bg-infield' },
-  OUTFIELD: { chip: 'bg-outfield-soft', text: 'text-outfield', dot: 'bg-outfield' },
-  BENCH: { chip: 'bg-bench-soft', text: 'text-bench', dot: 'bg-bench' },
+/**
+ * Position-group visual identity.
+ *
+ * - `chip`  the tinted fill
+ * - `text`  the readable group colour on that fill, for codes and labels
+ * - `dot`   the full-strength swatch, for row rails and legends
+ * - `rail`  a full-strength border, for the left edge of a grid cell
+ * - `ring`  a softer border, for cards on the field where a tint alone loses
+ *           against the grass
+ *
+ * Every `text`/`chip` pairing here is contrast-checked in both modes by
+ * `npm run validate:palette`.
+ */
+export const GROUP_STYLE: Record<
+  PositionGroup,
+  { chip: string; text: string; dot: string; rail: string; ring: string }
+> = {
+  BATTERY: {
+    chip: 'bg-battery-soft',
+    text: 'text-battery',
+    dot: 'bg-battery',
+    rail: 'border-battery',
+    ring: 'border-battery/60',
+  },
+  INFIELD: {
+    chip: 'bg-infield-soft',
+    text: 'text-infield',
+    dot: 'bg-infield',
+    rail: 'border-infield',
+    ring: 'border-infield/60',
+  },
+  OUTFIELD: {
+    chip: 'bg-outfield-soft',
+    text: 'text-outfield',
+    dot: 'bg-outfield',
+    rail: 'border-outfield',
+    ring: 'border-outfield/60',
+  },
+  BENCH: {
+    chip: 'bg-bench-soft',
+    text: 'text-bench',
+    dot: 'bg-bench',
+    rail: 'border-bench',
+    ring: 'border-bench/50',
+  },
 };
 
 export function EmptyState({
@@ -411,7 +451,9 @@ export function Meter({
 }) {
   const hue = {
     positive: 'var(--positive)',
-    brand: 'var(--brand)',
+    // --accent, not --brand: brand is the near-black action fill in light
+    // mode, which would draw a black bar where the identity wants lime.
+    brand: 'var(--accent)',
     caution: 'var(--caution)',
     critical: 'var(--critical)',
   }[tone];
@@ -435,9 +477,10 @@ export function Meter({
 /**
  * Stat tile: label, value, optional hint.
  *
- * Large standalone values use the font's proportional figures — tabular-nums
- * gives every digit the width of a zero, which reads loose at display sizes.
- * Tabular figures are for columns that must align vertically.
+ * Figures render in the condensed scoreboard face. Deliberately not
+ * tabular-nums: tabular gives every digit the width of a zero, which reads
+ * loose at display sizes. Tabular figures are for columns that align
+ * vertically, which is what the grids use.
  */
 export function StatTile({
   label,
@@ -454,16 +497,16 @@ export function StatTile({
 }) {
   return (
     <div className={cn('min-w-0', className)}>
-      <p className="text-xs font-semibold tracking-wide text-ink-muted uppercase">{label}</p>
+      <p className="eyebrow text-ink-muted">{label}</p>
       <p
         className={cn(
-          'mt-1 font-semibold text-ink',
-          hero ? 'display text-6xl leading-none' : 'text-2xl leading-tight tracking-tight',
+          'display mt-1.5 text-ink',
+          hero ? 'text-6xl sm:text-7xl' : 'text-3xl',
         )}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-ink-subtle">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-xs text-ink-subtle">{hint}</p> : null}
     </div>
   );
 }

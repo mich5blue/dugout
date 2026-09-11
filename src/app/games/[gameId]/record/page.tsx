@@ -70,7 +70,7 @@ export default function RecordResultsPage() {
         <Link href={`/games/${game.id}`} className="ring-focus text-sm text-ink-muted hover:text-ink">
           ← Back to lineup
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="display mt-1.5 text-4xl text-ink sm:text-5xl">
           {recorded ? 'Edit results' : 'Record results'}
         </h1>
         <p className="mt-1 text-sm text-ink-muted">

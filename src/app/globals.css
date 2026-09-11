@@ -1,17 +1,24 @@
 @import 'tailwindcss';
 
 /*
-  Dugout design tokens.
+  Dugout design tokens — "Broadcast".
 
-  Calm, premium, athletic. Restrained sport cues only: position groups get a
-  quiet colour each, and nothing else is decorative. No gradients, no heavy
-  shadows, no stitching.
+  Dark-first and high-contrast, built to read like a sports broadcast graphic:
+  a near-black base, one electric accent, and position groups that are loud
+  enough to identify at a glance from arm's length in a dugout.
+
+  Light mode is not an afterthought — a coach standing in direct sun needs it —
+  but it is a daylight variant of the same identity, not a different design.
+
+  The one place this restraint still applies absolutely is print. See the
+  @media print block at the bottom: paper is always black on white.
 */
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
 
@@ -24,6 +31,7 @@
   --color-brand-hover: var(--brand-hover);
   --color-brand-soft: var(--brand-soft);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
 
   --color-battery: var(--battery);
   --color-battery-soft: var(--battery-soft);
@@ -48,127 +56,143 @@
   --color-critical-soft: var(--critical-soft);
 
   --font-sans:
-    var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
+  /* Generates the `font-display` utility used by scoreboard type. */
+  --font-display:
+    'Barlow Condensed', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  --radius-card: 1rem;
+  --radius-card: 0.875rem;
 
-  /* Two-layer elevation: a hairline lift plus a soft wide ambient shadow.
-     Enough to separate a card from the page without the drop-shadow look
-     the design direction rules out. */
   --shadow-card: var(--card-shadow);
 }
 
+/*
+  Dark is the default. Broadcast was designed on near-black, and the whole
+  categorical palette is tuned against it; light mode below is the override.
+*/
 :root {
-  --bg: #f3f6f4;
-  --surface: #ffffff;
-  --surface-muted: #eaefec;
-  --border: #dfe6e2;
-  --border-strong: #c4cfc9;
+  --bg: #07090b;
+  --surface: #10151a;
+  /* One step above the surface, for nested panels and grid headers. */
+  --surface-raised: #161d23;
+  --surface-muted: #1a2228;
+  --border: #222c34;
+  --border-strong: #3a4750;
 
-  --ink: #101615;
-  --ink-muted: #515e59;
-  --ink-subtle: #7d8b85;
-  --ink-inverse: #ffffff;
-
-  /* A deeper, more saturated evergreen: the old one read as slate-green and
-     left the whole product looking washed out. */
-  --brand: #0c6b4f;
-  --brand-hover: #085440;
-  --brand-soft: #dcefe7;
-  --accent: #b4562e;
-
-  --card-shadow:
-    0 1px 2px 0 rgb(16 22 21 / 0.04),
-    0 12px 28px -18px rgb(16 22 21 / 0.18);
-  /* Section headers sit on a tint rather than being divided by a bare line. */
-  --header-tint: #f7faf8;
+  --ink: #f3f7f9;
+  --ink-muted: #9aa9b3;
+  --ink-subtle: #69787f;
+  /* Text that sits on a --brand fill. */
+  --ink-inverse: #0a1000;
 
   /*
-    Position-group identity colours. These are a categorical palette — they
-    carry which group a position belongs to across the grids, the diamond and
-    the season dashboard — so they are validated, not chosen by eye:
-    scripts/validate_palette.js passes all six checks for
-    #b45309,#0d9488,#4338ca (worst-case CVD dE 13.6 against a target of 8,
-    normal-vision dE 23.6).
-
-    The previous green/blue pair was dE 8.0 in *normal* vision, which meant
-    infield and outfield were near-indistinguishable in the inning grid — a
-    distinction this product is built around.
-
-    Bench is deliberately not part of the categorical set: it is the absence of
-    a defensive assignment, so it stays a neutral and is always text-labelled.
+    Electric lime is the single action colour: primary buttons, focus rings,
+    locks, the live inning. It is deliberately the only thing in the product
+    this bright, so "what can I press" never needs a second look.
   */
-  --battery: #b45309;
-  --battery-soft: #fbf1e4;
-  --infield: #0d9488;
-  --infield-soft: #e4f3f1;
-  --outfield: #4338ca;
-  --outfield-soft: #ebeafb;
-  --bench: #6b7280;
-  --bench-soft: #f1f2f3;
+  --brand: #d4ff3d;
+  --brand-hover: #e3ff74;
+  --brand-soft: #26300a;
+  --accent: #d4ff3d;
+  --accent-soft: #26300a;
 
-  /* Field rendering: muted enough to sit behind the player cards, not a
-     cartoon ballpark. */
-  --field-grass: #dde8d7;
-  --field-infield: #d3e1cc;
-  --field-dirt: #ecdcc6;
-  --field-line: #ffffff;
+  /* Shadows do not read on near-black. Depth comes from surface steps and
+     hairlines instead, so the ambient layer is dropped and only a contact
+     shadow remains to keep modals off the page. */
+  --card-shadow: 0 1px 0 0 rgb(255 255 255 / 0.03);
+  --header-tint: #161d23;
 
-  --positive: #1a6b4d;
-  --positive-soft: #e6f2ec;
-  --caution: #8a6100;
-  --caution-soft: #fbf2dc;
-  --critical: #9b2c2c;
-  --critical-soft: #f9e9e9;
+  /*
+    Position-group identity colours — a categorical palette, so they are
+    validated rather than chosen by eye: `npm run validate:palette` reads this
+    file and checks every pair for perceptual separation (CIEDE2000) under
+    normal vision and under protanopia, deuteranopia and tritanopia, plus text
+    contrast against both the card surface and the group's own tinted fill.
+
+    Coral / aqua / periwinkle replaces the previous amber / teal / indigo set
+    because amber collided with the new lime action colour — a coach should
+    never have to work out whether a yellow thing is a battery position or a
+    button.
+
+    Bench is deliberately outside the categorical set: it is the absence of a
+    defensive assignment, so it stays neutral and is always text-labelled.
+  */
+  --battery: #ff8a6b;
+  --battery-soft: #2d1610;
+  --infield: #43dfd0;
+  --infield-soft: #062825;
+  --outfield: #a3a8ff;
+  --outfield-soft: #191b40;
+  --bench: #7d8b93;
+  --bench-soft: #1a2126;
+
+  /* The field, saturated enough to be the primary surface in the Field view
+     while still sitting behind the player cards. */
+  --field-grass: #14301f;
+  --field-infield: #1a3d28;
+  --field-dirt: #5c3a24;
+  --field-line: #e8f2ea;
+
+  --positive: #52d493;
+  --positive-soft: #0c2b1e;
+  --caution: #f0b849;
+  --caution-soft: #33260a;
+  --critical: #ff6b6b;
+  --critical-soft: #3a1517;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    --bg: #0a0f0e;
-    --surface: #131a18;
-    --surface-muted: #1b2321;
-    --border: #28322f;
-    --border-strong: #3c4a45;
+    --bg: #eef1f3;
+    --surface: #ffffff;
+    --surface-raised: #f7f9fa;
+    --surface-muted: #e7ecef;
+    --border: #d9e0e4;
+    --border-strong: #b3bfc6;
 
-    --ink: #eef2f0;
-    --ink-muted: #9fada8;
-    --ink-subtle: #74837d;
-    --ink-inverse: #08100d;
+    --ink: #0a0e11;
+    --ink-muted: #4d5a62;
+    --ink-subtle: #75838b;
+    /* Light mode inverts the action pill: near-black fill, lime label. Same
+       two colours as dark mode, swapped — one identity, two modes. */
+    --ink-inverse: #d4ff3d;
 
-    --brand: #46c79d;
-    --brand-hover: #63d4ae;
-    /* Light enough that a selected row is obvious against the surface. */
-    --brand-soft: #16302a;
-    --accent: #e39a6b;
+    --brand: #10171b;
+    --brand-hover: #263038;
+    --brand-soft: #e3ecc9;
+    /* Lime as text or a hairline needs to be darkened to stay legible on
+       white; the pill keeps the bright value via --ink-inverse. */
+    --accent: #5f7800;
+    --accent-soft: #eaf5c4;
 
     --card-shadow:
-      0 1px 2px 0 rgb(0 0 0 / 0.4),
-      0 12px 28px -18px rgb(0 0 0 / 0.7);
-    --header-tint: #172220;
+      0 1px 2px 0 rgb(10 14 17 / 0.05),
+      0 12px 28px -18px rgb(10 14 17 / 0.2);
+    --header-tint: #f4f7f8;
 
-    /* Dark mode is stepped and validated separately against the dark surface,
-       never an automatic flip: #bf8438,#12a594,#7078f0 passes all six checks. */
-    --battery: #bf8438;
-    --battery-soft: #261d0f;
-    --infield: #12a594;
-    --infield-soft: #0f2320;
-    --outfield: #7078f0;
-    --outfield-soft: #1a1930;
-    --bench: #8b9390;
-    --bench-soft: #1f2422;
+    /* Stepped and validated separately against the light surface, never an
+       automatic flip of the dark values. */
+    --battery: #c2410c;
+    --battery-soft: #fef1eb;
+    --infield: #0f766e;
+    --infield-soft: #ddf2f0;
+    --outfield: #4f46e5;
+    --outfield-soft: #e8e7fd;
+    --bench: #64748b;
+    --bench-soft: #eef1f3;
 
-    --field-grass: #1a271f;
-    --field-infield: #1f2e25;
-    --field-dirt: #2b2419;
-    --field-line: #46504a;
+    --field-grass: #cfe0c6;
+    --field-infield: #c2d8ba;
+    --field-dirt: #e2c9a8;
+    --field-line: #ffffff;
 
-    --positive: #5cbb92;
-    --positive-soft: #16261f;
-    --caution: #d9ab4f;
-    --caution-soft: #28220f;
-    --critical: #e08585;
-    --critical-soft: #2a1a1a;
+    --positive: #15803d;
+    --positive-soft: #e3f3e8;
+    --caution: #92600a;
+    --caution-soft: #fbf0d9;
+    --critical: #b42323;
+    --critical-soft: #fae8e8;
   }
 }
 
@@ -178,17 +202,35 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Keeps the browser's own chrome (scrollbars, form controls, overscroll)
+     matched to whichever mode is active. */
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  html {
+    color-scheme: light;
+  }
 }
 
 body {
   background-color: var(--bg);
-  /* ~3% brand tint fading out over the first screen. Reads as depth; nowhere
-     near the heavy gradients the design direction rules out. */
-  background-image: radial-gradient(
-    120% 60% at 50% 0%,
-    color-mix(in srgb, var(--brand) 7%, transparent) 0%,
-    transparent 60%
-  );
+  /*
+    Two stacked washes: a cool lift from the top and a faint lime bloom behind
+    the header. Flat colour alone looked dead on near-black, and this reads as
+    a lit studio floor rather than a gradient for its own sake.
+  */
+  background-image:
+    radial-gradient(
+      100% 55% at 50% -5%,
+      color-mix(in srgb, var(--brand) 7%, transparent) 0%,
+      transparent 65%
+    ),
+    radial-gradient(
+      140% 80% at 50% 0%,
+      color-mix(in srgb, var(--infield) 6%, transparent) 0%,
+      transparent 55%
+    );
   background-repeat: no-repeat;
   background-attachment: fixed;
   color: var(--ink);
@@ -199,13 +241,36 @@ body {
 
 h1,
 h2 {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
-/* Hero figures want tighter tracking still. */
+/*
+  Scoreboard type. Condensed, tightly tracked and slightly wide-tracked in
+  caps — the register broadcast lower-thirds use. Applied to matchups, inning
+  numbers and hero figures, never to body copy.
+*/
+.scoreboard {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+/* Hero figures: the same condensed face, mixed case, tracked tighter. */
 .display {
-  letter-spacing: -0.035em;
-  font-feature-settings: 'ss01', 'cv11';
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 0.88;
+}
+
+/* An eyebrow label: small, wide-tracked caps above a figure or a section. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 /* A short accent rule used to anchor a hero figure. */
@@ -223,12 +288,32 @@ h2 {
   .rise {
     animation: rise 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
+
+  /*
+    Generating a lineup is the one moment in this product that should feel
+    like something happened. Cells fade up in a staggered sweep; the delay is
+    set inline per cell so a six-inning grid resolves in about 300ms.
+  */
+  .sweep-in {
+    animation: sweep-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
 }
 
 @keyframes rise {
   from {
     opacity: 0;
     transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sweep-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -243,13 +328,40 @@ h2 {
 
 /* Focus ring used by every interactive element. */
 .ring-focus:focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 /*
+  Paper. Used by the print route on screen as well as on paper, so the preview
+  is literally what comes out of the printer — the thing most coaches actually
+  carry to a game. It opts out of the dark theme entirely rather than
+  inheriting it.
+*/
+.paper {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #ffffff;
+  --border: #000000;
+  --border-strong: #000000;
+  --ink: #000000;
+  --ink-muted: #1a1a1a;
+  --ink-subtle: #444444;
+  --ink-inverse: #ffffff;
+  --brand: #000000;
+  --brand-soft: #ffffff;
+  --accent: #000000;
+  color-scheme: light;
+  background: #ffffff;
+  color: #000000;
+}
+
+/*
   Print: the dugout view. Large type, no chrome, no ink-hungry backgrounds,
-  and hard black on white so a cheap office printer produces something legible.
+  and hard black on white so a cheap office printer produces something
+  legible. Every colour token is flattened here, so nothing in the Broadcast
+  palette can leak onto paper.
 */
 @media print {
   @page {
@@ -259,22 +371,37 @@ h2 {
   :root {
     --bg: #ffffff;
     --surface: #ffffff;
+    --surface-raised: #ffffff;
     --surface-muted: #ffffff;
     --border: #000000;
     --border-strong: #000000;
     --ink: #000000;
     --ink-muted: #000000;
     --ink-subtle: #333333;
+    --ink-inverse: #ffffff;
     --brand: #000000;
     --brand-soft: #ffffff;
+    --accent: #000000;
+    --accent-soft: #ffffff;
+    --battery: #000000;
     --battery-soft: #ffffff;
+    --infield: #000000;
     --infield-soft: #ffffff;
+    --outfield: #000000;
     --outfield-soft: #ffffff;
+    --bench: #000000;
     --bench-soft: #ffffff;
     --field-grass: #ffffff;
     --field-infield: #ffffff;
     --field-dirt: #ffffff;
     --field-line: #000000;
+    --positive: #000000;
+    --positive-soft: #ffffff;
+    --caution: #000000;
+    --caution-soft: #ffffff;
+    --critical: #000000;
+    --critical-soft: #ffffff;
+    color-scheme: light;
   }
 
   body {

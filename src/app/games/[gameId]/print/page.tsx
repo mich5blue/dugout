@@ -44,7 +44,14 @@ export default function PrintPage() {
   const textSize = compact ? 'text-[11px]' : 'text-sm';
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 print:px-0 print:py-0">
+    /*
+      The controls sit on the app's own dark chrome; the sheet below is a real
+      white page. The `paper` class flattens every colour token inside it, so
+      this preview is literally what the printer produces — the Broadcast
+      palette cannot leak onto paper, and a coach checking the printout before
+      a game is looking at the printout.
+    */
+    <div className="mx-auto max-w-5xl px-4 py-6 print:max-w-none print:px-0 print:py-0">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2 print-hide">
         <Link href={`/games/${game.id}`}>
           <Button size="sm">← Back to lineup</Button>
@@ -65,6 +72,7 @@ export default function PrintPage() {
         </div>
       </div>
 
+      <div className="paper rounded-lg px-6 py-6 shadow-xl print:rounded-none print:px-0 print:py-0 print:shadow-none">
       <header className="mb-4 border-b-2 border-black pb-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -197,6 +205,7 @@ export default function PrintPage() {
             </table>
           </section>
         ) : null}
+      </div>
       </div>
     </div>
   );

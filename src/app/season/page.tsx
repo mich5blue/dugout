@@ -57,7 +57,7 @@ export default function SeasonPage() {
   if (completed.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Season</h1>
+        <h1 className="display text-4xl text-ink sm:text-5xl">Season</h1>
         <Card>
           <EmptyState
             title="No completed games yet"
@@ -94,10 +94,12 @@ export default function SeasonPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">Season</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            {completed.length} {completed.length === 1 ? 'game' : 'games'} ·{' '}
-            {fairness.averageDefensiveInnings.toFixed(1)} average defensive innings
+          <h1 className="display text-4xl text-ink sm:text-5xl">Season</h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            <span className="tnum">{completed.length}</span>{' '}
+            {completed.length === 1 ? 'game' : 'games'} ·{' '}
+            <span className="tnum">{fairness.averageDefensiveInnings.toFixed(1)}</span>{' '}
+            average defensive innings
           </p>
         </div>
         <Badge tone={fairness.balanceScore >= 0.8 ? 'positive' : 'caution'}>
@@ -169,13 +171,13 @@ export default function SeasonPage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase">
+                <th className="eyebrow px-4 py-2 text-left text-ink-subtle">
                   Player
                 </th>
                 {['Games', 'Total', 'Bench', 'IF', 'OF', 'P', 'C', 'Debt'].map((header) => (
                   <th
                     key={header}
-                    className="px-3 py-2 text-right text-xs font-semibold tracking-wide text-ink-muted uppercase"
+                    className="eyebrow px-3 py-2 text-right text-ink-subtle"
                   >
                     {header}
                   </th>
@@ -233,7 +235,7 @@ export default function SeasonPage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-ink-muted uppercase">
+                <th className="eyebrow px-4 py-2 text-left text-ink-subtle">
                   Player
                 </th>
                 {distribution.codes.map((code) => (
@@ -261,8 +263,18 @@ export default function SeasonPage() {
                   </th>
                   {distribution.codes.map((code) => {
                     const count = distribution.byPlayer[player.id]?.[code.code] ?? 0;
-                    // Restrained heat map: opacity only, no rainbow.
-                    const intensity = count === 0 ? 0 : 0.12 + 0.68 * (count / maxPositionCount);
+                    /*
+                      A neutral density ramp, not a hue ramp. The column
+                      headers already carry position-group colour, so tinting
+                      the cells with a second colour would double-encode; and
+                      mixing ink into the surface stays legible in both modes,
+                      which a --brand ramp does not (brand is near-black in
+                      light mode, so a dark cell swallowed its own label).
+
+                      Capped well below opaque so --ink always reads on top.
+                    */
+                    const intensity =
+                      count === 0 ? 0 : 0.05 + 0.17 * (count / maxPositionCount);
                     return (
                       <td key={code.code} className="p-0.5 text-center">
                         <span
@@ -271,7 +283,7 @@ export default function SeasonPage() {
                             backgroundColor:
                               count === 0
                                 ? 'transparent'
-                                : `color-mix(in srgb, var(--brand) ${Math.round(intensity * 100)}%, transparent)`,
+                                : `color-mix(in srgb, var(--ink) ${Math.round(intensity * 100)}%, transparent)`,
                             color: count === 0 ? 'var(--ink-subtle)' : 'var(--ink)',
                           }}
                         >

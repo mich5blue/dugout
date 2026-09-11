@@ -31,60 +31,76 @@ export function LineupGrid({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="bg-header-tint">
-            <th className="sticky left-0 z-10 bg-header-tint px-3 py-2.5 text-left text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
-              Position
+          <tr>
+            <th className="sticky left-0 z-10 bg-surface px-3 pb-2 text-left align-bottom">
+              <span className="eyebrow text-ink-subtle">Position</span>
             </th>
             {view.innings.map((inning) => (
-              <th
-                key={inning}
-                className="min-w-24 px-2 py-2.5 text-center text-[11px] font-semibold tracking-wider text-ink-muted uppercase"
-              >
-                Inn {inning}
+              <th key={inning} className="min-w-24 px-1 pb-2 align-bottom">
+                {/* Inning numbers are the scoreboard's own register: condensed
+                    figures in a tinted cap, not a table header in small caps. */}
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className="eyebrow text-ink-subtle">Inn</span>
+                  <span className="scoreboard text-lg text-ink">{inning}</span>
+                </span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {view.positions.map((position) => {
+          {view.positions.map((position, rowIndex) => {
             const style = GROUP_STYLE[position.group];
             return (
               <tr key={position.id} className="border-t border-border">
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 bg-surface px-3 py-1.5 text-left align-middle"
+                  className="sticky left-0 z-10 bg-surface px-3 py-1 text-left align-middle"
                 >
                   {/* A group-coloured rail carries which group the row belongs
                       to without spending a column on it. */}
                   <span className="flex items-center gap-2.5">
                     <span
-                      className={cn('h-6 w-1 shrink-0 rounded-full', style.dot)}
+                      className={cn('h-7 w-[3px] shrink-0 rounded-full', style.dot)}
                       aria-hidden
                     />
-                    <span className="text-sm font-semibold tracking-tight text-ink">
+                    <span className={cn('scoreboard text-base', style.text)}>
                       {position.code}
                     </span>
                   </span>
                 </th>
-                {view.innings.map((inning) => {
+                {view.innings.map((inning, colIndex) => {
                   const player = view.playerAt(inning, position.id);
                   const assignment = view.assignmentAt(inning, position.id);
                   const locked = assignment?.locked ?? false;
 
                   return (
                     <td key={inning} className="p-1 align-middle">
-                      <div className="flex items-stretch gap-1">
+                      <div
+                        className="sweep-in flex items-stretch gap-1"
+                        // Staggered on the diagonal so a generated lineup
+                        // resolves as a sweep across the grid rather than all
+                        // at once. Capped so a long game never feels slow.
+                        style={{
+                          animationDelay: `${Math.min(280, (rowIndex + colIndex) * 22)}ms`,
+                        }}
+                      >
                         <button
                           type="button"
                           disabled={readOnly}
                           onClick={() => onSelectCell?.(inning, position)}
                           className={cn(
-                            'ring-focus min-h-9 flex-1 truncate rounded-lg border px-2.5 py-1.5 text-left text-sm font-medium transition-all',
+                            /*
+                              The player's name is the content, so it takes the
+                              highest-contrast ink available; the group colour
+                              is carried by the rail and the tinted fill. Naming
+                              in the group colour was legible but measurably
+                              dimmer, and the name is what gets read.
+                            */
+                            'ring-focus min-h-9 flex-1 truncate rounded-md border-l-2 px-2.5 py-1.5 text-left text-sm font-medium transition-all',
                             player
-                              ? cn('border-transparent', style.chip, 'text-ink')
-                              : 'border-dashed border-border-strong text-ink-subtle',
-                            !readOnly &&
-                              'hover:-translate-y-px hover:border-brand hover:shadow-sm',
+                              ? cn(style.chip, style.rail, 'text-ink')
+                              : 'border-l border-dashed border-border-strong text-ink-subtle',
+                            !readOnly && 'hover:-translate-y-px hover:brightness-125',
                           )}
                         >
                           {player ? playerShortName(player) : '—'}
@@ -98,14 +114,14 @@ export function LineupGrid({
                             className={cn(
                               'ring-focus w-6 shrink-0 rounded-md border text-xs transition-colors',
                               locked
-                                ? 'border-brand bg-brand text-ink-inverse'
-                                : 'border-border text-ink-subtle hover:text-ink',
+                                ? 'border-accent bg-accent text-ink-inverse'
+                                : 'border-border text-ink-subtle hover:border-border-strong hover:text-ink',
                             )}
                           >
                             {locked ? '●' : '○'}
                           </button>
                         ) : locked ? (
-                          <span className="w-3 shrink-0 text-xs text-brand" aria-label="Locked">
+                          <span className="w-3 shrink-0 text-xs text-accent" aria-label="Locked">
                             ●
                           </span>
                         ) : null}
@@ -121,24 +137,21 @@ export function LineupGrid({
             <tr
               key={`bench-${row}`}
               className={cn(
-                'bg-bench-soft/50',
                 // One heavier rule separates the bench from the field.
                 row === 0 && 'border-t-2 border-border-strong',
               )}
             >
               <th
                 scope="row"
-                className="sticky left-0 z-10 bg-surface px-3 py-1.5 text-left align-middle"
+                className="sticky left-0 z-10 bg-surface px-3 py-1 text-left align-middle"
               >
                 {row === 0 ? (
                   <span className="flex items-center gap-2.5">
                     <span
-                      className={cn('h-6 w-1 shrink-0 rounded-full', GROUP_STYLE.BENCH.dot)}
+                      className={cn('h-7 w-[3px] shrink-0 rounded-full', GROUP_STYLE.BENCH.dot)}
                       aria-hidden
                     />
-                    <span className="text-sm font-semibold tracking-tight text-ink-muted">
-                      Bench
-                    </span>
+                    <span className="scoreboard text-base text-ink-subtle">Bench</span>
                   </span>
                 ) : null}
               </th>
@@ -149,7 +162,7 @@ export function LineupGrid({
                   <td key={inning} className="p-1 align-middle">
                     <div
                       className={cn(
-                        'min-h-9 truncate rounded-md px-2 py-1.5 text-sm',
+                        'min-h-9 truncate rounded-md px-2.5 py-1.5 text-sm',
                         player ? 'bg-bench-soft text-ink-muted' : 'text-transparent',
                       )}
                     >
@@ -172,20 +185,17 @@ export function PlayerGrid({ view }: { view: GameView }) {
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="bg-header-tint">
-            <th className="sticky left-0 z-10 bg-header-tint px-3 py-2.5 text-left text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
-              Player
+          <tr>
+            <th className="sticky left-0 z-10 bg-surface px-3 pb-2 text-left align-bottom">
+              <span className="eyebrow text-ink-subtle">Player</span>
             </th>
             {view.innings.map((inning) => (
-              <th
-                key={inning}
-                className="min-w-16 px-2 py-2.5 text-center text-[11px] font-semibold tracking-wider text-ink-muted uppercase"
-              >
-                {inning}
+              <th key={inning} className="min-w-16 px-2 pb-2 align-bottom">
+                <span className="scoreboard block text-lg text-ink">{inning}</span>
               </th>
             ))}
-            <th className="px-3 py-2.5 text-right text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
-              Innings
+            <th className="px-3 pb-2 text-right align-bottom">
+              <span className="eyebrow text-ink-subtle">Innings</span>
             </th>
           </tr>
         </thead>
@@ -223,7 +233,7 @@ export function PlayerGrid({ view }: { view: GameView }) {
                   <td key={inning} className="p-1 text-center">
                     <span
                       className={cn(
-                        'block rounded-md px-2 py-1.5 text-xs font-semibold',
+                        'scoreboard block rounded-md px-2 py-2 text-sm',
                         style.chip,
                         style.text,
                       )}
@@ -233,7 +243,7 @@ export function PlayerGrid({ view }: { view: GameView }) {
                   </td>
                 );
               })}
-              <td className="tnum px-3 py-1.5 text-right text-sm font-medium text-ink">
+              <td className="tnum px-3 py-1.5 text-right text-sm font-semibold text-ink">
                 {view.defensiveInnings(player.id)}
               </td>
             </tr>

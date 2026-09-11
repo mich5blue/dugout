@@ -118,7 +118,7 @@ export default function ComparePage() {
           >
             ← Back to lineup
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="display mt-1.5 text-4xl text-ink sm:text-5xl">
             Compare approaches
           </h1>
           <p className="mt-1 text-sm text-ink-muted">

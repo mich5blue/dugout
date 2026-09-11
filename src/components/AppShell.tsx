@@ -13,26 +13,15 @@ const NAV = [
 ];
 
 /**
- * The wordmark's glyph: a home plate.
+ * The wordmark's glyph: a home plate, filled in the accent.
  *
- * A restrained sport cue — flat geometry in the brand colour, no stitching and
- * no cartoon baseball, per the design direction.
+ * Solid rather than outlined now — at 20px an outlined plate read as a generic
+ * shield, and the mark has to hold its own next to condensed caps.
  */
 function HomePlateMark() {
   return (
-    <svg viewBox="0 0 20 20" className="size-5 text-brand" aria-hidden>
-      <path
-        d="M3 3.2h14v8.3L10 17.2 3 11.5Z"
-        fill="currentColor"
-        opacity="0.16"
-      />
-      <path
-        d="M3 3.2h14v8.3L10 17.2 3 11.5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 20 20" className="size-5 text-accent" aria-hidden>
+      <path d="M3 3.2h14v8.3L10 17.2 3 11.5Z" fill="currentColor" />
     </svg>
   );
 }
@@ -47,15 +36,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl print-hide">
+      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur-xl print-hide">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="ring-focus flex items-center gap-2.5 rounded-md">
+          <Link href="/" className="ring-focus flex items-center gap-2 rounded-md">
             <HomePlateMark />
-            <span className="text-lg font-semibold tracking-tight text-ink">Dugout</span>
+            <span className="scoreboard text-2xl text-ink">Dugout</span>
           </Link>
 
           {team ? (
-            <nav className="ml-auto hidden items-center gap-1 sm:flex">
+            <nav className="ml-auto hidden items-center gap-0.5 sm:flex">
               {NAV.map((item) => {
                 const active =
                   item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);
@@ -64,10 +53,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'ring-focus relative rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                      // The active tab is marked by an accent underline rather
+                      // than a filled pill: the filled treatment is reserved
+                      // for buttons, so navigation never looks pressable.
+                      'ring-focus relative rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                      'after:absolute after:inset-x-3 after:bottom-0.5 after:h-[2px] after:rounded-full after:content-[""]',
                       active
-                        ? 'bg-brand-soft text-brand'
-                        : 'text-ink-muted hover:bg-surface-muted hover:text-ink',
+                        ? 'text-ink after:bg-accent'
+                        : 'text-ink-muted after:bg-transparent hover:text-ink',
                     )}
                   >
                     {item.label}
@@ -76,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               })}
             </nav>
           ) : (
-            <span className="ml-auto text-sm text-ink-muted">
+            <span className="ml-auto hidden text-sm text-ink-muted sm:block">
               Smart lineups for youth baseball &amp; softball
             </span>
           )}
@@ -86,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:pb-10">{children}</main>
 
       {team ? (
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur sm:hidden print-hide">
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">
           <div className="grid grid-cols-4">
             {NAV.map((item) => {
               const active =
@@ -96,8 +89,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'ring-focus px-2 py-3 text-center text-xs font-medium',
-                    active ? 'text-brand' : 'text-ink-muted',
+                    // The accent bar sits on top of the tab so it reads as a
+                    // selected edge against the header's underline language.
+                    'ring-focus relative px-2 py-3.5 text-center text-xs font-semibold',
+                    'before:absolute before:inset-x-5 before:top-0 before:h-[2px] before:rounded-full before:content-[""]',
+                    active
+                      ? 'text-ink before:bg-accent'
+                      : 'text-ink-muted before:bg-transparent',
                   )}
                 >
                   {item.label === 'Team Settings' ? 'Settings' : item.label}

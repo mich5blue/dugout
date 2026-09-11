@@ -120,7 +120,7 @@ export default function PlayerDetailPage() {
           <Link href="/roster" className="ring-focus text-sm text-ink-muted hover:text-ink">
             ← Roster
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="display mt-1.5 text-4xl text-ink sm:text-5xl">
             {playerName(player)}
             {player.jerseyNumber ? (
               <span className="ml-2 text-ink-subtle">#{player.jerseyNumber}</span>
@@ -458,7 +458,7 @@ export default function PlayerDetailPage() {
                         <span className="tnum w-10 font-medium text-ink">{code}</span>
                         <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted">
                           <span
-                            className="block h-full rounded-full bg-brand"
+                            className="block h-full rounded-full bg-accent"
                             style={{
                               width: `${Math.round(
                                 (count / Math.max(1, record.defensiveInnings)) * 100,

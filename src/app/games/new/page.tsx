@@ -105,7 +105,7 @@ export default function NewGamePage() {
         <Link href="/" className="ring-focus text-sm text-ink-muted hover:text-ink">
           ← {team.name}
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">New game</h1>
+        <h1 className="display mt-1.5 text-4xl text-ink sm:text-5xl">New game</h1>
       </div>
 
       <Card>

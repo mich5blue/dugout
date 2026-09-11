@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "validate:palette": "node scripts/validate_palette.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
