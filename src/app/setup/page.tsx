@@ -12,12 +12,14 @@ import {
   Toggle,
 } from '@/components/ui';
 import { PhilosophyPicker } from '@/components/game/GameSetupPanels';
+import { RosterPhotoImport } from '@/components/RosterPhotoImport';
+import { toQuickAddText } from '@/lib/rosterImport';
 import {
   DEFAULT_FORMATION_BY_SPORT,
   systemFormationsForSport,
 } from '@/domain/formations';
 import { createPlayer, createTeam, parseQuickAddRoster } from '@/domain/factories';
-import type { BattingFormat, Philosophy, Player, Sport } from '@/domain/types';
+import type { BattingFormat, Formation, Philosophy, Player, Sport } from '@/domain/types';
 import { applyPhilosophy, defaultTeamSettings } from '@/domain/weights';
 import { cn } from '@/lib/cn';
 import Link from 'next/link';
@@ -49,6 +51,22 @@ const DIVISIONS = [
   'Other',
 ];
 
+/**
+ * What distinguishes one formation from another of the same size.
+ *
+ * Both ten-player baseball formations are four-outfielder setups differing only
+ * in what the middle two spots are called, so labelling both "Four outfielders"
+ * made them look like the same option listed twice.
+ */
+function formationSubtitle(formation: Formation): string {
+  const outfield = formation.positions.filter((position) => position.group === 'OUTFIELD');
+  if (outfield.length <= 3) return 'Standard defense';
+  const middle = outfield.slice(1, -1).map((position) => position.code);
+  return middle.length > 0
+    ? `Four outfielders, called ${middle.join(' / ')}`
+    : 'Four outfielders';
+}
+
 const STEPS = ['Team', 'Roster', 'Defense', 'Battery', 'Style', 'Ready'] as const;
 type StepIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -76,6 +94,7 @@ export default function SetupPage() {
   // Step 2: roster
   const [rosterText, setRosterText] = useState('');
   const [draft, setDraft] = useState<DraftPlayer[]>([]);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   // Step 3: defense
   const [innings, setInnings] = useState(6);
@@ -280,8 +299,18 @@ export default function SetupPage() {
         {step === 1 ? (
           <Step
             title="Add your players"
-            hint="Paste your roster — one player per line. Jersey numbers are optional."
+            hint="Import a photo of your roster, or type the names — one per line."
           >
+            <div className="mb-3">
+              <Button onClick={() => setPhotoOpen(true)}>
+                Import from a photo
+              </Button>
+              <p className="mt-1.5 text-xs text-ink-subtle">
+                A screenshot from your scorekeeping app, or a picture of a lineup
+                card — even handwritten.
+              </p>
+            </div>
+
             <Textarea
               rows={9}
               autoFocus
@@ -358,11 +387,9 @@ export default function SetupPage() {
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold text-ink">
                           {option.positions.length} players
-                          {option.positions.length === 10 ? (
-                            <span className="ml-2 text-xs font-normal text-ink-muted">
-                              Four outfielders
-                            </span>
-                          ) : null}
+                          <span className="ml-2 text-xs font-normal text-ink-muted">
+                            {formationSubtitle(option)}
+                          </span>
                         </span>
                         <span className="mt-0.5 block truncate text-sm text-ink-muted">
                           {option.positions.map((position) => position.code).join(' · ')}
@@ -523,6 +550,20 @@ export default function SetupPage() {
           </Step>
         ) : null}
       </div>
+
+      <RosterPhotoImport
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        onConfirm={(imported) => {
+          // Merge into the paste box, which is the single source of truth for
+          // this step, so the review list and the text stay consistent.
+          const added = toQuickAddText(
+            imported.map((player) => ({ ...player, confident: true })),
+          );
+          setRosterText((current) => (current.trim() ? `${current.trim()}\n${added}` : added));
+          setPhotoOpen(false);
+        }}
+      />
 
       {/* Sticky footer on mobile so Continue is always reachable. */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mt-8 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">

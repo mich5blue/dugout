@@ -50,25 +50,36 @@
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, sans-serif;
 
-  --radius-card: 0.875rem;
+  --radius-card: 1rem;
+
+  /* Two-layer elevation: a hairline lift plus a soft wide ambient shadow.
+     Enough to separate a card from the page without the drop-shadow look
+     the design direction rules out. */
+  --shadow-card: var(--card-shadow);
 }
 
 :root {
-  --bg: #f7f7f5;
+  --bg: #f3f6f4;
   --surface: #ffffff;
-  --surface-muted: #f2f2ef;
-  --border: #e5e4df;
-  --border-strong: #d2d1ca;
+  --surface-muted: #eaefec;
+  --border: #dfe6e2;
+  --border-strong: #c4cfc9;
 
-  --ink: #191c1b;
-  --ink-muted: #5b6360;
-  --ink-subtle: #8b9390;
+  --ink: #101615;
+  --ink-muted: #515e59;
+  --ink-subtle: #7d8b85;
   --ink-inverse: #ffffff;
 
-  --brand: #14503f;
-  --brand-hover: #0e3d30;
-  --brand-soft: #e7efec;
+  /* A deeper, more saturated evergreen: the old one read as slate-green and
+     left the whole product looking washed out. */
+  --brand: #0c6b4f;
+  --brand-hover: #085440;
+  --brand-soft: #dcefe7;
   --accent: #b4562e;
+
+  --card-shadow:
+    0 1px 2px 0 rgb(16 22 21 / 0.04),
+    0 12px 28px -18px rgb(16 22 21 / 0.18);
 
   /*
     Position-group identity colours. These are a categorical palette — they
@@ -111,21 +122,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #101312;
-    --surface: #171b1a;
-    --surface-muted: #1e2321;
-    --border: #2a302e;
-    --border-strong: #3b4340;
+    --bg: #0a0f0e;
+    --surface: #131a18;
+    --surface-muted: #1b2321;
+    --border: #28322f;
+    --border-strong: #3c4a45;
 
-    --ink: #f2f3f2;
-    --ink-muted: #a3aca9;
-    --ink-subtle: #79827f;
-    --ink-inverse: #0f1211;
+    --ink: #eef2f0;
+    --ink-muted: #9fada8;
+    --ink-subtle: #74837d;
+    --ink-inverse: #08100d;
 
-    --brand: #4fa98e;
-    --brand-hover: #67bda3;
-    --brand-soft: #1a2a26;
-    --accent: #dd8a5f;
+    --brand: #46c79d;
+    --brand-hover: #63d4ae;
+    /* Light enough that a selected row is obvious against the surface. */
+    --brand-soft: #16302a;
+    --accent: #e39a6b;
+
+    --card-shadow:
+      0 1px 2px 0 rgb(0 0 0 / 0.4),
+      0 12px 28px -18px rgb(0 0 0 / 0.7);
 
     /* Dark mode is stepped and validated separately against the dark surface,
        never an automatic flip: #bf8438,#12a594,#7078f0 passes all six checks. */
@@ -162,6 +178,15 @@ html {
 
 body {
   background-color: var(--bg);
+  /* ~3% brand tint fading out over the first screen. Reads as depth; nowhere
+     near the heavy gradients the design direction rules out. */
+  background-image: radial-gradient(
+    120% 60% at 50% 0%,
+    color-mix(in srgb, var(--brand) 7%, transparent) 0%,
+    transparent 60%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-sans);
   font-feature-settings: 'cv11', 'ss01';
@@ -211,7 +236,12 @@ body {
 
   body {
     background: #ffffff !important;
+    background-image: none !important;
     color: #000000 !important;
+  }
+
+  * {
+    box-shadow: none !important;
   }
 
   .print-hide {

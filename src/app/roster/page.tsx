@@ -14,6 +14,7 @@ import {
   SegmentedControl,
   Textarea,
 } from '@/components/ui';
+import { RosterPhotoImport } from '@/components/RosterPhotoImport';
 import { createPlayer, parseQuickAddRoster, playerName } from '@/domain/factories';
 import type { AbilityTier, Player } from '@/domain/types';
 import { useTeamFormation } from '@/lib/hooks';
@@ -32,6 +33,7 @@ export default function RosterPage() {
   const formation = useTeamFormation();
 
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [bulkPositionId, setBulkPositionId] = useState<string | null>(null);
 
@@ -132,7 +134,8 @@ export default function RosterPage() {
             {players.length} total
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setPhotoOpen(true)}>Import from photo</Button>
           <Button onClick={() => setQuickAddOpen(true)}>Quick add</Button>
           <Button variant="primary" onClick={() => setAddOpen(true)}>
             Add player
@@ -144,11 +147,14 @@ export default function RosterPage() {
         <Card>
           <EmptyState
             title="Add your players"
-            description="Paste a list of names — one per line — and your roster is done in seconds."
+            description="Snap a photo of your lineup card, paste a screenshot, or type the names."
             action={
-              <Button variant="primary" onClick={() => setQuickAddOpen(true)}>
-                Quick add roster
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="primary" onClick={() => setPhotoOpen(true)}>
+                  Import from photo
+                </Button>
+                <Button onClick={() => setQuickAddOpen(true)}>Paste names</Button>
+              </div>
             }
           />
         </Card>
@@ -271,6 +277,25 @@ export default function RosterPage() {
           </div>
         </Card>
       ) : null}
+
+      <RosterPhotoImport
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        onConfirm={async (imported) => {
+          await savePlayers(
+            imported.map((spec, index) =>
+              createPlayer({
+                teamId: team.id,
+                firstName: spec.firstName,
+                lastName: spec.lastName,
+                jerseyNumber: spec.jerseyNumber,
+                createdAt: new Date(Date.now() + index).toISOString(),
+              }),
+            ),
+          );
+          setPhotoOpen(false);
+        }}
+      />
 
       <Modal
         open={quickAddOpen}

@@ -401,3 +401,95 @@ test('compare approaches shows three lineups and applies the chosen one', async 
     page.getByRole('region', { name: 'Competitive' }).getByText('Current'),
   ).toBeVisible({ timeout: 30_000 });
 });
+
+test('a roster can be imported from a photo and corrected before saving', async ({ page }) => {
+  // The API is mocked: the extraction itself is covered by unit tests, and the
+  // browser test is about the review-and-edit gate in front of it.
+  await page.route('**/api/roster-import', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        result: {
+          source: 'handwritten lineup card',
+          warning: 'The last row was hard to read.',
+          duplicatesRemoved: [],
+          players: [
+            { firstName: 'Brody', lastName: 'Borek', jerseyNumber: '8', confident: true },
+            { firstName: 'Race', lastName: 'Smith', jerseyNumber: '12', confident: true },
+            { firstName: 'Vvalter', lastName: 'Nash', confident: false },
+          ],
+        },
+      }),
+    });
+  });
+
+  await page.goto('/setup');
+  await page.getByLabel('Team name').fill('Photo Team');
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await page.getByRole('button', { name: 'Import from a photo' }).click();
+  await expect(page.getByRole('heading', { name: 'Import roster from a photo' })).toBeVisible();
+
+  // Uploading is what triggers the read.
+  await page.setInputFiles('input[type=file]', {
+    name: 'lineup.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+
+  // Review step: the unsure row is flagged rather than silently trusted.
+  await expect(page.getByRole('heading', { name: 'Check what we read' })).toBeVisible();
+  await expect(page.getByText('1 to double-check')).toBeVisible();
+  await expect(page.getByText('The last row was hard to read.')).toBeVisible();
+  await expect(page.getByText('Hard to read — worth checking the spelling.')).toBeVisible();
+
+  // The coach fixes the misread name before anything is saved.
+  const misread = page.getByRole('textbox', { name: 'First name' }).nth(2);
+  await expect(misread).toHaveValue('Vvalter');
+  await misread.fill('Walter');
+
+  await page.getByRole('button', { name: 'Add 3 players' }).click();
+
+  // The names land in the roster step, ready to continue.
+  const rosterBox = page.getByPlaceholder(/Brody Borek/);
+  await expect(rosterBox).toHaveValue(/Walter Nash/);
+  await expect(rosterBox).toHaveValue(/Brody Borek #8/);
+  await expect(page.getByText('3 players', { exact: true })).toBeVisible();
+});
+
+test('photo import explains itself when the server has no API key', async ({ page }) => {
+  await page.route('**/api/roster-import', async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        unavailable: true,
+        error: 'Photo import is not configured on this server. Set ANTHROPIC_API_KEY to enable it — you can still paste or type your roster.',
+      }),
+    });
+  });
+
+  await page.goto('/setup');
+  await page.getByLabel('Team name').fill('No Key Team');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Import from a photo' }).click();
+
+  await page.setInputFiles('input[type=file]', {
+    name: 'lineup.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  });
+
+  // It degrades to an explanation plus the path that always works.
+  await expect(page.getByText('Not set up yet')).toBeVisible();
+  await expect(page.getByText(/ANTHROPIC_API_KEY/)).toBeVisible();
+});

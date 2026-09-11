@@ -54,7 +54,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-card border border-border bg-surface print-plain',
+        'rounded-card border border-border bg-surface shadow-card print-plain',
         className,
       )}
       {...props}
@@ -176,7 +176,13 @@ export function Badge({
   );
 }
 
-/** Big, tappable on/off control used for availability and bulk eligibility. */
+/**
+ * Big, tappable on/off control used for availability, formations and rules.
+ *
+ * The selected state carries a filled check mark and a heavier ring, not just a
+ * tinted background — a faint tint was nearly invisible in dark mode, and tint
+ * alone would make selection a colour-only signal.
+ */
 export function Toggle({
   active,
   children,
@@ -188,15 +194,28 @@ export function Toggle({
       type="button"
       aria-pressed={active}
       className={cn(
-        'ring-focus flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
+        'ring-focus group flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all',
         active
-          ? 'border-brand bg-brand-soft text-ink'
-          : 'border-border bg-surface text-ink-subtle hover:border-border-strong',
+          ? 'border-brand bg-brand-soft text-ink ring-2 ring-brand/25'
+          : 'border-border bg-surface text-ink-muted hover:border-border-strong hover:bg-surface-muted',
         className,
       )}
       {...props}
     >
-      {children}
+      <span
+        aria-hidden
+        className={cn(
+          'flex size-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold transition-colors',
+          active
+            ? 'border-brand bg-brand text-ink-inverse'
+            : 'border-border-strong bg-surface text-transparent',
+        )}
+      >
+        ✓
+      </span>
+      <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
+        {children}
+      </span>
     </button>
   );
 }
@@ -234,8 +253,8 @@ export function SegmentedControl<T extends string>({
             'ring-focus rounded-md font-medium transition-colors',
             size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
             value === option.value
-              ? 'bg-surface text-ink shadow-sm'
-              : 'text-ink-muted hover:text-ink',
+              ? 'bg-brand text-ink-inverse shadow-sm'
+              : 'text-ink-muted hover:bg-surface hover:text-ink',
           )}
         >
           {option.label}

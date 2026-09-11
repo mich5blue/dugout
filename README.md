@@ -35,8 +35,19 @@ imbalance for the season-aware optimizer to work against.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npx playwright install chromium && npx playwright test` | Browser end-to-end tests |
 
-Data is stored in the browser. There are no accounts yet, and nothing about a player
-leaves the device.
+Data is stored in the browser. There are no accounts yet, and the only thing that ever
+leaves the device is a roster photo you explicitly choose to import (see below).
+
+### Roster import from a photo
+
+Set `ANTHROPIC_API_KEY` to enable it:
+
+```bash
+echo 'ANTHROPIC_API_KEY=sk-ant-...' >> .env.local
+```
+
+Without a key the feature explains itself and the paste path still works — nothing
+breaks.
 
 ---
 
@@ -82,6 +93,34 @@ means "owed more of this", and it pulls future lineups without forcing rigid per
 equality.
 
 ---
+
+## Roster import from a photo
+
+A coach can import a roster from a screenshot of a scorekeeping app, a photo of a
+printed team list, or a picture of a handwritten lineup card. The image goes to
+the Claude API to be read; extraction is structured rather than free text, via
+`client.messages.parse()` against a Zod schema.
+
+Three deliberate constraints:
+
+- **The model reads, it does not infer.** It is told never to invent a player,
+  never to guess a jersey number, and never to derive positions or
+  pitching/catching ability from the image. Eligibility is the coach's call, and
+  a wrong guess there silently breaks lineups.
+- **Nothing is saved unreviewed.** Reading handwriting is never certain, so every
+  extracted row lands in an editable review step, and rows the model flagged as
+  unsure are called out so the coach knows where to look instead of re-checking
+  all of them.
+- **Normalization is separate from the API call.** `lib/rosterImport.ts` holds the
+  schema, prompt and all cleanup (title-casing, implausible jersey numbers,
+  duplicate collapsing), so the rules that stand between a misread photo and a
+  corrupted roster are unit-tested without spending a request.
+
+Privacy: this is the only server-side endpoint in the product. The image is
+forwarded to be read and is not written to disk, cached, or logged — and neither
+are the names that come back. Because this handles pictures of children's names,
+nothing in that route should ever start logging request bodies. Coaches who would
+rather nothing left the device are told so in the dialog, and can paste instead.
 
 ## Compare approaches
 
@@ -252,6 +291,9 @@ of its options, recording a short game, and the print and game-day views.
 - **Eligibility overrides are per-game.** Playing someone at a position marked `Never`
   asks first and applies to that game only; roster settings are never silently rewritten.
 - **Ability tiers are coach-only** and never appear in print or shared views.
+- **Selection states never rely on colour alone.** A chosen option carries a filled
+  check mark and a heavier ring as well as a tint — the tint alone was nearly
+  invisible in dark mode.
 
 ## Not built, deliberately
 
