@@ -13,6 +13,25 @@ import type { BattingPhilosophy, Game, Player } from '@/domain/types';
 import { cn } from '@/lib/cn';
 import { useState } from 'react';
 
+/**
+ * What each batting philosophy actually does.
+ *
+ * The control had no description, so the most surprising thing about it was
+ * invisible: Balanced and Competitive read each player's Hitting rating, while
+ * Rotate fairly and Manual ignore it. A coach had no way to know the order was
+ * being driven by a field on the player page, let alone which field.
+ */
+const BATTING_PHILOSOPHY_HELP: Record<BattingPhilosophy, string> = {
+  ROTATE_FAIRLY:
+    'Hitting ratings are ignored. Slots rotate across the season so nobody is parked at the bottom of the order.',
+  BALANCED:
+    "Mostly fair, nudged so stronger hitters see the better slots. Uses each player's Hitting rating.",
+  COMPETITIVE:
+    "Strongest hitters get the best slots, from each player's Hitting rating. Season fairness still counts, but much less.",
+  MANUAL:
+    'Dugout leaves the order to you. Locked slots stay put and everyone else falls in roster order.',
+};
+
 /** Batting order (spec sections 28-30) with manual reordering and locks. */
 export function BattingOrderPanel({
   game,
@@ -107,6 +126,13 @@ export function BattingOrderPanel({
             { value: 'MANUAL', label: 'Manual' },
           ]}
         />
+        <p className="mt-2 text-xs text-ink-subtle">
+          {BATTING_PHILOSOPHY_HELP[game.settingsSnapshot.battingPhilosophy]}
+          {game.settingsSnapshot.battingPhilosophy === 'ROTATE_FAIRLY' ||
+          game.settingsSnapshot.battingPhilosophy === 'MANUAL' ? null : (
+            <> Set it on each player&apos;s page.</>
+          )}
+        </p>
       </div>
       )}
 
