@@ -1,50 +1,10 @@
 'use client';
 
-import { GROUP_STYLE } from '@/components/ui';
+import { GROUP_STYLE, LockToggle, PadlockIcon, PinIcon } from '@/components/ui';
 import { playerShortName } from '@/domain/factories';
 import type { PositionDefinition } from '@/domain/types';
 import { cn } from '@/lib/cn';
 import { UNAVAILABLE, type GameView } from '@/lib/gameView';
-
-/**
- * A padlock, drawn rather than spelled with ● and ○.
- *
- * The dots carried no meaning on their own — nothing about a filled circle
- * says "Rebalance will keep this", so the control depended entirely on a
- * caption at the bottom of the card.
- */
-function PadlockIcon({ locked }: { locked: boolean }) {
-  return (
-    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-      <rect x="3.5" y="7" width="9" height="6.4" rx="1.3" fill="currentColor" />
-      <path
-        // Closed: the shackle comes down both sides. Open: the right leg is
-        // lifted clear of the body, which is the whole visual difference.
-        d={locked ? 'M5.6 7V5.3a2.4 2.4 0 0 1 4.8 0V7' : 'M5.6 7V5.3a2.4 2.4 0 0 1 4.8 0'}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-/** A drawing pin, for cells pinned by the pitching plan rather than by a lock. */
-function PinIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-      <path
-        d="M8 9.5V14"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path d="M4.4 4.2h7.2l-1.1 3.1a1 1 0 0 0 .2 1.1l.5.5H4.8l.5-.5a1 1 0 0 0 .2-1.1Z" fill="currentColor" />
-    </svg>
-  );
-}
 
 /**
  * By-inning grid (spec section 47). Rows come from the game's formation, so a
@@ -171,35 +131,17 @@ export function LineupGrid({
                           >
                             <PinIcon />
                           </span>
-                        ) : !readOnly && onToggleLock ? (
-                          <button
-                            type="button"
-                            aria-pressed={locked}
-                            aria-label={locked ? 'Unlock assignment' : 'Lock assignment'}
-                            title={
-                              locked
-                                ? 'Locked — Rebalance will keep this player here'
-                                : 'Lock this player here, so Rebalance cannot move them'
+                        ) : (
+                          <LockToggle
+                            locked={locked}
+                            noun="assignment"
+                            onToggle={
+                              !readOnly && onToggleLock
+                                ? () => onToggleLock(inning, position)
+                                : undefined
                             }
-                            onClick={() => onToggleLock(inning, position)}
-                            className={cn(
-                              'ring-focus flex w-6 shrink-0 items-center justify-center rounded-md border transition-colors',
-                              locked
-                                ? 'border-accent bg-accent text-ink-inverse'
-                                : 'border-border text-ink-subtle hover:border-border-strong hover:text-ink',
-                            )}
-                          >
-                            <PadlockIcon locked={locked} />
-                          </button>
-                        ) : locked ? (
-                          <span
-                            className="flex w-6 shrink-0 items-center justify-center text-accent"
-                            aria-label="Locked"
-                            title="Locked — Rebalance will keep this player here"
-                          >
-                            <PadlockIcon locked />
-                          </span>
-                        ) : null}
+                          />
+                        )}
                       </div>
                     </td>
                   );

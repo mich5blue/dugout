@@ -1,6 +1,13 @@
 'use client';
 
-import { Button, Card, CardHeader, EmptyState, SegmentedControl } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  LockToggle,
+  SegmentedControl,
+} from '@/components/ui';
 import { playerName } from '@/domain/factories';
 import type { BattingPhilosophy, Game, Player } from '@/domain/types';
 import { cn } from '@/lib/cn';
@@ -14,6 +21,7 @@ export function BattingOrderPanel({
   onToggleLock,
   onPhilosophyChange,
   onRotate,
+  onRebalance,
   canRotate,
   readOnly = false,
 }: {
@@ -23,6 +31,8 @@ export function BattingOrderPanel({
   onToggleLock: (playerId: string) => void;
   onPhilosophyChange: (philosophy: BattingPhilosophy) => void;
   onRotate: (offset: number) => void;
+  /** Regenerate just the order, honouring locked slots. */
+  onRebalance?: () => void;
   canRotate: boolean;
   readOnly?: boolean;
 }) {
@@ -56,16 +66,31 @@ export function BattingOrderPanel({
         title="Batting order"
         description={`${order.length} ${order.length === 1 ? 'batter' : 'batters'}`}
         action={
-          canRotate && !readOnly ? (
-            <div className="flex gap-1">
-              <Button size="sm" variant="ghost" onClick={() => onRotate(1)}>
-                Rotate +1
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => onRotate(2)}>
-                +2
-              </Button>
+          readOnly ? null : (
+            <div className="flex flex-wrap items-center gap-1">
+              {canRotate ? (
+                <>
+                  <Button size="sm" variant="ghost" onClick={() => onRotate(1)}>
+                    Rotate +1
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => onRotate(2)}>
+                    +2
+                  </Button>
+                </>
+              ) : null}
+              {/*
+                Rebalances the order on its own, leaving the defensive rotation
+                untouched. The two are independent decisions, and a coach who
+                has finished adjusting the grid should be able to reshuffle who
+                hits where without risking it.
+              */}
+              {onRebalance ? (
+                <Button size="sm" onClick={onRebalance}>
+                  Rebalance order
+                </Button>
+              ) : null}
             </div>
-          ) : null
+          )
         }
       />
 
@@ -118,22 +143,11 @@ export function BattingOrderPanel({
                   ) : null}
                 </span>
 
-                {readOnly ? null : (
-                <button
-                  type="button"
-                  aria-label={entry.locked ? 'Unlock batting slot' : 'Lock batting slot'}
-                  title={entry.locked ? 'Locked' : 'Lock this slot'}
-                  onClick={() => onToggleLock(entry.playerId)}
-                  className={cn(
-                    'ring-focus size-6 shrink-0 rounded-md border text-xs',
-                    entry.locked
-                      ? 'border-brand bg-brand text-ink-inverse'
-                      : 'border-border text-ink-subtle hover:text-ink',
-                  )}
-                >
-                  {entry.locked ? '●' : '○'}
-                </button>
-                )}
+                <LockToggle
+                  locked={entry.locked}
+                  noun="batting slot"
+                  onToggle={readOnly ? undefined : () => onToggleLock(entry.playerId)}
+                />
 
                 {readOnly ? null : (
                 <span className="flex shrink-0 gap-1">

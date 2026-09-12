@@ -327,6 +327,103 @@ export const GROUP_STYLE: Record<
   },
 };
 
+/**
+ * A padlock, drawn rather than spelled with ● and ○.
+ *
+ * Shared by every surface that can pin something — the inning grid and the
+ * batting order — because a lock has to mean the same thing in both places.
+ * The dots it replaced carried no meaning on their own: nothing about a filled
+ * circle says "Rebalance will keep this".
+ */
+export function PadlockIcon({ locked }: { locked: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+      <rect x="3.5" y="7" width="9" height="6.4" rx="1.3" fill="currentColor" />
+      <path
+        // Closed: the shackle comes down both sides. Open: the right leg is
+        // lifted clear of the body, which is the whole visual difference.
+        d={locked ? 'M5.6 7V5.3a2.4 2.4 0 0 1 4.8 0V7' : 'M5.6 7V5.3a2.4 2.4 0 0 1 4.8 0'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** A drawing pin, for cells pinned by something other than a lock. */
+export function PinIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+      <path
+        d="M8 9.5V14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4.4 4.2h7.2l-1.1 3.1a1 1 0 0 0 .2 1.1l.5.5H4.8l.5-.5a1 1 0 0 0 .2-1.1Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The lock toggle itself, so the grid and the batting order cannot drift apart
+ * in size, colour or wording.
+ */
+export function LockToggle({
+  locked,
+  onToggle,
+  noun,
+  className,
+}: {
+  locked: boolean;
+  /** Omit for a read-only surface: locked renders an icon, unlocked renders nothing. */
+  onToggle?: () => void;
+  /** Short name for the thing being held, e.g. "assignment", "batting slot". */
+  noun: string;
+  className?: string;
+}) {
+  const title = locked
+    ? `Locked — Rebalance keeps this ${noun}`
+    : `Lock this ${noun} so Rebalance cannot change it`;
+
+  if (!onToggle) {
+    return locked ? (
+      <span
+        className={cn('flex w-6 shrink-0 items-center justify-center text-accent', className)}
+        aria-label={`Locked ${noun}`}
+        title={title}
+      >
+        <PadlockIcon locked />
+      </span>
+    ) : null;
+  }
+
+  return (
+    <button
+      type="button"
+      aria-pressed={locked}
+      aria-label={locked ? `Unlock ${noun}` : `Lock ${noun}`}
+      title={title}
+      onClick={onToggle}
+      className={cn(
+        'ring-focus flex w-6 shrink-0 items-center justify-center rounded-md border transition-colors',
+        locked
+          ? 'border-accent bg-accent text-ink-inverse'
+          : 'border-border text-ink-subtle hover:border-border-strong hover:text-ink',
+        className,
+      )}
+    >
+      <PadlockIcon locked={locked} />
+    </button>
+  );
+}
+
 export function EmptyState({
   title,
   description,

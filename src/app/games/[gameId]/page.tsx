@@ -31,6 +31,7 @@ import type { Game, PositionDefinition, TeamSettings } from '@/domain/types';
 import { rotateBattingOrder, type OptimizationResult, type RelaxationSuggestion } from '@/optimizer';
 import {
   generateLineup,
+  regenerateBattingOrder,
   setAssignment,
   setBattingOrder,
   setBattingSlotLocked,
@@ -423,6 +424,23 @@ export default function GamePage() {
                 );
                 await update(setBattingOrder(game, rotated));
               }}
+              onRebalance={
+                editsGame
+                  ? async () => {
+                      await update(
+                        regenerateBattingOrder({
+                          team,
+                          game,
+                          players,
+                          history: games,
+                          goals,
+                          flags,
+                          seed: game.optimizerSeed,
+                        }),
+                      );
+                    }
+                  : undefined
+              }
             />
 
             <div className="space-y-4">

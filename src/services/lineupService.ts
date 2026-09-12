@@ -9,6 +9,8 @@ import type {
 } from '@/domain/types';
 import { resolveWeights } from '@/domain/weights';
 import { optimizer, type LockedAssignment, type OptimizationInput, type OptimizationResult } from '@/optimizer';
+import { generateBattingOrder } from '@/optimizer/batting';
+import { buildContext } from '@/optimizer/context';
 import { getFairnessDebt } from './fairness';
 import { getPlayerSeasonUsage } from './seasonStatistics';
 
@@ -94,6 +96,28 @@ export async function generateLineup(
   const result = await optimizer.generate(input);
   const game = result.ok ? applyResultToGame(options.game, result, input.seed) : options.game;
   return { result, game };
+}
+
+/**
+ * Regenerates only the batting order, leaving the defensive rotation alone.
+ *
+ * Separate from `generateLineup` because the two are independent decisions and
+ * a coach who has settled the defence should be able to reshuffle who hits
+ * where without risking the grid they just finished adjusting. Locked slots
+ * are honoured, exactly as the full generator honours them.
+ */
+export function regenerateBattingOrder(options: GenerateOptions): Game {
+  const input = buildOptimizationInput(options);
+  const ctx = buildContext(input);
+  const order = generateBattingOrder(ctx);
+  return setBattingOrder(
+    options.game,
+    order.map((entry) => ({
+      playerId: entry.playerId,
+      battingSlot: entry.battingSlot,
+      locked: entry.locked,
+    })),
+  );
 }
 
 /** Writes a generated lineup onto the game as PLANNED assignments. */
