@@ -99,6 +99,18 @@ export type VarietyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type CriticalStrength = 'OFF' | 'LOW' | 'MEDIUM' | 'HIGH';
 
+/**
+ * How hard to avoid stacking developing players in the infield at once.
+ *
+ * Distinct from `CriticalStrength`, which asks for *stronger* players at
+ * positions the coach marked critical. That is a per-position preference and
+ * the wrong tool here: turning it up pushes developing players out of the
+ * infield altogether, which fights the infield-opportunity promise. This is a
+ * co-occurrence preference — developing players are welcome in the infield,
+ * just not two at the same time.
+ */
+export type InfieldSpread = 'OFF' | 'LOW' | 'MEDIUM' | 'HIGH';
+
 export type BattingPhilosophy = 'ROTATE_FAIRLY' | 'BALANCED' | 'COMPETITIVE' | 'MANUAL';
 
 /** Soft "target" vs hard "required" for minimum-innings style rules. */
@@ -142,6 +154,15 @@ export interface RuleSettings {
   /** Competitive dial. */
   criticalStrength: CriticalStrength;
 
+  /**
+   * Avoid two developing players in the infield in the same inning, and more
+   * strongly avoid it two innings running.
+   *
+   * Optional, and absent means OFF: settings saved before this existed must
+   * keep generating the lineups they generated before.
+   */
+  infieldSpread?: InfieldSpread;
+
   /** Battery rules. */
   maxCatcherInningsPerPlayer?: number;
   maxConsecutiveCatcherInnings?: number;
@@ -181,6 +202,7 @@ export type WeightKey =
   | 'playerPreferences'
   | 'developmentGoals'
   | 'criticalPositionStrength'
+  | 'infieldAbilitySpread'
   | 'battingOrderFairness'
   | 'consecutiveBenchPenalty'
   | 'repeatedPositionPenalty'

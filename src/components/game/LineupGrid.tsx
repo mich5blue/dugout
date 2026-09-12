@@ -7,6 +7,46 @@ import { cn } from '@/lib/cn';
 import { UNAVAILABLE, type GameView } from '@/lib/gameView';
 
 /**
+ * A padlock, drawn rather than spelled with ● and ○.
+ *
+ * The dots carried no meaning on their own — nothing about a filled circle
+ * says "Rebalance will keep this", so the control depended entirely on a
+ * caption at the bottom of the card.
+ */
+function PadlockIcon({ locked }: { locked: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+      <rect x="3.5" y="7" width="9" height="6.4" rx="1.3" fill="currentColor" />
+      <path
+        // Closed: the shackle comes down both sides. Open: the right leg is
+        // lifted clear of the body, which is the whole visual difference.
+        d={locked ? 'M5.6 7V5.3a2.4 2.4 0 0 1 4.8 0V7' : 'M5.6 7V5.3a2.4 2.4 0 0 1 4.8 0'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** A drawing pin, for cells pinned by the pitching plan rather than by a lock. */
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+      <path
+        d="M8 9.5V14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path d="M4.4 4.2h7.2l-1.1 3.1a1 1 0 0 0 .2 1.1l.5.5H4.8l.5-.5a1 1 0 0 0 .2-1.1Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
  * By-inning grid (spec section 47). Rows come from the game's formation, so a
  * ten-player formation renders ten rows and a custom formation renders whatever
  * the coach defined.
@@ -26,6 +66,18 @@ export function LineupGrid({
     1,
     ...view.innings.map((inning) => view.benchAt(inning).length),
   );
+
+  /*
+    The pitching plan pins the primary pitcher position for an inning in the
+    solver (see context.ts), but it does not set the assignment's `locked`
+    flag. Those cells therefore used to render an unlocked circle on a cell
+    Rebalance would never move, which is worse than no affordance at all.
+
+    Only the first PITCHER-role position is pinned, matching the solver.
+  */
+  const primaryPitcherId = view.positions.find((position) => position.role === 'PITCHER')?.id;
+  const isPlanPinned = (inning: number, position: PositionDefinition): boolean =>
+    position.id === primaryPitcherId && Boolean(view.game.pitchingPlan[inning]);
 
   return (
     <div className="overflow-x-auto">
@@ -72,6 +124,7 @@ export function LineupGrid({
                   const player = view.playerAt(inning, position.id);
                   const assignment = view.assignmentAt(inning, position.id);
                   const locked = assignment?.locked ?? false;
+                  const planPinned = isPlanPinned(inning, position);
 
                   return (
                     <td key={inning} className="p-1 align-middle">
@@ -101,28 +154,50 @@ export function LineupGrid({
                               ? cn(style.chip, style.rail, 'text-ink')
                               : 'border-l border-dashed border-border-strong text-ink-subtle',
                             !readOnly && 'hover:-translate-y-px hover:brightness-125',
+                            // Pinned state reads on the cell, not only on the
+                            // small control beside it, so a coach can see what
+                            // is held without inspecting ten tiny buttons.
+                            (locked || planPinned) && 'ring-1 ring-accent ring-inset',
                           )}
                         >
                           {player ? playerShortName(player) : '—'}
                         </button>
-                        {!readOnly && onToggleLock ? (
+
+                        {planPinned ? (
+                          <span
+                            title={`Pitcher for inning ${inning} is set in the pitching plan — change it there`}
+                            aria-label={`Pinned by the pitching plan. Pitcher for inning ${inning} is set in the pitching plan.`}
+                            className="flex w-6 shrink-0 items-center justify-center rounded-md border border-accent/50 bg-accent-soft text-accent"
+                          >
+                            <PinIcon />
+                          </span>
+                        ) : !readOnly && onToggleLock ? (
                           <button
                             type="button"
+                            aria-pressed={locked}
                             aria-label={locked ? 'Unlock assignment' : 'Lock assignment'}
-                            title={locked ? 'Locked — Rebalance keeps this' : 'Lock this assignment'}
+                            title={
+                              locked
+                                ? 'Locked — Rebalance will keep this player here'
+                                : 'Lock this player here, so Rebalance cannot move them'
+                            }
                             onClick={() => onToggleLock(inning, position)}
                             className={cn(
-                              'ring-focus w-6 shrink-0 rounded-md border text-xs transition-colors',
+                              'ring-focus flex w-6 shrink-0 items-center justify-center rounded-md border transition-colors',
                               locked
                                 ? 'border-accent bg-accent text-ink-inverse'
                                 : 'border-border text-ink-subtle hover:border-border-strong hover:text-ink',
                             )}
                           >
-                            {locked ? '●' : '○'}
+                            <PadlockIcon locked={locked} />
                           </button>
                         ) : locked ? (
-                          <span className="w-3 shrink-0 text-xs text-accent" aria-label="Locked">
-                            ●
+                          <span
+                            className="flex w-6 shrink-0 items-center justify-center text-accent"
+                            aria-label="Locked"
+                            title="Locked — Rebalance will keep this player here"
+                          >
+                            <PadlockIcon locked />
                           </span>
                         ) : null}
                       </div>
@@ -175,6 +250,36 @@ export function LineupGrid({
           ))}
         </tbody>
       </table>
+
+      {/*
+        A legend showing the actual controls, rather than a sentence describing
+        them from the bottom of the card. Two of these three states are things
+        the coach did not create and would otherwise have to guess at.
+      */}
+      {!readOnly ? (
+        <dl className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 px-2 text-xs text-ink-subtle">
+          <div className="flex items-center gap-1.5">
+            <dt className="flex size-6 items-center justify-center rounded-md border border-border text-ink-subtle">
+              <PadlockIcon locked={false} />
+            </dt>
+            <dd>Open — Rebalance may move this player</dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <dt className="flex size-6 items-center justify-center rounded-md border border-accent bg-accent text-ink-inverse">
+              <PadlockIcon locked />
+            </dt>
+            <dd>Locked — Rebalance keeps them here</dd>
+          </div>
+          {primaryPitcherId !== undefined ? (
+            <div className="flex items-center gap-1.5">
+              <dt className="flex size-6 items-center justify-center rounded-md border border-accent/50 bg-accent-soft text-accent">
+                <PinIcon />
+              </dt>
+              <dd>Set in the pitching plan</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
     </div>
   );
 }

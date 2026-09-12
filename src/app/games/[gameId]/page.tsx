@@ -376,9 +376,10 @@ export default function GamePage() {
               ) : null}
             </div>
             {mode === 'inning' ? (
+              // The lock and pin states are explained by the legend the grid
+              // renders under itself, next to the actual controls.
               <p className="border-t border-border px-5 py-3 text-xs text-ink-subtle">
-                Tap any player to swap or bench them. The circle locks an assignment so
-                Rebalance leaves it alone.
+                Tap any player to swap or bench them.
               </p>
             ) : null}
           </Card>

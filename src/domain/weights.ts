@@ -1,5 +1,6 @@
 import type {
   CriticalStrength,
+  InfieldSpread,
   Philosophy,
   PlayingTimeBalance,
   TeamSettings,
@@ -23,6 +24,7 @@ export const WEIGHT_LABEL: Record<WeightKey, string> = {
   playerPreferences: 'Player Preferences',
   developmentGoals: 'Development Goals',
   criticalPositionStrength: 'Critical Position Strength',
+  infieldAbilitySpread: 'Infield Ability Spread',
   battingOrderFairness: 'Batting Order Fairness',
   consecutiveBenchPenalty: 'Consecutive Bench Penalty',
   repeatedPositionPenalty: 'Repeated Position Penalty',
@@ -39,6 +41,7 @@ const EQUAL_PLAYING_TIME: Weights = {
   infieldOpportunity: 70,
   playerPreferences: 30,
   developmentGoals: 40,
+  infieldAbilitySpread: 70,
   criticalPositionStrength: 0,
   battingOrderFairness: 100,
   consecutiveBenchPenalty: 90,
@@ -56,6 +59,7 @@ const DEVELOPMENT: Weights = {
   infieldOpportunity: 85,
   playerPreferences: 40,
   developmentGoals: 80,
+  infieldAbilitySpread: 80,
   criticalPositionStrength: 20,
   battingOrderFairness: 95,
   consecutiveBenchPenalty: 85,
@@ -73,6 +77,7 @@ const BALANCED: Weights = {
   infieldOpportunity: 70,
   playerPreferences: 50,
   developmentGoals: 60,
+  infieldAbilitySpread: 60,
   criticalPositionStrength: 60,
   battingOrderFairness: 80,
   consecutiveBenchPenalty: 80,
@@ -90,6 +95,7 @@ const COMPETITIVE: Weights = {
   infieldOpportunity: 30,
   playerPreferences: 65,
   developmentGoals: 30,
+  infieldAbilitySpread: 25,
   criticalPositionStrength: 100,
   battingOrderFairness: 40,
   consecutiveBenchPenalty: 60,
@@ -152,6 +158,19 @@ const CRITICAL_STRENGTH_MULTIPLIER: Record<CriticalStrength, number> = {
   HIGH: 1.8,
 };
 
+/*
+  Infield ability spread tops out lower than the critical-strength dial. It
+  competes with infield opportunity, and "every eligible player gets an infield
+  inning" is the more load-bearing promise — so even at HIGH this should bend
+  the lineup rather than override that.
+*/
+const INFIELD_SPREAD_MULTIPLIER: Record<InfieldSpread, number> = {
+  OFF: 0,
+  LOW: 0.4,
+  MEDIUM: 1.0,
+  HIGH: 1.5,
+};
+
 /**
  * Resolves the effective weights for a game: philosophy preset, adjusted by the
  * coach's plain-language dials, then by any explicit custom overrides.
@@ -189,6 +208,11 @@ export function resolveWeights(settings: TeamSettings): Weights {
 
   weights.criticalPositionStrength =
     base.criticalPositionStrength * CRITICAL_STRENGTH_MULTIPLIER[settings.criticalStrength];
+
+  // Absent means off, so settings saved before this setting existed keep
+  // generating exactly the lineups they generated before.
+  weights.infieldAbilitySpread =
+    base.infieldAbilitySpread * INFIELD_SPREAD_MULTIPLIER[settings.infieldSpread ?? 'OFF'];
 
   if (settings.infieldOpportunity.mode === 'OFF') {
     weights.infieldOpportunity = 0;
@@ -230,6 +254,7 @@ export function defaultRuleSettings(): Omit<TeamSettings, 'philosophy' | 'battin
     minOutfieldInnings: undefined,
     maxConsecutiveOutfieldInnings: undefined,
     criticalStrength: 'MEDIUM',
+    infieldSpread: 'MEDIUM',
     maxCatcherInningsPerPlayer: undefined,
     maxConsecutiveCatcherInnings: 3,
     maxPitchingInningsPerPlayer: 2,

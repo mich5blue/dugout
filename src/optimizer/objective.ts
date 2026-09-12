@@ -1,4 +1,4 @@
-import type { VarietyLevel } from '@/domain/types';
+import { ABILITY_VALUE, type VarietyLevel } from '@/domain/types';
 import { clamp, type SolverContext } from './context';
 import { computeStats, EMPTY, type Solution, type SolutionStats } from './solution';
 
@@ -21,6 +21,18 @@ export const TUNING = {
   firstInningBenchScale: 0.15,
   /** Bonus for using a coach-designated preferred pitcher/catcher. */
   preferredBatteryBonus: 0.5,
+  /**
+   * Developing players allowed in the infield in one inning before the
+   * infield-spread term starts charging for it. One is the point: developing
+   * players belong in the infield, just not two at a time.
+   */
+  maxDevelopingInfielders: 1,
+  /**
+   * Extra charge when an over-stacked infield repeats in consecutive innings.
+   * Above 1 so two soft innings running costs more than two soft innings apart,
+   * which is the distinction the coach cares about.
+   */
+  consecutiveDevelopingInfieldScale: 2,
   /**
    * Scale of the seed-derived tie-break. Small enough that it can never
    * outrank a real difference in fairness or strength, large enough to pick
@@ -124,8 +136,12 @@ export function cost(
   let consecutiveBench = 0;
   let continuity = 0;
   let outfield = 0;
+  let infieldSpread = 0;
   let tieBreak = 0;
   let hard = 0;
+
+  /* Developing infielders in the previous inning, for the repeat penalty. */
+  let previousDevelopingInfield = 0;
 
   // ---- Per-assignment terms ----------------------------------------------
   for (let inning = 1; inning <= ctx.innings; inning++) {
@@ -189,6 +205,36 @@ export function cost(
 
       tieBreak += ctx.tieBreak[playerIdx][pos];
     }
+
+    /*
+      Infield ability spread: keep developing players from stacking up in the
+      infield in the same inning.
+
+      Measured on `ability[pos]`, not the player's overall tier, so a coach who
+      has rated a developing player as solid at first base gets credit for it.
+
+      The repeat penalty is what the coach actually asked for — one weak infield
+      inning is survivable, the same weak infield two innings running is where
+      balls start getting through. It is keyed on the *count* rather than on the
+      same two players recurring: a coach watching from the dugout sees "the
+      infield is soft again", not a specific pairing.
+    */
+    let developingInfield = 0;
+    for (const pos of ctx.infieldPositions) {
+      const playerIdx = row[pos];
+      if (playerIdx === EMPTY) continue;
+      if (ctx.players[playerIdx].ability[pos] <= ABILITY_VALUE.DEVELOPING) {
+        developingInfield++;
+      }
+    }
+
+    const excess = Math.max(0, developingInfield - TUNING.maxDevelopingInfielders);
+    infieldSpread += sq(excess);
+    if (excess > 0 && previousDevelopingInfield > TUNING.maxDevelopingInfielders) {
+      infieldSpread +=
+        excess * TUNING.consecutiveDevelopingInfieldScale;
+    }
+    previousDevelopingInfield = developingInfield;
   }
 
   preferences /= slots;
@@ -341,6 +387,9 @@ export function cost(
   groupBalance /= n;
   continuity /= n;
   infieldOpportunity /= n;
+  // Per inning, not per player: this term counts innings, so a longer game
+  // must not read as a worse-spread one.
+  infieldSpread /= Math.max(1, ctx.innings);
   // Season term combines per-player inning debt with per-assignment position debt.
   seasonFairness = seasonPerPlayer + seasonFairness / slots;
 
@@ -355,6 +404,7 @@ export function cost(
     playerPreferences: w.playerPreferences * preferences,
     avoidPositionPenalty: w.avoidPositionPenalty * avoid,
     criticalPositionStrength: w.criticalPositionStrength * critical,
+    infieldAbilitySpread: w.infieldAbilitySpread * infieldSpread,
     developmentGoals: w.developmentGoals * development,
     consecutiveBenchPenalty: w.consecutiveBenchPenalty * consecutiveBench,
     excessiveOutfieldPenalty: w.excessiveOutfieldPenalty * outfield,

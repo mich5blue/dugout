@@ -13,6 +13,7 @@ import {
 import { playerName } from '@/domain/factories';
 import type {
   CriticalStrength,
+  InfieldSpread,
   Game,
   Philosophy,
   Player,
@@ -325,9 +326,16 @@ export function RulesPanel({
                 ]}
               />
             </div>
+            {/*
+              Worded as a preference because that is what it is: continuity is a
+              weighted objective term, not a feasibility rule, so the solver
+              breaks it when fairness or eligibility needs it to. The old copy
+              ("Players stay at one spot for N innings") promised a guarantee
+              the optimizer never made.
+            */}
             <p className="mt-1.5 text-xs text-ink-subtle">
               {(settings.positionContinuityInnings ?? 0) > 1
-                ? `Players stay at one spot for ${settings.positionContinuityInnings} innings before moving — good for learning a position, and for doubleheaders.`
+                ? `Dugout tries to hold players at one spot for ${settings.positionContinuityInnings} innings before moving them — good for learning a position, and for doubleheaders. Fair playing time still comes first.`
                 : 'Players can move position every inning.'}
             </p>
           </div>
@@ -349,6 +357,32 @@ export function RulesPanel({
             <p className="mt-1.5 text-xs text-ink-subtle">
               Higher gives stronger players more time at the positions you marked
               critical, without breaking playing-time rules.
+            </p>
+          </div>
+
+          <div>
+            <Label>Infield ability spread</Label>
+            <SegmentedControl<InfieldSpread>
+              className="mt-1.5"
+              size="sm"
+              label="Infield ability spread"
+              value={settings.infieldSpread ?? 'OFF'}
+              onChange={(value) => set({ infieldSpread: value })}
+              options={[
+                { value: 'OFF', label: 'Off' },
+                { value: 'LOW', label: 'Low' },
+                { value: 'MEDIUM', label: 'Med' },
+                { value: 'HIGH', label: 'High' },
+              ]}
+            />
+            {/*
+              Worded as spreading rather than as a limit, and it says "tries"
+              on purpose: this competes with infield opportunity, which wins.
+            */}
+            <p className="mt-1.5 text-xs text-ink-subtle">
+              Higher tries harder to avoid two developing players in the infield at
+              once, and harder still two innings in a row. Everyone still gets their
+              infield innings.
             </p>
           </div>
         </div>
