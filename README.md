@@ -197,6 +197,30 @@ are the names that come back. Because this handles pictures of children's names,
 nothing in that route should ever start logging request bodies. Coaches who would
 rather nothing left the device are told so in the dialog, and can paste instead.
 
+## Four ways to read a lineup
+
+The same generated game renders four ways, because reading a lineup at a desk
+the night before and calling one out at a fence between innings are different
+jobs:
+
+| View | What it is for |
+| --- | --- |
+| **By inning** | The planning grid: positions down, innings across. Tap a cell to swap, lock a cell so Rebalance leaves it alone. |
+| **By player** | The same data transposed — fairness at a glance, one row per player. |
+| **Field** | The diamond as the interface. Saturated field, tap or drag players between positions, oversized inning scrubber. |
+| **Live** | Phone-in-the-dugout. One inning at a time at arm's-length size, each player's previous spot inline, one thumb-sized action to advance. |
+
+Live is deliberately read-only. Swaps belong in the grid and Field views, where
+a mis-tap is cheap; mid-game a mis-tap costs the lineup.
+
+Live also has no separate "what changed" panel. The optimizer rotates for
+fairness, so in a typical game nearly every player moves every inning — a
+changes list ended up restating the whole roster above a list of the same
+eleven names. The inline `was` column carries it in one pass.
+
+For an actual game, most coaches use **Print**. It is the one surface that never
+inherits the theme; see the design-direction notes below.
+
 ## Compare approaches
 
 One tap generates the same game three ways — Equal Playing Time, Balanced,
@@ -313,15 +337,63 @@ against a theoretical ideal the rules make impossible:
 
 ### Position-group colours are validated, not chosen by eye
 
-Position groups carry identity across the grids, the diamond and the season
-dashboard, so they are a categorical palette and are checked with the
-colour validator. The original green/blue pair was ΔE 8.0 in *normal* vision,
-meaning infield and outfield were near-indistinguishable in the inning grid — a
-distinction this product is built around. The current amber/teal/indigo set
-passes every check in both light and dark mode, with worst-case CVD ΔE 13.6
-against a target of 8. Bench is deliberately excluded from the categorical set:
-it is the absence of a defensive assignment, so it stays neutral and always
-carries a text label.
+Position groups carry identity across the grids, the field view and the season
+dashboard, so they are a categorical palette and get checked rather than
+eyeballed:
+
+```bash
+npm run validate:palette
+```
+
+It reads the tokens straight out of `src/app/globals.css` — never a copy — and
+runs seven checks per mode: pairwise CIEDE2000 separation under normal vision
+and under protanopia, deuteranopia and tritanopia; each group colour against
+the card surface; each group colour against its own tinted fill; and body ink
+against every tinted fill, because the inning grid sets player names in `--ink`
+on a tinted cell.
+
+The history is worth keeping. An early green/blue pair was ΔE 8.0 in *normal*
+vision, meaning infield and outfield were near-indistinguishable in the inning
+grid — a distinction this product is built around. An amber/teal/indigo set
+fixed that but collided with the electric lime action colour the Broadcast
+redesign introduced, so a coach had to work out whether a yellow thing was a
+battery position or a button. The current coral/aqua/periwinkle set (deepened
+to coral/teal/indigo in light mode) clears every check in both modes, with a
+worst case of ΔE 15.5 against a target of 8.
+
+Bench is deliberately excluded from the separation checks: it is the absence of
+a defensive assignment, so it stays neutral and always carries a text label.
+
+### The design direction is "Broadcast", and it is dark-first
+
+The interface is built to read like a sports broadcast graphic: a near-black
+base, one electric accent, condensed scoreboard type for matchups and inning
+numbers, and position groups loud enough to identify at arm's length in a
+dugout. This deliberately replaced an earlier restrained direction ("calm,
+premium, athletic… no gradients, no heavy shadows, nothing decorative"), which
+read as plain rather than calm.
+
+Dark is the default because the design was built on near-black and the whole
+categorical palette is tuned against it. Light mode is not an afterthought — a
+coach standing in direct sun needs it — but it is a daylight variant of the
+same identity: the action pill inverts from a lime fill with dark text to a
+near-black fill with a lime label, so both modes use the same two colours.
+
+Two rules that are easy to break by accident:
+
+- **Type.** Inter carries the interface; Barlow Condensed carries scoreboard
+  type via the `.scoreboard`, `.display` and `.eyebrow` classes. Both load from
+  a stylesheet link in `layout.tsx` rather than `next/font`, because a build
+  machine behind a TLS-inspecting proxy cannot reach Google Fonts at build
+  time, which is when `next/font` downloads them. It is also not an `@import`
+  in `globals.css`: Tailwind v4 inlines its own import ahead of it, which
+  pushes a `url()` import below real rules and makes the browser drop it
+  silently.
+- **Paper is exempt.** The print route renders inside `.paper`, which flattens
+  every colour token to black on white on screen as well as on paper — so the
+  preview is literally what the printer produces. `@media print` flattens the
+  same tokens again as a backstop. Nothing in the Broadcast palette should ever
+  reach paper.
 
 ### Three bugs worth knowing about
 
@@ -373,8 +445,8 @@ six failures on identical code.
 
 It drives the real browser through the guided setup and both of
 its validation gates, generation, a locked manual swap surviving a rebalance,
-drag-and-tap editing on the diamond, the three-way comparison and applying one
-of its options, recording a short game, and the print and game-day views.
+drag-and-tap editing on the field, the three-way comparison and applying one
+of its options, recording a short game, and the print and live views.
 
 ---
 

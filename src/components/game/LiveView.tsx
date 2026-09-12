@@ -65,9 +65,16 @@ export function LiveView({ view }: { view: GameView }) {
             </p>
           </div>
 
+          {/*
+            Both steppers are held at 44px, the minimum comfortable touch
+            target, rather than the `sm` height the surrounding chrome uses.
+            This view's whole premise is a coach operating it one-handed
+            between innings, and Prev is the only way back through the game.
+          */}
           <div className="flex shrink-0 flex-col gap-1.5">
             <Button
               size="sm"
+              className="h-11 px-4"
               disabled={inning <= 1}
               onClick={() => setInning((current) => Math.max(1, current - 1))}
               aria-label="Previous inning"
@@ -77,6 +84,7 @@ export function LiveView({ view }: { view: GameView }) {
             <Button
               size="sm"
               variant="primary"
+              className="h-11 px-4"
               disabled={inning >= last}
               onClick={() => setInning((current) => Math.min(last, current + 1))}
               aria-label="Next inning"
