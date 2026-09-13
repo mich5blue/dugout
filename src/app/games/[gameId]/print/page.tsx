@@ -4,6 +4,7 @@ import { useDugout } from '@/app/providers';
 import { Button, EmptyState, SegmentedControl } from '@/components/ui';
 import { playerName, playerShortName } from '@/domain/factories';
 import { formatGameDate } from '@/lib/format';
+import { extraInningPlan } from '@/lib/gameDayChanges';
 import { buildGameView, UNAVAILABLE } from '@/lib/gameView';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -40,6 +41,7 @@ export default function PrintPage() {
   }
 
   const battingOrder = view.battingOrder();
+  const extraInnings = extraInningPlan(view);
   const cellPadding = compact ? 'px-1.5 py-1' : 'px-2 py-2';
   const textSize = compact ? 'text-[11px]' : 'text-sm';
 
@@ -165,6 +167,41 @@ export default function PrintPage() {
               </tr>
             </tbody>
           </table>
+
+          {/*
+            The pitcher contingency, on paper.
+
+            A coach decides "is this inning quick enough to send him back out?"
+            at the fence, holding this sheet — so the swap it implies has to be
+            printed, not computed in an app they are not looking at. One line
+            per inning, and only for innings where the question arises.
+          */}
+          {extraInnings.length > 0 ? (
+            <div className={compact ? 'mt-2' : 'mt-3'}>
+              <h3 className={compact ? 'text-[10px] font-bold uppercase' : 'text-xs font-bold uppercase'}>
+                If the pitcher goes another inning
+              </h3>
+              <ul className={compact ? 'mt-0.5 text-[10px]' : 'mt-1 text-xs'}>
+                {extraInnings.map((plan) => (
+                  <li key={plan.inning} className="whitespace-nowrap">
+                    <span className="font-bold">
+                      Inn {plan.inning}
+                      {'\u2192'}
+                      {plan.nextInning}
+                    </span>{' '}
+                    {playerShortName(plan.pitcher)} stays on
+                    {plan.displaced ? (
+                      <>
+                        {' '}
+                        &middot; {playerShortName(plan.displaced)} takes{' '}
+                        {plan.pitcherNextPosition ? plan.pitcherNextPosition.code : 'the bench'}
+                      </>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </section>
 
         {!compact ? (

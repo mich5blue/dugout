@@ -7,6 +7,7 @@ import { BattingOrderPanel } from '@/components/game/BattingOrderPanel';
 import { FieldView } from '@/components/game/FieldView';
 import { LiveView } from '@/components/game/LiveView';
 import { ShareActions } from '@/components/game/ShareActions';
+import { SomeoneOutSheet } from '@/components/game/SomeoneOutSheet';
 import { LineupGrid, PlayerGrid } from '@/components/game/LineupGrid';
 import {
   AvailabilityPanel,
@@ -34,6 +35,7 @@ import {
   regenerateBattingOrder,
   setAssignment,
   setBattingOrder,
+  setAvailability,
   setBattingSlotLocked,
   toggleLock,
 } from '@/services/lineupService';
@@ -64,6 +66,9 @@ export default function GamePage() {
   const [picker, setPicker] = useState<{ inning: number; position: PositionDefinition } | null>(
     null,
   );
+  const [someoneOut, setSomeoneOut] = useState(false);
+  /** The inning the Live view is showing, so mid-game changes cut from there. */
+  const [liveInning, setLiveInning] = useState(1);
 
   const game = games.find((entry) => entry.id === params.gameId) ?? null;
 
@@ -372,7 +377,25 @@ export default function GamePage() {
               ) : null}
               {mode === 'live' ? (
                 <div className="px-2 py-1">
-                  <LiveView view={view} />
+                  <LiveView
+                    view={view}
+                    onInningChange={setLiveInning}
+                    onPitchAnotherInning={
+                      editsGame
+                        ? async (plan) => {
+                            await update(
+                              setAssignment(
+                                game,
+                                plan.nextInning,
+                                plan.pitcherPositionId,
+                                plan.pitcher.id,
+                              ),
+                            );
+                          }
+                        : undefined
+                    }
+                    onSomeoneOut={editsGame ? () => setSomeoneOut(true) : undefined}
+                  />
                 </div>
               ) : null}
             </div>
@@ -474,6 +497,49 @@ export default function GamePage() {
           />
         </Card>
       )}
+
+      {someoneOut ? (
+        <SomeoneOutSheet
+          view={view}
+          open={someoneOut}
+          currentInning={liveInning}
+          onClose={() => setSomeoneOut(false)}
+          onApply={async (playerId, lastInning) => {
+            /*
+              Two steps, in this order. Record that the player is gone, then
+              re-plan only what has not happened yet: innings up to and
+              including `lastInning` are frozen, so what was actually played
+              stays exactly as played and the season keeps counting it.
+            */
+            const withDeparture =
+              lastInning <= 0
+                ? setAvailability(game, playerId, { available: false })
+                : setAvailability(game, playerId, { departureInning: lastInning });
+            await saveGame(withDeparture);
+
+            setGenerating(true);
+            try {
+              const outcome = await generateLineup({
+                team,
+                game: withDeparture,
+                players,
+                history: games,
+                goals,
+                flags,
+                seed: game.optimizerSeed,
+                frozenInnings: lastInning,
+              });
+              setResult(outcome.result);
+              if (outcome.result.ok) {
+                await saveGame(outcome.game);
+                setStale(false);
+              }
+            } finally {
+              setGenerating(false);
+            }
+          }}
+        />
+      ) : null}
 
       {picker ? (
         <AssignmentPicker

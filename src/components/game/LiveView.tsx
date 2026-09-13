@@ -3,6 +3,7 @@
 import { Button, GROUP_STYLE } from '@/components/ui';
 import { playerName, playerShortName } from '@/domain/factories';
 import { cn } from '@/lib/cn';
+import { extraInningFor, type ExtraInning } from '@/lib/gameDayChanges';
 import { UNAVAILABLE, type GameView } from '@/lib/gameView';
 import { useState } from 'react';
 
@@ -23,14 +24,37 @@ import { useState } from 'react';
  * showing it above the field list meant reading the same eleven names twice.
  * The `was` column carries the same information in one pass.
  *
- * Everything here is read-only. Swaps belong in the Field and By-inning views,
- * where a mis-tap is cheap; mid-game a mis-tap costs the lineup.
+ * It carries exactly two actions, because these are the two things that
+ * actually change during a youth game: the pitcher can go another inning, or
+ * someone has to come out. Free-form swaps stay in the Field and By-inning
+ * views, where a mis-tap is cheap; mid-game a mis-tap costs the lineup.
  */
-export function LiveView({ view }: { view: GameView }) {
-  const [inning, setInning] = useState(1);
+export function LiveView({
+  view,
+  onInningChange,
+  onPitchAnotherInning,
+  onSomeoneOut,
+}: {
+  view: GameView;
+  /** Reported up so a mid-game change knows which inning is in progress. */
+  onInningChange?: (inning: number) => void;
+  /** Keep this inning's pitcher on for the next one. */
+  onPitchAnotherInning?: (plan: ExtraInning) => void;
+  /** Open the "someone has to come out" flow. */
+  onSomeoneOut?: () => void;
+}) {
+  const [inning, setInningState] = useState(1);
+  const setInning = (next: number | ((current: number) => number)) => {
+    setInningState((current) => {
+      const value = typeof next === 'function' ? next(current) : next;
+      onInningChange?.(value);
+      return value;
+    });
+  };
 
   const last = view.innings.length;
   const bench = view.benchAt(inning);
+  const extra = extraInningFor(view, inning);
 
   /** Where this player was the inning before, as a short label. */
   const previousLabel = (playerId: string): string | null => {
@@ -104,6 +128,40 @@ export function LiveView({ view }: { view: GameView }) {
       </div>
 
       {/*
+        The mound decision, stated as a question with its consequence attached.
+        A coach deciding this has a live ball in front of them, so the button
+        says who ends up where rather than making them work it out from the
+        list below.
+      */}
+      {onPitchAnotherInning && extra && !extra.blocked ? (
+        <div className="rounded-xl border border-accent/40 bg-accent-soft p-3">
+          <p className="text-base text-ink">
+            <span className="font-semibold">{playerShortName(extra.pitcher)}</span> is
+            pitching. Quick inning — send them back out?
+          </p>
+          <Button
+            variant="primary"
+            size="lg"
+            className="mt-2.5 w-full"
+            onClick={() => onPitchAnotherInning(extra)}
+          >
+            Pitch inning {extra.nextInning} too
+          </Button>
+          <p className="mt-2 text-xs text-ink-muted">
+            {extra.summary}
+            {extra.warning ? <> · {extra.warning}</> : null}
+          </p>
+        </div>
+      ) : null}
+
+      {onPitchAnotherInning && extra?.blocked ? (
+        <p className="rounded-xl border border-border bg-surface-raised px-3 py-2.5 text-xs text-ink-muted">
+          {playerShortName(extra.pitcher)} cannot pitch inning {extra.nextInning}.{' '}
+          {extra.blocked}
+        </p>
+      ) : null}
+
+      {/*
         The field, as a list. Rows are tall enough to read standing up, and the
         `was` column means a coach can call the whole inning off one screen.
       */}
@@ -155,6 +213,12 @@ export function LiveView({ view }: { view: GameView }) {
           </span>
         </li>
       </ul>
+
+      {onSomeoneOut ? (
+        <Button size="lg" className="w-full" onClick={onSomeoneOut}>
+          Someone has to come out
+        </Button>
+      ) : null}
 
       {inning < last ? (
         <Button
