@@ -7,9 +7,10 @@
 
 # Accounts, roles and the move off localStorage
 
-Status: **planned, not connected.** The role model and every permission check
-are live in the app today; there is no backend behind them yet, so nobody can
-sign in. This document is the plan for closing that gap.
+Status: **shipped, on Firebase.** The role model and every permission check are
+live, and accounts are connected — see [firebase.md](firebase.md) for what
+actually runs. This document is the original plan, kept for its reasoning about
+the permission model and for the Postgres route described below.
 
 ## Roles
 
