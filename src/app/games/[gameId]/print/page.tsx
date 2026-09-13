@@ -42,6 +42,26 @@ export default function PrintPage() {
 
   const battingOrder = view.battingOrder();
   const extraInnings = extraInningPlan(view);
+
+  /*
+    Batting order and defensive assignments, as one table.
+
+    On paper a coach reads down the batting order and needs to know where each
+    kid is playing, and two separate tables meant looking up every name twice.
+    Ordering the by-player grid by batting slot lets one table answer both.
+
+    Anyone without a batting slot is appended rather than dropped — the
+    optimizer gives every available player one, but a STARTERS_SUBS game or a
+    hand-edited order could leave someone out, and silently omitting a player
+    from the sheet the coach is holding is the worst possible failure here.
+  */
+  const slotByPlayer = new Map(battingOrder.map((entry) => [entry.player.id, entry.slot]));
+  const lineupRows = [
+    ...battingOrder.map((entry) => ({ player: entry.player, slot: entry.slot })),
+    ...view.players
+      .filter((player) => !slotByPlayer.has(player.id))
+      .map((player) => ({ player, slot: undefined })),
+  ];
   const cellPadding = compact ? 'px-1.5 py-1' : 'px-2 py-2';
   const textSize = compact ? 'text-[11px]' : 'text-sm';
 
@@ -92,6 +112,9 @@ export default function PrintPage() {
       </header>
 
       <div className={compact ? 'grid gap-4 lg:grid-cols-[200px_1fr]' : 'space-y-6'}>
+        {/* Compact keeps a lean batting list: the merged table below adds an
+            inning column per inning, which will not fit a clipboard. */}
+        {compact ? (
         <section>
           <h2 className={compact ? 'mb-1 text-xs font-bold uppercase' : 'mb-2 text-sm font-bold uppercase'}>
             Batting order
@@ -114,6 +137,7 @@ export default function PrintPage() {
             </tbody>
           </table>
         </section>
+        ) : null}
 
         <section>
           <h2 className={compact ? 'mb-1 text-xs font-bold uppercase' : 'mb-2 text-sm font-bold uppercase'}>
@@ -206,11 +230,15 @@ export default function PrintPage() {
 
         {!compact ? (
           <section>
-            <h2 className="mb-2 text-sm font-bold uppercase">By player</h2>
+            <h2 className="mb-2 text-sm font-bold uppercase">
+              Batting order and positions
+            </h2>
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b-2 border-black">
+                  <th className="w-6 px-1 py-2 text-left text-sm font-bold">#</th>
                   <th className="px-2 py-2 text-left text-sm font-bold">Player</th>
+                  <th className="w-10 px-1 py-2 text-right text-sm font-bold">No.</th>
                   {view.innings.map((inning) => (
                     <th key={inning} className="px-2 py-2 text-sm font-bold">
                       {inning}
@@ -220,16 +248,22 @@ export default function PrintPage() {
                 </tr>
               </thead>
               <tbody>
-                {view.players.map((player) => (
+                {lineupRows.map(({ player, slot: battingSlot }) => (
                   <tr key={player.id} className="border-b border-black/30">
+                    <td className="tnum w-6 px-1 py-1.5 text-left text-sm font-bold">
+                      {battingSlot ?? ''}
+                    </td>
                     <th scope="row" className="px-2 py-1.5 text-left text-sm font-medium">
                       {playerName(player)}
                     </th>
+                    <td className="tnum w-10 px-1 py-1.5 text-right text-sm">
+                      {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}
+                    </td>
                     {view.innings.map((inning) => {
-                      const slot = view.slotOf(player.id, inning);
+                      const at = view.slotOf(player.id, inning);
                       return (
                         <td key={inning} className="px-2 py-1.5 text-center text-sm">
-                          {slot === UNAVAILABLE ? '' : slot === null ? 'Bench' : slot.code}
+                          {at === UNAVAILABLE ? '' : at === null ? 'Bench' : at.code}
                         </td>
                       );
                     })}
