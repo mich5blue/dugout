@@ -41,6 +41,7 @@ import {
 } from '@/services/lineupService';
 import { formatGameDate } from '@/lib/format';
 import { buildGameView } from '@/lib/gameView';
+import { adjacentGames } from '@/lib/schedule';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -163,8 +164,66 @@ export default function GamePage() {
   /* An assistant can read every lineup but cannot change one. */
   const editsGame = can('game:edit');
 
+  const { previous, next, position, total } = adjacentGames(games, game.id);
+
   return (
     <div className="space-y-6">
+      {/*
+        Season pager. A coach reviewing the week moves between games far more
+        often than they go back to the dashboard, and previously the only way
+        was dashboard → next game → back → there was no way to the one after.
+
+        It walks the whole season rather than only the upcoming games, and the
+        adjacent opponent is named so the arrow says where it goes instead of
+        making the coach press it to find out.
+      */}
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/games" className="ring-focus text-sm text-ink-muted hover:text-ink">
+          ← Schedule
+        </Link>
+
+        {position !== undefined && total > 1 ? (
+          <nav aria-label="Other games" className="flex items-center gap-1.5">
+            {previous ? (
+              <Link href={`/games/${previous.id}`} className="ring-focus rounded-lg">
+                <Button
+                  size="sm"
+                  aria-label={`Previous game, vs ${previous.opponent || 'TBD'}`}
+                >
+                  <span aria-hidden>←</span>
+                  <span className="hidden max-w-28 truncate sm:inline">
+                    {previous.opponent || 'TBD'}
+                  </span>
+                </Button>
+              </Link>
+            ) : (
+              <Button size="sm" disabled aria-hidden>
+                ←
+              </Button>
+            )}
+
+            <span className="tnum px-1 text-xs whitespace-nowrap text-ink-subtle">
+              {position} of {total}
+            </span>
+
+            {next ? (
+              <Link href={`/games/${next.id}`} className="ring-focus rounded-lg">
+                <Button size="sm" aria-label={`Next game, vs ${next.opponent || 'TBD'}`}>
+                  <span className="hidden max-w-28 truncate sm:inline">
+                    {next.opponent || 'TBD'}
+                  </span>
+                  <span aria-hidden>→</span>
+                </Button>
+              </Link>
+            ) : (
+              <Button size="sm" disabled aria-hidden>
+                →
+              </Button>
+            )}
+          </nav>
+        ) : null}
+      </div>
+
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
           <Link href="/" className="ring-focus text-sm text-ink-muted hover:text-ink">

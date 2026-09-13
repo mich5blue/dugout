@@ -14,7 +14,8 @@ import {
   StatTile,
 } from '@/components/ui';
 import { getFairnessDebt, getTeamSeasonFairness } from '@/services/fairness';
-import { formatDayAndDate, formatGameDate, percent } from '@/lib/format';
+import { formatDayAndDate, formatGameDate, formatShortDate, percent } from '@/lib/format';
+import { upcomingGames } from '@/lib/schedule';
 import { playerName } from '@/domain/factories';
 import { MoveLocalData } from '@/components/MoveLocalData';
 import Link from 'next/link';
@@ -24,13 +25,13 @@ export default function DashboardPage() {
   const { ready, team, players, activePlayers, games, seedDemoTeam } = useDugout();
   const [seeding, setSeeding] = useState(false);
 
-  const upcoming = useMemo(
-    () =>
-      [...games]
-        .filter((game) => game.status !== 'COMPLETED')
-        .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null,
-    [games],
-  );
+  /* Season order comes from lib/schedule so this agrees with the Schedule
+     page and the pager on a game. */
+  const upcomingList = useMemo(() => upcomingGames(games), [games]);
+  const upcoming = upcomingList[0] ?? null;
+  /** The next few after this one; the rest are a count behind one link. */
+  const laterGames = useMemo(() => upcomingList.slice(1, 4), [upcomingList]);
+  const moreCount = Math.max(0, upcomingList.length - 4);
 
   const lastGame = useMemo(
     () =>
@@ -215,7 +216,16 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Next game" />
+          <CardHeader
+            title="Next game"
+            action={
+              <Link href="/games">
+                <Button size="sm" variant="ghost">
+                  Full schedule
+                </Button>
+              </Link>
+            }
+          />
           {upcoming ? (
             <div className="px-5 py-5">
               <p className="flex flex-wrap items-baseline gap-2">
@@ -237,6 +247,42 @@ export default function DashboardPage() {
                   <Button size="lg">New game</Button>
                 </Link>
               </div>
+
+              {/*
+                The games after this one. The card used to stop at the next
+                game, which made a coach with four booked games unable to see
+                past the first without opening each in turn.
+              */}
+              {laterGames.length > 0 ? (
+                <div className="mt-5 border-t border-border pt-3">
+                  <p className="eyebrow text-ink-subtle">Then</p>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {laterGames.map((game) => (
+                      <li key={game.id}>
+                        <Link
+                          href={`/games/${game.id}`}
+                          className="ring-focus group -mx-2 flex items-baseline gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-muted"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                            vs {game.opponent || 'TBD'}
+                          </span>
+                          <span className="shrink-0 text-xs text-ink-muted">
+                            {formatShortDate(game.date)}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {moreCount > 0 ? (
+                    <Link
+                      href="/games"
+                      className="ring-focus mt-1.5 inline-block rounded-md text-xs text-ink-muted underline hover:text-ink"
+                    >
+                      {moreCount} more
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : (
             <EmptyState
@@ -340,8 +386,9 @@ export default function DashboardPage() {
         </Notice>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
+          { href: '/games', label: 'Schedule', hint: 'Every game, upcoming and played' },
           { href: '/roster', label: 'Roster', hint: 'Players, positions, eligibility' },
           { href: '/season', label: 'Season', hint: 'Playing time and position history' },
           { href: '/settings', label: 'Team Settings', hint: 'Formation, rules, philosophy' },

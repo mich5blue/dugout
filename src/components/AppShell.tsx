@@ -7,12 +7,17 @@ import { cn } from '@/lib/cn';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+/**
+ * `short` is what the mobile bar uses. Six tabs at 375px leaves about 62px
+ * each, which "Dashboard" and "Team Settings" do not fit without wrapping.
+ */
 const NAV = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/roster', label: 'Roster' },
-  { href: '/season', label: 'Season' },
-  { href: '/coaches', label: 'Coaches' },
-  { href: '/settings', label: 'Team Settings' },
+  { href: '/', label: 'Dashboard', short: 'Home' },
+  { href: '/games', label: 'Schedule', short: 'Games' },
+  { href: '/roster', label: 'Roster', short: 'Roster' },
+  { href: '/season', label: 'Season', short: 'Season' },
+  { href: '/coaches', label: 'Coaches', short: 'Coaches' },
+  { href: '/settings', label: 'Team Settings', short: 'Settings' },
 ];
 
 /**
@@ -128,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {showNav ? (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">
-          <div className="grid grid-cols-5">
+          <div className="grid grid-cols-6">
             {NAV.map((item) => {
               const active =
                 item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);
@@ -146,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       : 'text-ink-muted before:bg-transparent',
                   )}
                 >
-                  {item.label === 'Team Settings' ? 'Settings' : item.label}
+                  {item.short}
                 </Link>
               );
             })}
