@@ -3,6 +3,7 @@
 import { useDugout } from '@/app/providers';
 import { Button, EmptyState, SegmentedControl } from '@/components/ui';
 import { playerName, playerShortName } from '@/domain/factories';
+import { cn } from '@/lib/cn';
 import { formatGameDate } from '@/lib/format';
 import { extraInningPlan } from '@/lib/gameDayChanges';
 import { buildGameView, UNAVAILABLE } from '@/lib/gameView';
@@ -159,12 +160,23 @@ export default function PrintPage() {
                   </th>
                   {view.innings.map((inning) => {
                     const at = view.slotOf(player.id, inning);
+                    const resting = at === null;
                     return (
                       <td
                         key={inning}
-                        className="border-2 border-black px-2 py-2.5 text-center text-xl font-bold"
+                        className={cn(
+                          'border-2 border-black px-2 py-2.5 text-center text-xl font-bold',
+                          /*
+                            print-color-adjust is not optional here. Browsers
+                            drop background colour when printing unless the
+                            user has ticked "background graphics", and a rest
+                            inning that only reads as grey would vanish on
+                            paper — which is the one place this sheet is used.
+                          */
+                          resting && 'bg-[#d6d6d6] [print-color-adjust:exact]',
+                        )}
                       >
-                        {at === UNAVAILABLE ? '—' : at === null ? 'SIT' : at.code}
+                        {at === UNAVAILABLE ? '—' : resting ? 'REST' : at.code}
                       </td>
                     );
                   })}
@@ -183,7 +195,10 @@ export default function PrintPage() {
                 </li>
               ))}
               <li className="whitespace-nowrap">
-                <span className="font-bold">SIT</span> On the bench this inning
+                <span className="bg-[#d6d6d6] px-1 font-bold [print-color-adjust:exact]">
+                  REST
+                </span>{' '}
+                On the bench this inning
               </li>
               {/* A blank cell would read as a mistake on a wall, so a player
                   who arrives late or leaves early gets a dash with a key. */}
