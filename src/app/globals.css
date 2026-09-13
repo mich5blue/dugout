@@ -110,20 +110,33 @@
     normal vision and under protanopia, deuteranopia and tritanopia, plus text
     contrast against both the card surface and the group's own tinted fill.
 
-    Coral / aqua / periwinkle replaces the previous amber / teal / indigo set
-    because amber collided with the new lime action colour — a coach should
-    never have to work out whether a yellow thing is a battery position or a
-    button.
+    Rose / cyan / violet, arrived at by searching the hue space rather than by
+    taste. Infield is the bright cyan on purpose: the question a coach asks
+    most of these grids is "has this kid been in the infield yet?", so infield
+    is the group held furthest from the other two — about 42 dE in plain
+    vision, against a floor of 8.
+
+    Two earlier sets failed for reasons worth recording, because both are easy
+    to reintroduce:
+
+      - amber / teal / indigo: amber sat 6.8 dE from the lime action colour,
+        so a coach had to work out whether a yellow thing was a battery
+        position or a button. Check 8 exists because of this.
+      - red / cyan / violet: a true red is only 2.4 dE from the *light* mode's
+        olive accent under deuteranopia, where red and green both collapse
+        toward yellow. Any red battery collides with any green accent for a
+        deuteranope, so battery moved to rose instead of the accent moving.
+        Rose also keeps battery clear of --critical, which is red.
 
     Bench is deliberately outside the categorical set: it is the absence of a
     defensive assignment, so it stays neutral and is always text-labelled.
   */
-  --battery: #ff8a6b;
-  --battery-soft: #2d1610;
-  --infield: #43dfd0;
-  --infield-soft: #062825;
-  --outfield: #a3a8ff;
-  --outfield-soft: #191b40;
+  --battery: #ff5c8f;
+  --battery-soft: #45111f;
+  --infield: #4fe8e8;
+  --infield-soft: #0d474d;
+  --outfield: #ab82ff;
+  --outfield-soft: #211a5c;
   --bench: #7d8b93;
   --bench-soft: #1a2126;
 
@@ -173,12 +186,12 @@
 
     /* Stepped and validated separately against the light surface, never an
        automatic flip of the dark values. */
-    --battery: #c2410c;
-    --battery-soft: #fef1eb;
-    --infield: #0f766e;
-    --infield-soft: #ddf2f0;
-    --outfield: #4f46e5;
-    --outfield-soft: #e8e7fd;
+    --battery: #a61e63;
+    --battery-soft: #fdeaf2;
+    --infield: #0e7490;
+    --infield-soft: #e2f4f8;
+    --outfield: #6d28d9;
+    --outfield-soft: #f0eafe;
     --bench: #64748b;
     --bench-soft: #eef1f3;
 

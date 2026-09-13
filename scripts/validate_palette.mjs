@@ -19,10 +19,24 @@
  *   7.   Body ink against every -soft fill. The inning grid sets player names
  *        in --ink on a tinted cell, so this pairing is load-bearing too — and
  *        it is the one that breaks silently when a fill is retuned.
+ *   8.   Every group colour against --accent, under all four visions. The
+ *        accent means "held" or "pressable"; a group colour that reads like it
+ *        makes a chip look like a control. This is not hypothetical — an
+ *        amber/teal/indigo set shipped once whose amber sat 6.8 dE from the
+ *        lime accent, and the only way anyone noticed was by eye.
  *
  * Bench is included in check 7 (the bench row uses the same treatment) but
  * excluded from the separation checks: it is a neutral standing for the
  * absence of a defensive assignment, and it is always text-labelled.
+ *
+ * What is deliberately NOT checked: separation between the -soft fills. Pale
+ * tints on white cannot be pulled apart — light mode's fills sit about 1 dE
+ * apart under protanopia, and deepening them far enough to separate breaks the
+ * contrast of the code printed on top. So the fill is never the only cue. Every
+ * chip that uses one also carries the saturated group colour as a left rail and
+ * a text label, and those are what checks 1-6 hold to a standard. If you are
+ * adding a surface that tints a block with -soft, it needs a rail and a label
+ * too.
  */
 
 import { readFileSync } from 'node:fs';
@@ -36,6 +50,12 @@ const CSS_PATH = resolve(HERE, '../src/app/globals.css');
 const MIN_DELTA_E = 8;
 /** WCAG AA for normal-size text. */
 const MIN_CONTRAST = 4.5;
+/**
+ * Separation floor between a categorical colour and the action colour. Higher
+ * than MIN_DELTA_E because the confusion it prevents is a category error — "is
+ * this a status or a button?" — not merely telling two categories apart.
+ */
+const MIN_ACCENT_DELTA_E = 15;
 
 const GROUPS = ['battery', 'infield', 'outfield'];
 
@@ -280,6 +300,30 @@ function checkMode(name, vars) {
       failures.push(
         `${name}: --${group} on --${group}-soft is ${ratio.toFixed(2)}:1, need ${MIN_CONTRAST}`,
       );
+    }
+  }
+
+  // Check 8: group colours must not be mistakable for the action colour.
+  if (!vars.accent) {
+    failures.push(`${name}: missing --accent`);
+  } else {
+    for (const group of GROUPS) {
+      let worst = { delta: Infinity, vision: '' };
+      for (const [vision, matrix] of Object.entries(CVD)) {
+        const a = labOf(simulate(linearRgb(vars[group]), matrix));
+        const b = labOf(simulate(linearRgb(vars.accent), matrix));
+        const delta = deltaE00(a, b);
+        if (delta < worst.delta) worst = { delta, vision };
+      }
+      const ok = worst.delta >= MIN_ACCENT_DELTA_E;
+      notes.push(
+        `  ${ok ? 'pass' : 'FAIL'}  ${group.padEnd(13)} vs accent${' '.repeat(18)}dE ${worst.delta.toFixed(1)} (min ${MIN_ACCENT_DELTA_E}, ${worst.vision})`,
+      );
+      if (!ok) {
+        failures.push(
+          `${name}: --${group} is only dE ${worst.delta.toFixed(1)} from --accent under ${worst.vision}, need ${MIN_ACCENT_DELTA_E}`,
+        );
+      }
     }
   }
 

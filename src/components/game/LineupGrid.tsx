@@ -278,10 +278,19 @@ export function PlayerGrid({ view }: { view: GameView }) {
                 const style = GROUP_STYLE[slot.group];
                 return (
                   <td key={inning} className="p-1 text-center">
+                    {/*
+                      The rail matters more here than it looks. Pale tints on
+                      white cannot be separated from each other under
+                      protanopia — the light -soft fills sit about 1 dE apart —
+                      so the fill alone can never carry the group. The
+                      saturated rail and the code text do, and both are
+                      contrast-checked.
+                    */}
                     <span
                       className={cn(
-                        'scoreboard block rounded-md px-2 py-2 text-sm',
+                        'scoreboard block rounded-md border-l-2 px-2 py-2 text-sm',
                         style.chip,
+                        style.rail,
                         style.text,
                       )}
                     >
