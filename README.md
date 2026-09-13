@@ -167,6 +167,21 @@ game called after five innings creates expectations for five innings only. Posit
 means "owed more of this", and it pulls future lineups without forcing rigid per-game
 equality.
 
+**The inning is the atom, and partial innings do not affect fairness.** A player pulled
+with two outs, or brought in to finish someone else's inning, is credited with that
+inning in full — there is no fractional accounting anywhere in the model.
+
+This is a deliberate product decision, not a shortcut. How much of an inning a kid
+actually played is unpredictable: it depends on how many batters came up, whether the
+opponent went down in order, and where the coach happened to make the change. Prorating
+something that noisy would put noise into the one number the whole product is built to
+get right, and it would mean a kid's fair share depended on the opposition's batting.
+
+The consequence to know: `DefensiveAssignment` is keyed on `(inning, positionId)` with
+one player, so mid-inning substitution is not representable. Adding it is a display and
+record-keeping change — who else appeared in that inning — and must not become a
+fairness change.
+
 ---
 
 ## Roster import from a photo
