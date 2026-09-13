@@ -17,7 +17,8 @@ import { useMemo, useState } from 'react';
 export default function PrintPage() {
   const params = useParams<{ gameId: string }>();
   const { ready, team, players, games } = useDugout();
-  const [compact, setCompact] = useState(false);
+  const [mode, setMode] = useState<'full' | 'compact' | 'dugout'>('full');
+  const compact = mode === 'compact';
 
   const game = games.find((entry) => entry.id === params.gameId) ?? null;
   const view = useMemo(
@@ -81,11 +82,13 @@ export default function PrintPage() {
         <div className="flex items-center gap-2">
           <SegmentedControl
             size="sm"
-            value={compact ? 'compact' : 'full'}
-            onChange={(value) => setCompact(value === 'compact')}
+            label="Print layout"
+            value={mode}
+            onChange={setMode}
             options={[
               { value: 'full', label: 'Full page' },
               { value: 'compact', label: 'Compact' },
+              { value: 'dugout', label: 'Dugout wall' },
             ]}
           />
           <Button size="sm" variant="primary" onClick={() => window.print()}>
@@ -105,12 +108,92 @@ export default function PrintPage() {
               {formatGameDate(game.date)} · {game.plannedInnings} innings
             </p>
           </div>
-          <p className={compact ? 'text-[10px]' : 'text-sm'}>
-            {game.formationSnapshot.positions.length} defenders
-          </p>
+          {mode === 'dugout' ? null : (
+            <p className={compact ? 'text-[10px]' : 'text-sm'}>
+              {game.formationSnapshot.positions.length} defenders
+            </p>
+          )}
         </div>
       </header>
 
+      {/*
+        Dugout wall. One sheet, taped up, for the players rather than the coach:
+        find your name on the left, read across to the inning.
+
+        So it is only that grid — no batting order, no by-position table, no
+        pitcher contingency. Type is large enough to read from a step back, and
+        every cell is ruled rather than banded: shading is what printers drop
+        or lighten, and losing your place a row up or down is the whole failure
+        mode of a wide grid. A legend decodes the position codes, because "LC"
+        means nothing to a nine-year-old.
+      */}
+      {mode === 'dugout' ? (
+        <section>
+          <table className="w-full border-collapse border-2 border-black">
+            <thead>
+              <tr>
+                <th className="border-2 border-black px-2 py-2 text-left text-base font-bold">
+                  Player
+                </th>
+                {view.innings.map((inning) => (
+                  <th
+                    key={inning}
+                    className="border-2 border-black px-2 py-2 text-center text-2xl font-bold"
+                  >
+                    {inning}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {lineupRows.map(({ player }) => (
+                <tr key={player.id}>
+                  <th
+                    scope="row"
+                    className="border-2 border-black px-2 py-2.5 text-left text-lg font-bold whitespace-nowrap"
+                  >
+                    {player.jerseyNumber ? (
+                      <span className="tnum mr-2">{player.jerseyNumber}</span>
+                    ) : null}
+                    {playerName(player)}
+                  </th>
+                  {view.innings.map((inning) => {
+                    const at = view.slotOf(player.id, inning);
+                    return (
+                      <td
+                        key={inning}
+                        className="border-2 border-black px-2 py-2.5 text-center text-xl font-bold"
+                      >
+                        {at === UNAVAILABLE ? '—' : at === null ? 'SIT' : at.code}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="mt-3 border-t-2 border-black pt-2">
+            <p className="text-xs font-bold uppercase">Where that is</p>
+            <ul className="mt-1 flex flex-wrap gap-x-5 gap-y-0.5 text-sm">
+              {view.positions.map((position) => (
+                <li key={position.id} className="whitespace-nowrap">
+                  <span className="font-bold">{position.code}</span>{' '}
+                  {position.displayName}
+                </li>
+              ))}
+              <li className="whitespace-nowrap">
+                <span className="font-bold">SIT</span> On the bench this inning
+              </li>
+              {/* A blank cell would read as a mistake on a wall, so a player
+                  who arrives late or leaves early gets a dash with a key. */}
+              <li className="whitespace-nowrap">
+                <span className="font-bold">—</span> Not at the game yet, or gone home
+              </li>
+            </ul>
+          </div>
+        </section>
+      ) : (
       <div className={compact ? 'grid gap-4 lg:grid-cols-[200px_1fr]' : 'space-y-6'}>
         {/* Compact keeps a lean batting list: the merged table below adds an
             inning column per inning, which will not fit a clipboard. */}
@@ -277,6 +360,7 @@ export default function PrintPage() {
           </section>
         ) : null}
       </div>
+      )}
       </div>
     </div>
   );
