@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { buildScenario, runScenario } from '@/test/fixtures';
 import { buildGameView, UNAVAILABLE } from '@/lib/gameView';
-import { recordActualResults, updateActualAssignment } from '@/services/lineupService';
+import {
+  materializeActualInning,
+  recordActualResults,
+  setAssignment,
+  updateActualAssignment,
+} from '@/services/lineupService';
 import { getPlayerSeasonUsage } from '@/services/seasonStatistics';
 import type { Game, Player } from '@/domain/types';
 
@@ -113,7 +118,8 @@ describe('correcting a recorded game', () => {
   it('drops the inning from the season statistics, which is what feeds fairness', async () => {
     const { game, players } = await recordedGame();
     const brody = players.find((p) => p.firstName === 'Brody')!;
-    const before = getPlayerSeasonUsage([game])[brody.id].defensiveInnings;
+    const baseline = getPlayerSeasonUsage([game])[brody.id];
+    const before = baseline.defensiveInnings;
 
     const slot = buildGameView(game, players, 'ACTUAL').slotOf(brody.id, 4) as {
       id: string;
@@ -122,8 +128,10 @@ describe('correcting a recorded game', () => {
     const usage = getPlayerSeasonUsage([corrected]);
 
     expect(usage[brody.id].defensiveInnings).toBe(before - 1);
-    // And it is a bench inning now, not a vanished one.
-    expect(usage[brody.id].benchInnings).toBeGreaterThan(0);
+    /* And it is a bench inning now, not a vanished one. Asserting an increase,
+       not just a non-zero count: `benchInnings > 0` passed on bench innings he
+       already had and hid a correction that recorded nothing. */
+    expect(usage[brody.id].benchInnings).toBe(baseline.benchInnings + 1);
   });
 
   it('leaves the plan untouched, so planned and actual stay distinguishable', async () => {
@@ -142,5 +150,76 @@ describe('correcting a recorded game', () => {
         planned.playerAt(4, position.id)?.id,
       );
     }
+  });
+});
+
+/**
+ * The same correction, made from the game page rather than the record page.
+ *
+ * The bug this exists for: the game page read and wrote PLANNED rows whatever
+ * the game's status, so benching a player on a completed game updated the grid
+ * and changed nothing the season reads. It looked like it worked, which is the
+ * worst way for fairness data to be wrong.
+ */
+describe('editing a completed game the way the game page does', () => {
+  it('records a benching in the season, not just on screen', async () => {
+    const { game, players } = await recordedGame();
+    const brody = players.find((p) => p.firstName === 'Brody')!;
+    const baseline = getPlayerSeasonUsage([game])[brody.id];
+
+    const slot = buildGameView(game, players, 'ACTUAL').slotOf(brody.id, 4) as {
+      id: string;
+    };
+    // What the page now does on a COMPLETED game: the ACTUAL type.
+    const edited = setAssignment(game, 4, slot.id, null, 'ACTUAL');
+    const usage = getPlayerSeasonUsage([edited])[brody.id];
+
+    expect(usage.defensiveInnings).toBe(baseline.defensiveInnings - 1);
+    expect(usage.benchInnings).toBe(baseline.benchInnings + 1);
+  });
+
+  it('is the exact edit the old PLANNED write failed to make', async () => {
+    const { game, players } = await recordedGame();
+    const brody = players.find((p) => p.firstName === 'Brody')!;
+    const baseline = getPlayerSeasonUsage([game])[brody.id];
+
+    const slot = buildGameView(game, players, 'ACTUAL').slotOf(brody.id, 4) as {
+      id: string;
+    };
+    const plannedEdit = setAssignment(game, 4, slot.id, null, 'PLANNED');
+
+    // Pinned as a regression: the plan-side write moves no season number.
+    expect(getPlayerSeasonUsage([plannedEdit])[brody.id].benchInnings).toBe(
+      baseline.benchInnings,
+    );
+  });
+});
+
+describe('materializing an inning before correcting it', () => {
+  it('copies the plan across so one edit does not empty the inning', async () => {
+    const scenario = buildScenario({
+      innings: 6,
+      players: NAMES.map((name) => ({ name, canPitch: true, canCatch: true })),
+    });
+    const { game } = await runScenario(scenario, { seed: 4 });
+    const players = scenario.players;
+
+    // A game completed after five innings: the sixth has a plan, no record.
+    const completed = recordActualResults(game, 5);
+    const planned = buildGameView(completed, players, 'PLANNED');
+    const target = planned.positions[0];
+    const keep = planned.positions[1];
+
+    const edited = setAssignment(completed, 6, target.id, null, 'ACTUAL');
+    const after = buildGameView(edited, players, 'ACTUAL');
+
+    expect(after.playerAt(6, target.id)).toBeUndefined();
+    // Everyone else in that inning is still standing where the plan put them.
+    expect(after.playerAt(6, keep.id)?.id).toBe(planned.playerAt(6, keep.id)?.id);
+  });
+
+  it('leaves an inning that is already recorded alone', async () => {
+    const { game } = await recordedGame();
+    expect(materializeActualInning(game, 4)).toBe(game);
   });
 });

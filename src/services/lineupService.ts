@@ -199,6 +199,37 @@ export function benchedPlayerIds(game: Game, inning: number): string[] {
  * two positions in the same inning whenever a coach corrected a result. The
  * duplicate then fed straight into season statistics as two innings played.
  */
+/**
+ * Copy an inning's plan into the record before the record is edited.
+ *
+ * Both readers fall back to the plan for an inning that has no ACTUAL rows, so
+ * writing one ACTUAL cell into such an inning silently erases the other eight:
+ * the inning counts as recorded, and the fallback stops applying to it. Copying
+ * the plan across first makes the edit mean what a coach expects — this one
+ * change, and everything else the way it was.
+ */
+export function materializeActualInning(game: Game, inning: number): Game {
+  const alreadyRecorded = game.defensiveAssignments.some(
+    (assignment) => assignment.assignmentType === 'ACTUAL' && assignment.inning === inning,
+  );
+  if (alreadyRecorded) return game;
+
+  const copied: DefensiveAssignment[] = game.defensiveAssignments
+    .filter(
+      (assignment) =>
+        assignment.assignmentType === 'PLANNED' && assignment.inning === inning,
+    )
+    .map((assignment) => ({
+      ...assignment,
+      id: createId('asg'),
+      locked: false,
+      assignmentType: 'ACTUAL',
+    }));
+
+  if (copied.length === 0) return game;
+  return { ...game, defensiveAssignments: [...game.defensiveAssignments, ...copied] };
+}
+
 export function setAssignment(
   game: Game,
   inning: number,
@@ -206,8 +237,9 @@ export function setAssignment(
   playerId: string | null,
   type: AssignmentType = 'PLANNED',
 ): Game {
-  const planned = game.defensiveAssignments.filter((a) => a.assignmentType === type);
-  const others = game.defensiveAssignments.filter((a) => a.assignmentType !== type);
+  const source = type === 'ACTUAL' ? materializeActualInning(game, inning) : game;
+  const planned = source.defensiveAssignments.filter((a) => a.assignmentType === type);
+  const others = source.defensiveAssignments.filter((a) => a.assignmentType !== type);
 
   const targetIndex = planned.findIndex(
     (a) => a.inning === inning && a.positionId === positionId,
@@ -216,7 +248,7 @@ export function setAssignment(
 
   if (playerId === null) {
     const next = targetIndex >= 0 ? planned.filter((_, i) => i !== targetIndex) : planned;
-    return { ...game, defensiveAssignments: [...next, ...others] };
+    return { ...source, defensiveAssignments: [...next, ...others] };
   }
 
   const existingIndex = planned.findIndex(
@@ -229,17 +261,17 @@ export function setAssignment(
     // Straight swap between two positions in the same inning.
     updated[existingIndex] = { ...updated[existingIndex], playerId: displaced.playerId };
     updated[targetIndex] = { ...updated[targetIndex], playerId };
-    return { ...game, defensiveAssignments: [...updated, ...others] };
+    return { ...source, defensiveAssignments: [...updated, ...others] };
   }
 
   if (existingIndex >= 0) {
     updated[existingIndex] = { ...updated[existingIndex], positionId };
-    return { ...game, defensiveAssignments: [...updated, ...others] };
+    return { ...source, defensiveAssignments: [...updated, ...others] };
   }
 
   if (targetIndex >= 0) {
     updated[targetIndex] = { ...updated[targetIndex], playerId };
-    return { ...game, defensiveAssignments: [...updated, ...others] };
+    return { ...source, defensiveAssignments: [...updated, ...others] };
   }
 
   updated.push({
@@ -251,7 +283,7 @@ export function setAssignment(
     locked: false,
     assignmentType: type,
   });
-  return { ...game, defensiveAssignments: [...updated, ...others] };
+  return { ...source, defensiveAssignments: [...updated, ...others] };
 }
 
 export function toggleLock(game: Game, inning: number, positionId: string): Game {

@@ -28,7 +28,7 @@ import {
   Select,
   Spinner,
 } from '@/components/ui';
-import type { Game, PositionDefinition, TeamSettings } from '@/domain/types';
+import type { AssignmentType, Game, PositionDefinition, TeamSettings } from '@/domain/types';
 import { rotateBattingOrder, type OptimizationResult, type RelaxationSuggestion } from '@/optimizer';
 import {
   generateLineup,
@@ -73,9 +73,19 @@ export default function GamePage() {
 
   const game = games.find((entry) => entry.id === params.gameId) ?? null;
 
+  /*
+    Which set of rows the page reads and writes.
+
+    Once a game is completed the plan is history and the record is the truth —
+    the season counts ACTUAL rows. The page used to read and write PLANNED on a
+    completed game, so a coach who benched a player here saw the grid update and
+    the season ignore it: they had edited a plan nothing reads any more.
+  */
+  const editType: AssignmentType = game?.status === 'COMPLETED' ? 'ACTUAL' : 'PLANNED';
+
   const view = useMemo(
-    () => (game ? buildGameView(game, players, 'PLANNED') : null),
-    [game, players],
+    () => (game ? buildGameView(game, players, editType) : null),
+    [game, players, editType],
   );
 
   if (!ready) return null;
@@ -309,6 +319,23 @@ export default function GamePage() {
         </div>
       </div>
 
+      {/*
+        Say which thing an edit changes. On a completed game every change on
+        this page rewrites what happened, and that flows straight into season
+        fairness — the coach should never have to guess whether a correction
+        counted.
+      */}
+      {game.status === 'COMPLETED' ? (
+        <div className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm">
+          <p className="font-semibold text-ink">Recorded result</p>
+          <p className="mt-0.5 text-ink-muted">
+            This game is done, so changes here correct what actually happened and
+            update season fairness. {game.actualInnings} of {game.plannedInnings} innings
+            counted.
+          </p>
+        </div>
+      ) : null}
+
       {result && !result.ok ? (
         <ConflictList
           conflicts={result.conflicts}
@@ -426,10 +453,10 @@ export default function GamePage() {
                       setPicker({ inning: fieldInning, position })
                     }
                     onAssign={async (positionId, playerId) => {
-                      await update(setAssignment(game, fieldInning, positionId, playerId));
+                      await update(setAssignment(game, fieldInning, positionId, playerId, editType));
                     }}
                     onBench={async (positionId) => {
-                      await update(setAssignment(game, fieldInning, positionId, null));
+                      await update(setAssignment(game, fieldInning, positionId, null, editType));
                     }}
                   />
                 </div>
@@ -448,6 +475,7 @@ export default function GamePage() {
                                 plan.nextInning,
                                 plan.pitcherPositionId,
                                 plan.pitcher.id,
+                                editType,
                               ),
                             );
                           }
@@ -462,7 +490,9 @@ export default function GamePage() {
               // The lock and pin states are explained by the legend the grid
               // renders under itself, next to the actual controls.
               <p className="border-t border-border px-5 py-3 text-xs text-ink-subtle">
-                Tap any player to swap or bench them.
+                {game.status === 'COMPLETED'
+                  ? 'Tap any player to correct what happened that inning.'
+                  : 'Tap any player to swap or bench them.'}
               </p>
             ) : null}
           </Card>
@@ -607,10 +637,10 @@ export default function GamePage() {
           position={picker.position}
           onClose={() => setPicker(null)}
           onAssign={async (playerId) => {
-            await update(setAssignment(game, picker.inning, picker.position.id, playerId));
+            await update(setAssignment(game, picker.inning, picker.position.id, playerId, editType));
           }}
           onBench={async () => {
-            await update(setAssignment(game, picker.inning, picker.position.id, null));
+            await update(setAssignment(game, picker.inning, picker.position.id, null, editType));
           }}
           onOverride={async (playerId) => {
             const withOverride: Game = {
