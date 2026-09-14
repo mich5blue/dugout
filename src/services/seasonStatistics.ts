@@ -33,11 +33,33 @@ export function isCountedGame(game: Game): boolean {
  */
 export function effectiveAssignments(game: Game): DefensiveAssignment[] {
   const limit = countedInnings(game);
+
+  /*
+    Fall back to the plan per *inning*, not per cell.
+
+    Per-cell fallback made a correction impossible to record. A coach logging
+    that a player sat an inning they were scheduled for removes that ACTUAL
+    row, and a per-cell fallback then re-read the PLANNED row for the empty
+    cell and credited the inning anyway — so the correction appeared to save
+    and changed nothing, which is the worst way for fairness data to be wrong.
+
+    An inning that has been recorded is recorded completely, so its ACTUAL rows
+    are the whole truth about it. Innings never recorded still fall back, which
+    is what lets a game called early count the innings that were played.
+  */
+  const recordedInnings = new Set<number>();
+  for (const assignment of game.defensiveAssignments) {
+    if (assignment.assignmentType === 'ACTUAL') recordedInnings.add(assignment.inning);
+  }
+
   const byCell = new Map<string, DefensiveAssignment>();
 
   for (const assignment of game.defensiveAssignments) {
     if (assignment.inning > limit) continue;
     if (assignment.positionId === BENCH_POSITION_ID) continue;
+    if (assignment.assignmentType === 'PLANNED' && recordedInnings.has(assignment.inning)) {
+      continue;
+    }
     const key = `${assignment.inning}|${assignment.positionId}`;
     const existing = byCell.get(key);
     if (!existing || (assignment.assignmentType === 'ACTUAL' && existing.assignmentType === 'PLANNED')) {

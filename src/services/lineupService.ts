@@ -1,5 +1,6 @@
 import { createId } from '@/domain/factories';
 import type {
+  AssignmentType,
   DefensiveAssignment,
   DevelopmentGoal,
   Game,
@@ -190,18 +191,23 @@ export function benchedPlayerIds(game: Game, inning: number): string[] {
 /**
  * Manual edit: put `playerId` at a position in an inning. If that player is
  * already on the field that inning the two swap; otherwise whoever held the
- * position goes to the bench.
+ * position goes to the bench. Passing null empties the position.
+ *
+ * `type` decides whether this edits the plan or the record of what happened.
+ * Both need identical semantics — the actual-side used to have its own simpler
+ * version that only overwrote the target cell, which left a player standing at
+ * two positions in the same inning whenever a coach corrected a result. The
+ * duplicate then fed straight into season statistics as two innings played.
  */
 export function setAssignment(
   game: Game,
   inning: number,
   positionId: string,
   playerId: string | null,
+  type: AssignmentType = 'PLANNED',
 ): Game {
-  const planned = game.defensiveAssignments.filter(
-    (a) => a.assignmentType === 'PLANNED',
-  );
-  const others = game.defensiveAssignments.filter((a) => a.assignmentType !== 'PLANNED');
+  const planned = game.defensiveAssignments.filter((a) => a.assignmentType === type);
+  const others = game.defensiveAssignments.filter((a) => a.assignmentType !== type);
 
   const targetIndex = planned.findIndex(
     (a) => a.inning === inning && a.positionId === positionId,
@@ -243,7 +249,7 @@ export function setAssignment(
     positionId,
     playerId,
     locked: false,
-    assignmentType: 'PLANNED',
+    assignmentType: type,
   });
   return { ...game, defensiveAssignments: [...updated, ...others] };
 }
@@ -370,40 +376,20 @@ export function recordActualResults(
   };
 }
 
+/**
+ * Correct what actually happened in a recorded game.
+ *
+ * Delegates so a correction behaves exactly like a planned edit: swapping
+ * rather than duplicating, and accepting null to bench a player who sat when
+ * they were not scheduled to.
+ */
 export function updateActualAssignment(
   game: Game,
   inning: number,
   positionId: string,
-  playerId: string,
+  playerId: string | null,
 ): Game {
-  const existing = game.defensiveAssignments.find(
-    (a) => a.assignmentType === 'ACTUAL' && a.inning === inning && a.positionId === positionId,
-  );
-
-  if (existing) {
-    return {
-      ...game,
-      defensiveAssignments: game.defensiveAssignments.map((assignment) =>
-        assignment === existing ? { ...assignment, playerId } : assignment,
-      ),
-    };
-  }
-
-  return {
-    ...game,
-    defensiveAssignments: [
-      ...game.defensiveAssignments,
-      {
-        id: createId('asg'),
-        gameId: game.id,
-        inning,
-        positionId,
-        playerId,
-        locked: false,
-        assignmentType: 'ACTUAL',
-      },
-    ],
-  };
+  return setAssignment(game, inning, positionId, playerId, 'ACTUAL');
 }
 
 export function setAvailability(

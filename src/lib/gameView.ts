@@ -52,10 +52,35 @@ export function buildGameView(
   const innings = Array.from({ length: game.plannedInnings }, (_, i) => i + 1);
   const playerById = new Map(roster.map((player) => [player.id, player]));
 
-  // Prefer the requested type, falling back to PLANNED so a partially recorded
-  // game still renders completely.
+  /*
+    Prefer the requested type, falling back to PLANNED so a partially recorded
+    game still renders completely — but fall back per *inning*, not per cell.
+
+    Per-cell fallback made a correction impossible to express. Recording that a
+    player sat an inning they were scheduled for means removing their ACTUAL
+    row, and with a per-cell fallback that empty cell immediately re-read the
+    PLANNED row and put them straight back — on screen and, worse, in the
+    season statistics, which credited the inning they did not play.
+
+    Per-inning is the right grain because that is how results are recorded: an
+    inning the coach has logged is logged completely, so its ACTUAL rows are
+    the whole truth about it and an absent cell means nobody, not "ask the
+    plan". Innings never logged still fall back and render.
+  */
+  const recordedInnings = new Set<number>();
+  if (assignmentType !== 'PLANNED') {
+    for (const assignment of game.defensiveAssignments) {
+      if (assignment.assignmentType === assignmentType) {
+        recordedInnings.add(assignment.inning);
+      }
+    }
+  }
+
   const cells = new Map<string, DefensiveAssignment>();
   for (const assignment of game.defensiveAssignments) {
+    if (assignment.assignmentType !== assignmentType && recordedInnings.has(assignment.inning)) {
+      continue;
+    }
     const key = `${assignment.inning}|${assignment.positionId}`;
     const existing = cells.get(key);
     if (!existing) {

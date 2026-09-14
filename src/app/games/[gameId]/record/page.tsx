@@ -150,18 +150,20 @@ export default function RecordResultsPage() {
                               className="h-9"
                               value={current?.id ?? ''}
                               onChange={async (event) => {
-                                if (!event.target.value) return;
+                                /* An empty value is a real edit, not a no-op:
+                                   it is how a coach records that the player
+                                   scheduled here sat the inning. */
                                 await saveGame(
                                   updateActualAssignment(
                                     game,
                                     inning,
                                     position.id,
-                                    event.target.value,
+                                    event.target.value || null,
                                   ),
                                 );
                               }}
                             >
-                              <option value="">—</option>
+                              <option value="">Nobody — sat this inning</option>
                               {view.availableAt(inning).map((player) => (
                                 <option key={player.id} value={player.id}>
                                   {playerShortName(player)}
