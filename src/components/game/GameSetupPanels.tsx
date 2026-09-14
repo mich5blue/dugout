@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Badge,
   Button,
   Card,
   CardHeader,
@@ -27,6 +28,7 @@ import {
   PHILOSOPHY_LABEL,
   PHILOSOPHY_SPECTRUM,
   applyPhilosophy,
+  defaultRuleSettings,
 } from '@/domain/weights';
 import { cn } from '@/lib/cn';
 import { useState } from 'react';
@@ -189,6 +191,46 @@ export function AvailabilityPanel({
   );
 }
 
+/**
+ * The rules that live behind "Advanced".
+ *
+ * Listed explicitly rather than derived, so adding a setting is a deliberate
+ * choice about which side of the disclosure it belongs on instead of silently
+ * landing in whichever half a diff happens to produce.
+ */
+const ADVANCED_RULE_KEYS = [
+  'playingTimeBalance',
+  'variety',
+  'criticalStrength',
+  'infieldSpread',
+  'positionContinuityInnings',
+  'minUniquePositions',
+  'maxInningsSamePosition',
+  'maxConsecutiveSamePosition',
+  'maxBenchInnings',
+  'maxOutfieldInnings',
+  'minOutfieldInnings',
+  'maxConsecutiveOutfieldInnings',
+  'maxCatcherInningsPerPlayer',
+  'maxConsecutiveCatcherInnings',
+  'maxPitchingInningsPerPlayer',
+  'restrictPitcherCatcherTransition',
+] as const satisfies ReadonlyArray<keyof TeamSettings>;
+
+/** Every advanced rule back at its default, for the reset action. */
+function defaultAdvancedRules(): Partial<TeamSettings> {
+  const defaults = defaultRuleSettings();
+  return Object.fromEntries(
+    ADVANCED_RULE_KEYS.map((key) => [key, defaults[key]]),
+  ) as Partial<TeamSettings>;
+}
+
+/** How many advanced rules the coach has moved off default. */
+function countChangedFromDefault(settings: TeamSettings): number {
+  const defaults = defaultRuleSettings();
+  return ADVANCED_RULE_KEYS.filter((key) => settings[key] !== defaults[key]).length;
+}
+
 /** Coaching philosophy and rules (spec sections 3, 18-24). */
 export function RulesPanel({
   settings,
@@ -204,12 +246,13 @@ export function RulesPanel({
     onChange({ ...settings, ...changes, philosophy: 'CUSTOM' });
 
   const inningOptions = Array.from({ length: innings + 1 }, (_, i) => i);
+  const changedFromDefault = countChangedFromDefault(settings);
 
   return (
     <Card>
       <CardHeader
         title="How do you want to coach this game?"
-        description="Presets move everything below. Change anything and you're on Custom."
+        description="Pick how you want to coach and Dugout sets the rest. Change anything and you're on Custom."
       />
       <div className="space-y-6 px-5 py-5">
         <div>
@@ -277,6 +320,109 @@ export function RulesPanel({
             ) : null}
           </div>
 
+        </div>
+
+        <div>
+          <Label>Infield opportunity</Label>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <SegmentedControl
+              size="sm"
+              value={settings.infieldOpportunity.mode}
+              onChange={(mode) =>
+                set({
+                  infieldOpportunity:
+                    mode === 'OFF'
+                      ? { mode: 'OFF' }
+                      : {
+                          mode,
+                          innings:
+                            settings.infieldOpportunity.mode === 'OFF'
+                              ? 1
+                              : settings.infieldOpportunity.innings,
+                        },
+                })
+              }
+              options={[
+                { value: 'OFF', label: 'Off' },
+                { value: 'TARGET', label: 'Target' },
+                { value: 'REQUIRED', label: 'Require' },
+              ]}
+            />
+            {settings.infieldOpportunity.mode !== 'OFF' ? (
+              <Select
+                className="w-36"
+                value={settings.infieldOpportunity.innings}
+                onChange={(event) =>
+                  set({
+                    infieldOpportunity: {
+                      mode: settings.infieldOpportunity.mode as 'TARGET' | 'REQUIRED',
+                      innings: Number(event.target.value),
+                    },
+                  })
+                }
+              >
+                {[1, 2, 3].map((value) => (
+                  <option key={value} value={value}>
+                    {value} {value === 1 ? 'inning' : 'innings'}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+          </div>
+          <p className="mt-1.5 text-xs text-ink-subtle">
+            Applies to every player eligible for at least one infield position.
+          </p>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Toggle
+            active={settings.noConsecutiveBench}
+            onClick={() => set({ noConsecutiveBench: !settings.noConsecutiveBench })}
+          >
+            <span className="text-sm text-ink">Nobody sits twice in a row</span>
+          </Toggle>
+          <Toggle
+            active={settings.equalizeBench}
+            onClick={() => set({ equalizeBench: !settings.equalizeBench })}
+          >
+            <span className="text-sm text-ink">Even out bench innings</span>
+          </Toggle>
+        </div>
+
+        {/*
+          Everything a preset already decides lives behind here.
+          `applyPhilosophy` sets playing time, variety, critical strength and
+          the bench flags, so showing those dials next to the preset that sets
+          them invited a coach to fight their own choice — and sixteen controls
+          on one panel is not a decision most little-league coaches want to
+          make. The preset is the interface; this is the escape hatch.
+
+          The count matters as much as the disclosure: a rule hidden behind a
+          collapsed section is a rule a coach cannot be held to, so anything
+          moved off default is reported on the closed button.
+        */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          <Button size="sm" variant="ghost" onClick={() => setAdvanced((value) => !value)}>
+            {advanced ? 'Hide advanced rules' : 'Advanced rules'}
+          </Button>
+          {changedFromDefault > 0 ? (
+            <Badge tone="caution">
+              {changedFromDefault} changed from default
+            </Badge>
+          ) : null}
+          {advanced && changedFromDefault > 0 ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => set(defaultAdvancedRules())}
+            >
+              Reset to default
+            </Button>
+          ) : null}
+        </div>
+
+        {advanced ? (
+          <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <Label>Playing time</Label>
             <SegmentedControl<PlayingTimeBalance>
@@ -385,80 +531,8 @@ export function RulesPanel({
               infield innings.
             </p>
           </div>
-        </div>
-
-        <div>
-          <Label>Infield opportunity</Label>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <SegmentedControl
-              size="sm"
-              value={settings.infieldOpportunity.mode}
-              onChange={(mode) =>
-                set({
-                  infieldOpportunity:
-                    mode === 'OFF'
-                      ? { mode: 'OFF' }
-                      : {
-                          mode,
-                          innings:
-                            settings.infieldOpportunity.mode === 'OFF'
-                              ? 1
-                              : settings.infieldOpportunity.innings,
-                        },
-                })
-              }
-              options={[
-                { value: 'OFF', label: 'Off' },
-                { value: 'TARGET', label: 'Target' },
-                { value: 'REQUIRED', label: 'Require' },
-              ]}
-            />
-            {settings.infieldOpportunity.mode !== 'OFF' ? (
-              <Select
-                className="w-36"
-                value={settings.infieldOpportunity.innings}
-                onChange={(event) =>
-                  set({
-                    infieldOpportunity: {
-                      mode: settings.infieldOpportunity.mode as 'TARGET' | 'REQUIRED',
-                      innings: Number(event.target.value),
-                    },
-                  })
-                }
-              >
-                {[1, 2, 3].map((value) => (
-                  <option key={value} value={value}>
-                    {value} {value === 1 ? 'inning' : 'innings'}
-                  </option>
-                ))}
-              </Select>
-            ) : null}
           </div>
-          <p className="mt-1.5 text-xs text-ink-subtle">
-            Applies to every player eligible for at least one infield position.
-          </p>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Toggle
-            active={settings.noConsecutiveBench}
-            onClick={() => set({ noConsecutiveBench: !settings.noConsecutiveBench })}
-          >
-            <span className="text-sm text-ink">Nobody sits twice in a row</span>
-          </Toggle>
-          <Toggle
-            active={settings.equalizeBench}
-            onClick={() => set({ equalizeBench: !settings.equalizeBench })}
-          >
-            <span className="text-sm text-ink">Even out bench innings</span>
-          </Toggle>
-        </div>
-
-        <div>
-          <Button size="sm" variant="ghost" onClick={() => setAdvanced((value) => !value)}>
-            {advanced ? 'Hide advanced rules' : 'Advanced rules'}
-          </Button>
-        </div>
+        ) : null}
 
         {advanced ? (
           <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
