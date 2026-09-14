@@ -187,6 +187,83 @@ export function getPlayerSeasonUsage(games: Game[]): Record<string, PlayerSeason
   return usage;
 }
 
+/** One completed game, from one player's point of view. */
+export interface PlayerGameLine {
+  gameId: string;
+  date: string;
+  opponent: string;
+  /** Innings actually played in the field. */
+  innings: number;
+  /** Innings they were available for but sat. */
+  benchInnings: number;
+  /** Innings that counted in this game, for the whole team. */
+  gameInnings: number;
+  byGroup: Record<PositionGroup, number>;
+}
+
+/**
+ * Per-player, per-game playing time.
+ *
+ * The season totals answer "how much", but not "when". A player can sit on a
+ * healthy season average and still have been parked for two games running —
+ * which is the thing a parent notices and the coach cannot see in a total.
+ * Ordered oldest first, so a strip of these reads left to right as the season.
+ */
+export function getPlayerGameLog(games: Game[]): Record<string, PlayerGameLine[]> {
+  const log: Record<string, PlayerGameLine[]> = {};
+
+  const ordered = [...games]
+    .filter(isCountedGame)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+
+  for (const game of ordered) {
+    const limit = countedInnings(game);
+    if (limit <= 0) continue;
+
+    const positionsById = new Map(game.formationSnapshot.positions.map((p) => [p.id, p]));
+    const playedInning = new Map<string, Set<number>>();
+    const groups = new Map<string, Record<PositionGroup, number>>();
+
+    for (const assignment of effectiveAssignments(game)) {
+      const position = positionsById.get(assignment.positionId);
+      if (!position) continue;
+      const set = playedInning.get(assignment.playerId) ?? new Set<number>();
+      set.add(assignment.inning);
+      playedInning.set(assignment.playerId, set);
+
+      const byGroup =
+        groups.get(assignment.playerId) ??
+        ({ BATTERY: 0, INFIELD: 0, OUTFIELD: 0, BENCH: 0 } as Record<PositionGroup, number>);
+      byGroup[position.group]++;
+      groups.set(assignment.playerId, byGroup);
+    }
+
+    for (const entry of gameAvailability(game)) {
+      const played = playedInning.get(entry.playerId) ?? new Set<number>();
+      let bench = 0;
+      for (let inning = 1; inning <= limit; inning++) {
+        if (entry.available[inning - 1] && !played.has(inning)) bench++;
+      }
+      const byGroup =
+        groups.get(entry.playerId) ??
+        ({ BATTERY: 0, INFIELD: 0, OUTFIELD: 0, BENCH: 0 } as Record<PositionGroup, number>);
+
+      log[entry.playerId] ??= [];
+      log[entry.playerId].push({
+        gameId: game.id,
+        date: game.date,
+        opponent: game.opponent,
+        innings: played.size,
+        benchInnings: bench,
+        gameInnings: limit,
+        byGroup: { ...byGroup, BENCH: bench },
+      });
+    }
+  }
+
+  return log;
+}
+
 export function getPositionDistribution(
   games: Game[],
 ): { codes: Array<{ code: string; displayName: string; group: PositionGroup }>; byPlayer: Record<string, Record<string, number>> } {
