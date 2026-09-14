@@ -1,6 +1,8 @@
 'use client';
 
 import { useDugout } from '@/app/providers';
+import { AwaitingResults } from '@/components/game/AwaitingResults';
+import { recordActualResults } from '@/services/lineupService';
 import { Badge, Button, Card, CardHeader, EmptyState } from '@/components/ui';
 import { formatDayAndDate, formatGameDate } from '@/lib/format';
 import { completedGames, hasLineup, upcomingGames } from '@/lib/schedule';
@@ -17,7 +19,7 @@ import { useMemo } from 'react';
  * and what has been played.
  */
 export default function SchedulePage() {
-  const { ready, team, games, can } = useDugout();
+  const { ready, team, games, can, saveGame } = useDugout();
 
   const upcoming = useMemo(() => upcomingGames(games), [games]);
   const played = useMemo(() => completedGames(games), [games]);
@@ -54,6 +56,13 @@ export default function SchedulePage() {
           </Link>
         ) : null}
       </div>
+
+      <AwaitingResults
+        games={games}
+        onRecord={async (game, innings) => {
+          await saveGame(recordActualResults(game, innings));
+        }}
+      />
 
       {games.length === 0 ? (
         <Card>

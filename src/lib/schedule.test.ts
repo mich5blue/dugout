@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Game } from '@/domain/types';
 import {
   adjacentGames,
+  awaitingResults,
   completedGames,
   orderedGames,
   upcomingGames,
@@ -32,8 +33,32 @@ describe('season order', () => {
   });
 
   it('splits upcoming from completed, each in reading order', () => {
-    expect(upcomingGames(GAMES).map((g) => g.id)).toEqual(['b1', 'b2', 'c', 'd']);
+    expect(upcomingGames(GAMES, '2026-04-01').map((g) => g.id)).toEqual([
+      'b1',
+      'b2',
+      'c',
+      'd',
+    ]);
     expect(completedGames(GAMES).map((g) => g.id)).toEqual(['a']);
+  });
+
+  it('does not call a game that already happened "upcoming"', () => {
+    // Mid-season: b1 and b2 are in the past and were never recorded.
+    expect(upcomingGames(GAMES, '2026-05-05').map((g) => g.id)).toEqual(['c', 'd']);
+  });
+
+  it('lists played-but-unrecorded games as awaiting results, oldest first', () => {
+    expect(awaitingResults(GAMES, '2026-05-05').map((g) => g.id)).toEqual(['b1', 'b2']);
+  });
+
+  it('counts a game dated today as still to play, not awaiting results', () => {
+    expect(awaitingResults(GAMES, '2026-05-02').map((g) => g.id)).toEqual([]);
+    expect(upcomingGames(GAMES, '2026-05-02').map((g) => g.id)).toContain('b1');
+  });
+
+  it('never lists a recorded game as awaiting results', () => {
+    // 'a' is in the past but COMPLETED.
+    expect(awaitingResults(GAMES, '2026-12-01').map((g) => g.id)).not.toContain('a');
   });
 
   it('walks the whole season with the arrows', () => {

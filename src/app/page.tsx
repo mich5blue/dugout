@@ -17,12 +17,15 @@ import { getFairnessDebt, getTeamSeasonFairness } from '@/services/fairness';
 import { formatDayAndDate, formatGameDate, formatShortDate, percent } from '@/lib/format';
 import { upcomingGames } from '@/lib/schedule';
 import { playerName } from '@/domain/factories';
+import { AwaitingResults } from '@/components/game/AwaitingResults';
 import { MoveLocalData } from '@/components/MoveLocalData';
+import { recordActualResults } from '@/services/lineupService';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 export default function DashboardPage() {
-  const { ready, team, players, activePlayers, games, seedDemoTeam } = useDugout();
+  const { ready, team, players, activePlayers, games, seedDemoTeam, saveGame } =
+    useDugout();
   const [seeding, setSeeding] = useState(false);
 
   /* Season order comes from lib/schedule so this agrees with the Schedule
@@ -152,6 +155,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <MoveLocalData />
+
+      {/* Above the season card on purpose: those numbers are empty until
+          these are logged. */}
+      <AwaitingResults
+        games={games}
+        onRecord={async (game, innings) => {
+          await saveGame(recordActualResults(game, innings));
+        }}
+      />
 
       <div>
         <p className="eyebrow text-accent">

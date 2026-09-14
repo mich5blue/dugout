@@ -1,4 +1,5 @@
 import type { Game } from '@/domain/types';
+import { todayIso } from '@/lib/format';
 
 /**
  * Season order.
@@ -23,9 +24,33 @@ export function orderedGames(games: Game[]): Game[] {
   );
 }
 
-/** Not yet recorded, soonest first. */
-export function upcomingGames(games: Game[]): Game[] {
-  return orderedGames(games).filter((game) => game.status !== 'COMPLETED');
+/**
+ * Still to be played, soonest first.
+ *
+ * Dated today or later, not merely unrecorded. Filtering on status alone meant
+ * a game from May still billed itself as "Next game" in September, because
+ * nobody had got round to recording it — the dashboard pointed at a game that
+ * had already happened.
+ */
+export function upcomingGames(games: Game[], today: string = todayIso()): Game[] {
+  return orderedGames(games).filter(
+    (game) => game.status !== 'COMPLETED' && game.date >= today,
+  );
+}
+
+/**
+ * Played, but never recorded — oldest first.
+ *
+ * These are the games holding the season back. Every season number comes from
+ * recorded results, so a coach who never opens "Record results" gets an empty
+ * Season page and no fairness carry-over at all: the thing the product is for
+ * silently does not run. Surfacing them is what makes the season engine
+ * self-starting.
+ */
+export function awaitingResults(games: Game[], today: string = todayIso()): Game[] {
+  return orderedGames(games).filter(
+    (game) => game.status !== 'COMPLETED' && game.date < today,
+  );
 }
 
 /** Recorded, most recent first. */
