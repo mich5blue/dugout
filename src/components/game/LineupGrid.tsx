@@ -120,7 +120,7 @@ export function LineupGrid({
                             (locked || planPinned) && 'ring-1 ring-accent ring-inset',
                           )}
                         >
-                          {player ? playerShortName(player) : '—'}
+                          {player ? view.names.short(player.id) : '—'}
                         </button>
 
                         {planPinned ? (
@@ -183,7 +183,7 @@ export function LineupGrid({
                         player ? 'bg-bench-soft text-ink-muted' : 'text-transparent',
                       )}
                     >
-                      {player ? playerShortName(player) : '—'}
+                      {player ? view.names.short(player.id) : '—'}
                     </div>
                   </td>
                 );

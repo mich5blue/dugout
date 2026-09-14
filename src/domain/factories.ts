@@ -46,7 +46,7 @@ export function createTeam(options: CreateTeamOptions): Team {
 export interface CreatePlayerOptions {
   teamId: string;
   firstName: string;
-  lastName?: string;
+  lastInitial?: string;
   jerseyNumber?: string;
   overallTier?: AbilityTier;
   offensiveTier?: AbilityTier;
@@ -60,7 +60,7 @@ export function createPlayer(options: CreatePlayerOptions): Player {
     id: createId('plr'),
     teamId: options.teamId,
     firstName: options.firstName.trim(),
-    lastName: (options.lastName ?? '').trim(),
+    lastInitial: toLastInitial(options.lastInitial),
     jerseyNumber: options.jerseyNumber?.trim() || undefined,
     active: true,
     overallTier: options.overallTier ?? 'REGULAR',
@@ -111,9 +111,11 @@ export function parseQuickAddRoster(
 
     const parts = remainder.split(/\s+/);
     const firstName = parts[0];
-    const lastName = parts.slice(1).join(' ');
+    /* A pasted line usually carries a full surname. Only its initial is kept —
+       see the note on Player.lastInitial. */
+    const lastInitial = toLastInitial(parts.slice(1).join(' '));
 
-    results.push({ teamId, firstName, lastName, jerseyNumber });
+    results.push({ teamId, firstName, lastInitial, jerseyNumber });
   }
 
   return results;
@@ -157,10 +159,37 @@ export function createGame(options: CreateGameOptions): Game {
   };
 }
 
-export function playerName(player: Pick<Player, 'firstName' | 'lastName'>): string {
-  return `${player.firstName} ${player.lastName}`.trim();
+/**
+ * Narrows whatever was typed or pasted to a single last initial.
+ *
+ * One character, not a few. A pasted "Brody Borek" reduced to "Bo" is both
+ * odd to read and more identifying than it needs to be, and two letters of a
+ * surname is the beginning of a surname — which is the one thing this field
+ * must not hold. See the note on Player.lastInitial.
+ *
+ * A leading "." or a typed "B." both land on "B".
+ */
+export function toLastInitial(value: string | undefined): string | undefined {
+  const letter = (value ?? '').trim().replace(/^[^\p{L}\p{N}]+/u, '').charAt(0);
+  return letter === '' ? undefined : letter.toUpperCase();
 }
 
-export function playerShortName(player: Pick<Player, 'firstName' | 'lastName'>): string {
-  return player.firstName || player.lastName;
+/**
+ * Name for a single player, with no knowledge of the rest of the roster.
+ *
+ * Use `playerNames(roster)` from lib/playerNames wherever two players could
+ * share a first name — it disambiguates with the jersey number. These two are
+ * for the cases where there is genuinely only one player in view.
+ */
+export function playerName(
+  player: Pick<Player, 'firstName' | 'lastInitial'>,
+): string {
+  const initial = (player.lastInitial ?? '').trim();
+  return `${player.firstName} ${initial === '' ? '' : `${initial}.`}`.trim();
+}
+
+export function playerShortName(
+  player: Pick<Player, 'firstName' | 'lastInitial'>,
+): string {
+  return player.firstName.trim() || (player.lastInitial ?? '');
 }

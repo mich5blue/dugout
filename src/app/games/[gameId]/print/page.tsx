@@ -2,7 +2,6 @@
 
 import { useDugout } from '@/app/providers';
 import { Button, EmptyState, SegmentedControl } from '@/components/ui';
-import { playerName, playerShortName } from '@/domain/factories';
 import { cn } from '@/lib/cn';
 import { formatGameDate } from '@/lib/format';
 import { extraInningPlan } from '@/lib/gameDayChanges';
@@ -156,7 +155,7 @@ export default function PrintPage() {
                     {player.jerseyNumber ? (
                       <span className="tnum mr-2">{player.jerseyNumber}</span>
                     ) : null}
-                    {playerName(player)}
+                    {view.names.plain(player.id)}
                   </th>
                   {view.innings.map((inning) => {
                     const at = view.slotOf(player.id, inning);
@@ -225,7 +224,7 @@ export default function PrintPage() {
                     {entry.slot}
                   </td>
                   <td className={`${cellPadding} ${textSize} font-medium`}>
-                    {playerName(entry.player)}
+                    {view.names.plain(entry.player.id)}
                   </td>
                   <td className={`tnum w-10 text-right ${cellPadding} ${textSize}`}>
                     {entry.player.jerseyNumber ? `#${entry.player.jerseyNumber}` : ''}
@@ -268,7 +267,7 @@ export default function PrintPage() {
                         key={inning}
                         className={`text-center ${cellPadding} ${textSize} whitespace-nowrap`}
                       >
-                        {player ? playerShortName(player) : '—'}
+                        {player ? view.names.short(player.id) : '—'}
                       </td>
                     );
                   })}
@@ -283,7 +282,7 @@ export default function PrintPage() {
                     key={inning}
                     className={`text-center ${cellPadding} ${textSize} whitespace-nowrap`}
                   >
-                    {view.benchAt(inning).map(playerShortName).join(', ') || '—'}
+                    {view.benchAt(inning).map((p) => view.names.short(p.id)).join(', ') || '—'}
                   </td>
                 ))}
               </tr>
@@ -311,11 +310,11 @@ export default function PrintPage() {
                       {'\u2192'}
                       {plan.nextInning}
                     </span>{' '}
-                    {playerShortName(plan.pitcher)} stays on
+                    {view.names.short(plan.pitcher.id)} stays on
                     {plan.displaced ? (
                       <>
                         {' '}
-                        &middot; {playerShortName(plan.displaced)} takes{' '}
+                        &middot; {view.names.short(plan.displaced.id)} takes{' '}
                         {plan.pitcherNextPosition ? plan.pitcherNextPosition.code : 'the bench'}
                       </>
                     ) : null}
@@ -352,7 +351,7 @@ export default function PrintPage() {
                       {battingSlot ?? ''}
                     </td>
                     <th scope="row" className="px-2 py-1.5 text-left text-sm font-medium">
-                      {playerName(player)}
+                      {view.names.plain(player.id)}
                     </th>
                     <td className="tnum w-10 px-1 py-1.5 text-right text-sm">
                       {player.jerseyNumber ? `#${player.jerseyNumber}` : ''}

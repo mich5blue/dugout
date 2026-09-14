@@ -169,10 +169,17 @@ export function normalizeExtraction(extraction: RosterExtraction): NormalizedImp
 }
 
 /** Renders an import back into the Quick Add text format, one player per line. */
-export function toQuickAddText(players: NormalizedImport['players']): string {
+/**
+ * Renders rows back into the paste box. Takes a loose shape rather than the
+ * wire shape: what comes off a photograph carries a surname, what the coach
+ * keeps is an initial, and this is used with the latter.
+ */
+export function toQuickAddText(
+  players: Array<{ firstName: string; lastInitial?: string; jerseyNumber?: string }>,
+): string {
   return players
     .map((player) =>
-      [player.firstName, player.lastName].filter(Boolean).join(' ') +
+      [player.firstName, player.lastInitial].filter(Boolean).join(' ') +
       (player.jerseyNumber ? ` #${player.jerseyNumber}` : ''),
     )
     .join('\n');

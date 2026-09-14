@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, GROUP_STYLE } from '@/components/ui';
-import { playerName, playerShortName } from '@/domain/factories';
+import { playerShortName } from '@/domain/factories';
 import { cn } from '@/lib/cn';
 import { extraInningFor, type ExtraInning } from '@/lib/gameDayChanges';
 import { UNAVAILABLE, type GameView } from '@/lib/gameView';
@@ -188,7 +188,7 @@ export function LiveView({
                 {position.code}
               </span>
               <span className="min-w-0 flex-1 truncate text-base font-medium text-ink">
-                {player ? playerName(player) : '—'}
+                {player ? view.names.plain(player.id) : '—'}
               </span>
               {moved ? (
                 <span className="shrink-0 text-xs text-ink-subtle">
@@ -209,7 +209,7 @@ export function LiveView({
             BN
           </span>
           <span className="min-w-0 flex-1 text-base text-ink-muted">
-            {bench.length > 0 ? bench.map(playerShortName).join(' · ') : 'Nobody sits'}
+            {bench.length > 0 ? bench.map((p) => view.names.short(p.id)).join(' · ') : 'Nobody sits'}
           </span>
         </li>
       </ul>

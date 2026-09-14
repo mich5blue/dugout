@@ -1,3 +1,4 @@
+import { playerNames, type PlayerNames } from '@/lib/playerNames';
 import type {
   AssignmentType,
   DefensiveAssignment,
@@ -20,6 +21,13 @@ export interface GameView {
   innings: number[];
   players: Player[];
   playerById: Map<string, Player>;
+  /**
+   * Display names resolved against this game's roster, so two players who
+   * share a first name are separated by jersey number. Every surface that
+   * shows a name to a coach, a kid or a parent should use these rather than
+   * the unqualified helpers in domain/factories.
+   */
+  names: PlayerNames;
   hasLineup: boolean;
   assignmentAt(inning: number, positionId: string): DefensiveAssignment | undefined;
   playerAt(inning: number, positionId: string): Player | undefined;
@@ -85,6 +93,7 @@ export function buildGameView(
 
   const view: GameView = {
     game,
+    names: playerNames(roster),
     positions,
     innings,
     players: roster.filter((player) => availability.has(player.id)),
@@ -150,6 +159,9 @@ export function inningChanges(
   toInning: number,
 ): InningChange[] {
   const changes: InningChange[] = [];
+  /* Disambiguated against the roster: two Jacks on one bench make an
+     unqualified first name useless in exactly the moment this is read. */
+  const resolver = playerNames(view.players);
 
   for (const player of view.players) {
     const before = view.slotOf(player.id, fromInning);
@@ -168,7 +180,7 @@ export function inningChanges(
 
     changes.push({
       playerId: player.id,
-      playerName: `${player.firstName} ${player.lastName}`.trim(),
+      playerName: resolver.short(player.id),
       from: fromLabel,
       to: toLabel,
     });

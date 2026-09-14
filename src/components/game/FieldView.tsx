@@ -429,7 +429,7 @@ function PositionCard({
         ) : null}
       </span>
       <span className="mt-0.5 block truncate text-xs leading-tight font-semibold text-ink">
-        {player ? playerShortName(player) : '—'}
+        {player ? view.names.short(player.id) : '—'}
       </span>
       {player?.jerseyNumber ? (
         <span className="tnum block text-[9px] leading-none text-ink-subtle">

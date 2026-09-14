@@ -231,8 +231,9 @@ describe('parseQuickAddRoster', () => {
       'team_1',
     );
     expect(parsed).toHaveLength(4);
-    expect(parsed[0]).toMatchObject({ firstName: 'Brody', lastName: 'Borek' });
-    expect(parsed[3]).toMatchObject({ firstName: 'Calvin', lastName: 'Miller' });
+    // A pasted surname is reduced to its initial and never stored in full.
+    expect(parsed[0]).toMatchObject({ firstName: 'Brody', lastInitial: 'B' });
+    expect(parsed[3]).toMatchObject({ firstName: 'Calvin', lastInitial: 'M' });
   });
 
   it('picks up jersey numbers in common formats', () => {
@@ -243,7 +244,7 @@ describe('parseQuickAddRoster', () => {
     expect(parsed[0]).toMatchObject({ firstName: 'Brody', jerseyNumber: '8' });
     expect(parsed[1]).toMatchObject({ firstName: 'Race', jerseyNumber: '12' });
     expect(parsed[2]).toMatchObject({ firstName: 'Weston', jerseyNumber: '4' });
-    expect(parsed[3]).toMatchObject({ firstName: 'Solo', lastName: '' });
+    expect(parsed[3]).toMatchObject({ firstName: 'Solo', lastInitial: undefined });
   });
 
   it('ignores blank lines', () => {

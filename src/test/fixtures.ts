@@ -77,7 +77,7 @@ export function buildScenario(spec: ScenarioSpec): Scenario {
     const player = createPlayer({
       teamId: team.id,
       firstName: playerSpec.name,
-      lastName: '',
+      lastInitial: '',
       jerseyNumber: String(index + 1),
       overallTier: playerSpec.tier ?? 'REGULAR',
       offensiveTier: playerSpec.offensiveTier ?? playerSpec.tier ?? 'REGULAR',

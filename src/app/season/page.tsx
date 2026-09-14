@@ -10,7 +10,7 @@ import {
   GROUP_STYLE,
   Notice,
 } from '@/components/ui';
-import { createId, playerName, playerShortName } from '@/domain/factories';
+import { createId } from '@/domain/factories';
 import type { PriorityFlag } from '@/domain/types';
 import { getFairnessDebt, getTeamSeasonFairness } from '@/services/fairness';
 import {
@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/cn';
 import { formatShortDate, formatSigned, percent } from '@/lib/format';
 import Link from 'next/link';
+import { playerNames } from '@/lib/playerNames';
 import { useMemo } from 'react';
 
 export default function SeasonPage() {
@@ -30,6 +31,8 @@ export default function SeasonPage() {
     () => games.filter((game) => game.status === 'COMPLETED'),
     [games],
   );
+
+  const names = useMemo(() => playerNames(players), [players]);
 
   const usage = useMemo(() => getPlayerSeasonUsage(games), [games]);
   const debts = useMemo(() => getFairnessDebt(games, players), [games, players]);
@@ -120,7 +123,7 @@ export default function SeasonPage() {
           {flags
             .map((flag) => {
               const player = players.find((entry) => entry.id === flag.playerId);
-              return player ? playerName(player) : null;
+              return player ? names.full(player.id) : null;
             })
             .filter(Boolean)
             .join(', ')}
@@ -195,7 +198,7 @@ export default function SeasonPage() {
                         href={`/roster/${player.id}`}
                         className="ring-focus text-sm font-medium text-ink hover:underline"
                       >
-                        {playerName(player)}
+                        {names.full(player.id)}
                       </Link>
                     </th>
                     <Cell value={record?.games ?? 0} />
@@ -259,7 +262,7 @@ export default function SeasonPage() {
                     scope="row"
                     className="px-4 py-1.5 text-left text-sm font-medium whitespace-nowrap text-ink"
                   >
-                    {playerShortName(player)}
+                    {names.short(player.id)}
                   </th>
                   {distribution.codes.map((code) => {
                     const count = distribution.byPlayer[player.id]?.[code.code] ?? 0;

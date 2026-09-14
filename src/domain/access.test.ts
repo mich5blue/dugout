@@ -135,7 +135,7 @@ describe('permittedPlayerChanges', () => {
     const result = permittedPlayerChanges('ASSISTANT', {
       overallTier: 'CORE',
       firstName: 'Renamed',
-      lastName: 'Player',
+      lastInitial: 'P',
       jerseyNumber: '99',
       active: false,
       offensiveTier: 'CORE',

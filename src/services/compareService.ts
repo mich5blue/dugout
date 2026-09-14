@@ -1,3 +1,4 @@
+import { playerName } from '@/domain/factories';
 import type { Game, Philosophy, Player, TeamSettings } from '@/domain/types';
 import { PHILOSOPHY_DESCRIPTION, PHILOSOPHY_LABEL, applyPhilosophy } from '@/domain/weights';
 import type { OptimizationResult } from '@/optimizer';
@@ -146,7 +147,7 @@ export function describeTradeoff(
 
   const shorted = competitive.mostBenched[0];
   const player = players.find((entry) => entry.id === shorted?.playerId);
-  const name = player ? `${player.firstName} ${player.lastName}`.trim() : null;
+  const name = player ? playerName(player) : null;
 
   const strengthText = `${Math.round(strengthGain * 100)}% more defensive strength`;
   if (inningsCost > 0 && name) {

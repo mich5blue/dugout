@@ -1,4 +1,5 @@
 import type { Game, Player, Team } from '@/domain/types';
+import { playerNames } from './playerNames';
 import { buildGameView, UNAVAILABLE } from './gameView';
 
 /**
@@ -63,11 +64,14 @@ export const GROUP_FROM_CODE: Record<GroupCode, 'BATTERY' | 'INFIELD' | 'OUTFIEL
 export function buildSharePayload(team: Team, game: Game, roster: Player[]): SharePayload {
   const view = buildGameView(game, roster, 'PLANNED');
 
+  /* A share link is forwarded through group chats, so it carries the
+     disambiguated short name and never a surname. */
+  const resolver = playerNames(view.players);
   const names: string[] = [];
   const indexOf = new Map<string, number>();
   for (const player of view.players) {
     indexOf.set(player.id, names.length);
-    names.push(`${player.firstName} ${player.lastName}`.trim());
+    names.push(resolver.short(player.id));
   }
 
   const positions = view.positions;

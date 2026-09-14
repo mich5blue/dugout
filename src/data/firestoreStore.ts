@@ -1,3 +1,4 @@
+import { migratePlayer, needsMigration } from './migratePlayer';
 import {
   ASSISTANT_EDITABLE_PLAYER_FIELDS,
   MAX_ASSISTANT_COACHES,
@@ -148,7 +149,7 @@ export class FirestoreStore implements DugoutStore {
     this.cache = {
       version: 1,
       teams: teams.map((team) => stripAccess(team as unknown as DocumentData)),
-      players: gather<Player>('players'),
+      players: gather<Player>('players').map(migratePlayer),
       games: gather<Game>('games'),
       formations: gather<Formation>('formations'),
       goals: gather<DevelopmentGoal>('goals'),
@@ -158,7 +159,31 @@ export class FirestoreStore implements DugoutStore {
       session: this.cache.session,
     };
     this.emit();
+
+    /*
+      Surname migration at rest. Reads above are already reduced, so nothing
+      renders a surname — but the stored document keeps the old `lastName`
+      until it is replaced, and a privacy change that leaves the data in the
+      database is not one.
+
+      Best-effort on purpose: only a head coach may write players, the write is
+      not worth retrying, and a failure must never break a read. The document
+      is replaced the next time that player is edited in any case.
+    */
+    const stale = gather<Player>('players').filter(needsMigration);
+    if (stale.length > 0 && !this.surnameMigrationRun) {
+      this.surnameMigrationRun = true;
+      const writable = stale.filter((player) => roles[player.teamId] === 'HEAD_COACH');
+      if (writable.length > 0) {
+        void this.players.saveMany(writable.map(migratePlayer)).catch(() => {
+          // An assistant session, an offline device, or a rules refusal.
+        });
+      }
+    }
   }
+
+  /** So the migration is attempted once, not on every snapshot. */
+  private surnameMigrationRun = false;
 
   /**
    * Starts listening.

@@ -1,3 +1,4 @@
+import { playerName } from '@/domain/factories';
 import {
   emptyFairnessDebt,
   type FairnessAlert,
@@ -174,7 +175,7 @@ export function getTeamSeasonFairness(
     const record = usage[player.id];
     const debt = debts[player.id];
     if (!record || !debt || record.games === 0) continue;
-    const name = `${player.firstName} ${player.lastName}`.trim();
+    const name = playerName(player);
 
     if (debt.defensiveDebt >= ALERT_THRESHOLD.defensiveInnings) {
       alerts.push({

@@ -1,3 +1,4 @@
+import { playerNames } from '@/lib/playerNames';
 import { describe, expect, it } from 'vitest';
 import { buildScenario, runScenario } from '@/test/fixtures';
 import {
@@ -66,11 +67,9 @@ describe('share link', () => {
     const codeOf = new Map(
       game.formationSnapshot.positions.map((position) => [position.id, position.code]),
     );
+    const resolver = playerNames(scenario.players);
     const nameOf = new Map(
-      scenario.players.map((player) => [
-        player.id,
-        `${player.firstName} ${player.lastName}`.trim(),
-      ]),
+      scenario.players.map((player) => [player.id, resolver.short(player.id)]),
     );
 
     for (const assignment of game.defensiveAssignments.filter(

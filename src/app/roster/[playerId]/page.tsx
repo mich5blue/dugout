@@ -16,7 +16,7 @@ import {
   Toggle,
 } from '@/components/ui';
 import { permittedPlayerChanges } from '@/domain/access';
-import { createId, playerName } from '@/domain/factories';
+import { createId, playerName, toLastInitial } from '@/domain/factories';
 import { GROUP_LABEL } from '@/domain/formations';
 import type { AbilityTier, Eligibility, GoalType, Player } from '@/domain/types';
 import { getFairnessDebt } from '@/services/fairness';
@@ -195,13 +195,16 @@ export default function PlayerDetailPage() {
                 />
               </div>
               <div className="sm:col-span-1">
-                <Label htmlFor="last">Last name</Label>
+                <Label htmlFor="last">Last initial</Label>
                 <Input
                   id="last"
                   className="mt-1.5"
                   disabled={!editsIdentity}
-                  value={player.lastName}
-                  onChange={(event) => update({ lastName: event.target.value })}
+                  value={player.lastInitial ?? ''}
+                  maxLength={1}
+                  onChange={(event) =>
+                    update({ lastInitial: toLastInitial(event.target.value) })
+                  }
                 />
               </div>
               <div className="sm:col-span-1">

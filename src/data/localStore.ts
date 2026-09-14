@@ -1,3 +1,4 @@
+import { migratePlayer, needsMigration } from './migratePlayer';
 import type { TeamMembership, TeamRole } from '@/domain/access';
 import { SYSTEM_FORMATIONS } from '@/domain/formations';
 import type {
@@ -57,9 +58,27 @@ function createLocalStorageBackend(): Backend {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       // Older saved databases predate memberships and session, so fill them in
       // rather than letting every read hit undefined.
-      cache = raw
+      const parsed = raw
         ? { ...emptyDatabase(), ...(JSON.parse(raw) as DugoutDatabase) }
         : emptyDatabase();
+
+      /*
+        Players saved before surnames were dropped carry a `lastName`. They are
+        reduced on the way in so nothing can render one, and — because a
+        privacy change that leaves the data at rest is not one — written
+        straight back so the stored copy loses the field too. Cheap and
+        synchronous here; a corrupt or full store must not break the read, so
+        the write is allowed to fail quietly.
+      */
+      const stale = parsed.players.some(needsMigration);
+      cache = { ...parsed, players: parsed.players.map(migratePlayer) };
+      if (stale) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+        } catch {
+          // Reading still works; the next successful save clears it.
+        }
+      }
     } catch {
       // Corrupt or unavailable storage should never hard-fail the app.
       cache = emptyDatabase();

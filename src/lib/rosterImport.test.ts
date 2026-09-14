@@ -171,9 +171,9 @@ describe('toQuickAddText', () => {
   it('round-trips into the paste format', () => {
     expect(
       toQuickAddText([
-        { firstName: 'Brody', lastName: 'Borek', jerseyNumber: '8', confident: true },
-        { firstName: 'Solomon', lastName: '', confident: true },
+        { firstName: 'Brody', lastInitial: 'B', jerseyNumber: '8' },
+        { firstName: 'Solomon' },
       ]),
-    ).toBe('Brody Borek #8\nSolomon');
+    ).toBe('Brody B #8\nSolomon');
   });
 });

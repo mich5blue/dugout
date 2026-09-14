@@ -67,7 +67,19 @@ export interface Player {
   id: string;
   teamId: string;
   firstName: string;
-  lastName: string;
+  /**
+   * At most a last initial — never a surname.
+   *
+   * Rosters of children reach printed sheets, a dugout wall and share links
+   * that get forwarded through group chats, and the surname is the field that
+   * turns a first name into an identifiable child. Nothing in the product ever
+   * needed one; it was only ever typed in and printed out. Disambiguation is
+   * done with the jersey number instead — see lib/playerNames.
+   *
+   * A single character. Two letters of a surname is the beginning of a
+   * surname, which is exactly what must not be stored here.
+   */
+  lastInitial?: string;
   jerseyNumber?: string;
   active: boolean;
   overallTier: AbilityTier;

@@ -59,7 +59,7 @@ type StepIndex = 0 | 1 | 2 | 3 | 4 | 5;
 interface DraftPlayer {
   key: string;
   firstName: string;
-  lastName: string;
+  lastInitial?: string;
   jerseyNumber?: string;
   canPitch: boolean;
   canCatch: boolean;
@@ -115,7 +115,7 @@ export default function SetupPage() {
     const seen = new Map<string, number>();
 
     return parsed.map((spec) => {
-      const base = `${spec.firstName} ${spec.lastName ?? ''}`.trim().toLowerCase();
+      const base = `${spec.firstName} ${spec.lastInitial ?? ''}`.trim().toLowerCase();
       const occurrence = seen.get(base) ?? 0;
       seen.set(base, occurrence + 1);
       const key = occurrence === 0 ? base : `${base}#${occurrence}`;
@@ -124,7 +124,7 @@ export default function SetupPage() {
       return {
         key,
         firstName: spec.firstName,
-        lastName: spec.lastName ?? '',
+        lastInitial: spec.lastInitial,
         jerseyNumber: spec.jerseyNumber,
         canPitch: existing?.canPitch ?? false,
         canCatch: existing?.canCatch ?? false,
@@ -193,7 +193,7 @@ export default function SetupPage() {
         createPlayer({
           teamId: newTeam.id,
           firstName: entry.firstName,
-          lastName: entry.lastName,
+          lastInitial: entry.lastInitial,
           jerseyNumber: entry.jerseyNumber,
           canPitch: entry.canPitch,
           canCatch: entry.canCatch,
@@ -327,7 +327,7 @@ export default function SetupPage() {
                     key={player.key}
                     className="rounded-md bg-surface-muted px-2 py-1 text-sm text-ink"
                   >
-                    {player.firstName} {player.lastName}
+                    {player.firstName} {player.lastInitial}
                     {player.jerseyNumber ? (
                       <span className="ml-1 text-ink-subtle">#{player.jerseyNumber}</span>
                     ) : null}
@@ -692,7 +692,7 @@ function BatteryPicker({
               )}
             >
               {player.firstName}
-              {player.lastName ? ` ${player.lastName.charAt(0)}.` : ''}
+              {player.lastInitial ? ` ${player.lastInitial}.` : ''}
             </button>
           );
         })}

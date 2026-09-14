@@ -1,3 +1,4 @@
+import { playerName, playerShortName } from '@/domain/factories';
 import { emptyFairnessDebt, emptySeasonUsage } from '@/domain/season';
 import type { FairnessDebt, PlayerSeasonUsage } from '@/domain/season';
 import { ABILITY_VALUE } from '@/domain/types';
@@ -98,10 +99,6 @@ export interface SolverContext {
    * lineup for a new seed while keeping any single seed fully reproducible.
    */
   tieBreak: number[][];
-}
-
-function displayName(firstName: string, lastName: string): string {
-  return `${firstName} ${lastName}`.trim();
 }
 
 /**
@@ -250,8 +247,8 @@ export function buildContext(input: OptimizationInput): SolverContext {
     players.push({
       idx: players.length,
       id: player.id,
-      name: displayName(player.firstName, player.lastName),
-      shortName: player.firstName || player.lastName,
+      name: playerName(player),
+      shortName: playerShortName(player),
       available,
       availableInnings,
       eligibility,

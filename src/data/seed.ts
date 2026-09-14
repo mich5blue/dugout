@@ -21,7 +21,7 @@ const FORMATION_ID = 'baseball-10-lc-rc';
 
 interface SeedPlayerSpec {
   firstName: string;
-  lastName: string;
+  lastInitial: string;
   jersey: string;
   tier: 'CORE' | 'REGULAR' | 'DEVELOPING';
   offensiveTier?: 'CORE' | 'REGULAR' | 'DEVELOPING';
@@ -37,7 +37,7 @@ interface SeedPlayerSpec {
 const SEED_PLAYERS: SeedPlayerSpec[] = [
   {
     firstName: 'Brody',
-    lastName: 'Borek',
+    lastInitial: 'Borek',
     jersey: '8',
     tier: 'CORE',
     canPitch: true,
@@ -47,7 +47,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Race',
-    lastName: 'Smith',
+    lastInitial: 'Smith',
     jersey: '12',
     tier: 'CORE',
     canPitch: true,
@@ -57,7 +57,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Weston',
-    lastName: 'Jones',
+    lastInitial: 'Jones',
     jersey: '4',
     tier: 'CORE',
     canPitch: true,
@@ -66,7 +66,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Calvin',
-    lastName: 'Miller',
+    lastInitial: 'Miller',
     jersey: '7',
     tier: 'REGULAR',
     canPitch: true,
@@ -75,7 +75,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Emerson',
-    lastName: 'Reed',
+    lastInitial: 'Reed',
     jersey: '2',
     tier: 'REGULAR',
     canPitch: true,
@@ -84,7 +84,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Solomon',
-    lastName: 'Fisk',
+    lastInitial: 'Fisk',
     jersey: '15',
     tier: 'REGULAR',
     canPitch: true,
@@ -92,7 +92,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Finnegan',
-    lastName: 'Doyle',
+    lastInitial: 'Doyle',
     jersey: '21',
     tier: 'REGULAR',
     canPitch: true,
@@ -101,7 +101,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Vasil',
-    lastName: 'Petrov',
+    lastInitial: 'Petrov',
     jersey: '9',
     tier: 'REGULAR',
     canPitch: false,
@@ -111,7 +111,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Mehki',
-    lastName: 'Barnes',
+    lastInitial: 'Barnes',
     jersey: '3',
     tier: 'DEVELOPING',
     canPitch: false,
@@ -119,7 +119,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Ashur',
-    lastName: 'Haddad',
+    lastInitial: 'Haddad',
     jersey: '18',
     tier: 'DEVELOPING',
     canPitch: false,
@@ -129,7 +129,7 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
   {
     firstName: 'Walter',
-    lastName: 'Nash',
+    lastInitial: 'Nash',
     jersey: '24',
     tier: 'DEVELOPING',
     canPitch: false,
@@ -223,7 +223,7 @@ export async function buildDemoDatabase(): Promise<DugoutDatabase> {
     const player = createPlayer({
       teamId: team.id,
       firstName: spec.firstName,
-      lastName: spec.lastName,
+      lastInitial: spec.lastInitial,
       jerseyNumber: spec.jersey,
       overallTier: spec.tier,
       offensiveTier: spec.offensiveTier ?? spec.tier,

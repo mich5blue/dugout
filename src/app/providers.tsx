@@ -149,6 +149,8 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
+
+
   const teams = useMemo(
     () => [...db.teams].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     [db.teams],

@@ -1,6 +1,7 @@
 'use client';
 
 import { Badge, Button, Input, Modal, Notice, Spinner } from '@/components/ui';
+import { toLastInitial } from '@/domain/factories';
 import { cn } from '@/lib/cn';
 import {
   ACCEPTED_IMAGE_TYPES,
@@ -22,7 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface ReviewedPlayer {
   key: string;
   firstName: string;
-  lastName: string;
+  lastInitial?: string;
   jerseyNumber: string;
   confident: boolean;
   include: boolean;
@@ -37,7 +38,9 @@ export function RosterPhotoImport({
 }: {
   open: boolean;
   onClose: () => void;
-  onConfirm: (players: Array<{ firstName: string; lastName: string; jerseyNumber?: string }>) => void;
+  onConfirm: (
+    players: Array<{ firstName: string; lastInitial?: string; jerseyNumber?: string }>,
+  ) => void;
 }) {
   const [stage, setStage] = useState<Stage>('choose');
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +103,8 @@ export function RosterPhotoImport({
         payload.result.players.map((player, index) => ({
           key: `${index}-${player.firstName}-${player.lastName}`,
           firstName: player.firstName,
-          lastName: player.lastName,
+          /* A photographed card carries a surname; only its initial is kept. */
+          lastInitial: toLastInitial(player.lastName),
           jerseyNumber: player.jerseyNumber ?? '',
           confident: player.confident,
           include: true,
@@ -153,7 +157,7 @@ export function RosterPhotoImport({
                 onConfirm(
                   included.map((row) => ({
                     firstName: row.firstName.trim(),
-                    lastName: row.lastName.trim(),
+                    lastInitial: toLastInitial(row.lastInitial),
                     jerseyNumber: row.jerseyNumber.trim() || undefined,
                   })),
                 );
@@ -287,7 +291,7 @@ export function RosterPhotoImport({
                     type="button"
                     role="checkbox"
                     aria-checked={row.include}
-                    aria-label={`Include ${row.firstName} ${row.lastName}`.trim()}
+                    aria-label={`Include ${row.firstName} ${row.lastInitial ?? ''}`.trim()}
                     onClick={() => update(row.key, { include: !row.include })}
                     className={cn(
                       'ring-focus flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold',
@@ -308,8 +312,11 @@ export function RosterPhotoImport({
                   <Input
                     aria-label="Last name"
                     className="h-9 flex-1"
-                    value={row.lastName}
-                    onChange={(event) => update(row.key, { lastName: event.target.value })}
+                    value={row.lastInitial ?? ''}
+                    maxLength={1}
+                    onChange={(event) =>
+                      update(row.key, { lastInitial: toLastInitial(event.target.value) })
+                    }
                   />
                   <Input
                     aria-label="Jersey number"

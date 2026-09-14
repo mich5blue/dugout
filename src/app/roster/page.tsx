@@ -15,11 +15,17 @@ import {
   Textarea,
 } from '@/components/ui';
 import { RosterPhotoImport } from '@/components/RosterPhotoImport';
-import { createPlayer, parseQuickAddRoster, playerName } from '@/domain/factories';
+import {
+  createPlayer,
+  parseQuickAddRoster,
+  playerName,
+  toLastInitial,
+} from '@/domain/factories';
 import type { AbilityTier, Player } from '@/domain/types';
 import { useTeamFormation } from '@/lib/hooks';
 import { cn } from '@/lib/cn';
 import Link from 'next/link';
+import { playerNames } from '@/lib/playerNames';
 import { useMemo, useState } from 'react';
 
 const TIER_LABEL: Record<AbilityTier, string> = {
@@ -40,9 +46,13 @@ export default function RosterPage() {
   const [quickText, setQuickText] = useState('');
   const [draft, setDraft] = useState({
     firstName: '',
-    lastName: '',
+    lastInitial: '',
     jerseyNumber: '',
   });
+
+  /* Resolved against the roster so two players sharing a first name are
+     separated by jersey number rather than both reading "Jack B.". */
+  const names = useMemo(() => playerNames(players), [players]);
 
   const quickPreview = useMemo(
     () => parseQuickAddRoster(quickText, team?.id ?? 'preview'),
@@ -116,11 +126,11 @@ export default function RosterPage() {
       createPlayer({
         teamId: team.id,
         firstName: draft.firstName,
-        lastName: draft.lastName,
+        lastInitial: toLastInitial(draft.lastInitial),
         jerseyNumber: draft.jerseyNumber,
       }),
     );
-    setDraft({ firstName: '', lastName: '', jerseyNumber: '' });
+    setDraft({ firstName: '', lastInitial: '', jerseyNumber: '' });
     setAddOpen(false);
   };
 
@@ -201,7 +211,7 @@ export default function RosterPage() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">
-                        {playerName(player)}
+                        {names.plain(player.id)}
                         {!player.active ? (
                           <span className="ml-2 text-xs text-ink-subtle">Inactive</span>
                         ) : null}
@@ -310,7 +320,7 @@ export default function RosterPage() {
               createPlayer({
                 teamId: team.id,
                 firstName: spec.firstName,
-                lastName: spec.lastName,
+                lastInitial: spec.lastInitial,
                 jerseyNumber: spec.jerseyNumber,
                 createdAt: new Date(Date.now() + index).toISOString(),
               }),
@@ -376,12 +386,16 @@ export default function RosterPage() {
               />
             </div>
             <div>
-              <Label htmlFor="last">Last name</Label>
+              <Label htmlFor="last">Last initial</Label>
               <Input
                 id="last"
                 className="mt-1.5"
-                value={draft.lastName}
-                onChange={(event) => setDraft({ ...draft, lastName: event.target.value })}
+                maxLength={1}
+                value={draft.lastInitial}
+                placeholder="B"
+                onChange={(event) =>
+                  setDraft({ ...draft, lastInitial: event.target.value })
+                }
               />
             </div>
           </div>
