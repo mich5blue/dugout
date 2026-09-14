@@ -241,7 +241,7 @@ export function RosterPhotoImport({
 
           <Notice tone="neutral">
             Your photo is sent to the Claude API to be read, and is not stored by
-            Dugout. Names come back to this device for you to check before anything
+            InningGrid. Names come back to this device for you to check before anything
             is saved. If you would rather nothing left your device, paste or type
             the names instead.
           </Notice>

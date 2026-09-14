@@ -1,13 +1,13 @@
-# Dugout
+# InningGrid
 
 **Smart lineups for youth baseball & softball.**
 
-Dugout builds optimized batting orders and inning-by-inning defensive rotations for
+InningGrid builds optimized batting orders and inning-by-inning defensive rotations for
 youth baseball and softball teams. Pick who's playing, choose how you want to coach,
 and generate a full game in about a second.
 
 Its distinguishing feature is that it optimizes the **season**, not just the game.
-Dugout records what actually happened — including games called early and players who
+InningGrid records what actually happened — including games called early and players who
 left at the third inning — and compensates in later games.
 
 ```
@@ -161,7 +161,7 @@ matching the code `"P"`. That keeps the optimizer sport-neutral.
 
 ### Fairness debt
 
-For every player, Dugout compares expected against actual. "Expected" is that player's
+For every player, InningGrid compares expected against actual. "Expected" is that player's
 fair share of the opportunities they were **actually present for**: within each game,
 each available player's expectation is proportional to the innings they were available.
 
@@ -285,7 +285,7 @@ constants are scattered through the code — solver-internal tuning sits in a si
 player, availability windows, `NEVER` restrictions, locks and the pitching plan, battery
 caps. Required minimums are enforced when mathematically possible, and when they are
 not, `optimizer/feasibility.ts` says why before generating and ranks the smallest
-changes that would fix it. Dugout never reports "unable to generate" without an
+changes that would fix it. InningGrid never reports "unable to generate" without an
 explanation.
 
 **Solver output is never trusted.** `optimizer/validate.ts` re-checks every invariant
@@ -348,7 +348,7 @@ against a theoretical ideal the rules make impossible:
   players across ten positions is a fair share of 5.45 innings each, so the best
   possible result is some players at five and some at six; scoring that against
   a perfect 5.45 rated the optimum "Fair, 67%".
-- The dashboard reports the innings Dugout **owes** a player rather than the
+- The dashboard reports the innings InningGrid **owes** a player rather than the
   spread of raw totals. A player who missed a game has fewer innings without
   having been treated unfairly — which is the whole reason fairness is expected
   versus actual.
@@ -490,7 +490,7 @@ of its options, recording a short game, and the print and live views.
 ## Not built, deliberately
 
 Scorekeeping, live scoring, streaming, parent messaging, team chat, photos, video,
-tournament brackets, full player statistics, payments. Dugout does lineup optimization.
+tournament brackets, full player statistics, payments. InningGrid does lineup optimization.
 
 Phase 2 candidates: accounts and cloud sync, assistant coaches, shared read-only lineup
 links, pitch-count tracking, CSV/image roster import, live mid-game rebalance.

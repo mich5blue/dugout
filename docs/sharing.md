@@ -1,6 +1,6 @@
 # Sharing a lineup
 
-Coaches distribute lineups to parents, assistants and scorekeepers. Dugout does
+Coaches distribute lineups to parents, assistants and scorekeepers. InningGrid does
 this without a backend: the whole lineup is encoded into the link.
 
 ## How it works

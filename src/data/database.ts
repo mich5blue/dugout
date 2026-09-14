@@ -10,7 +10,7 @@ import type {
 import type { Repositories } from './repositories';
 
 /**
- * The shape of everything Dugout stores, and the contract every backing store
+ * The shape of everything InningGrid stores, and the contract every backing store
  * implements.
  *
  * The whole UI reads one synchronous snapshot of this document and calls

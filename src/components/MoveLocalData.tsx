@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 /**
  * Moves a team that was created before sign-in into the account.
  *
- * Dugout stored everything in the browser before it had a backend, and a coach
+ * InningGrid stored everything in the browser before it had a backend, and a coach
  * who already has a roster and a season of games there should not have to type
  * it again. The move is explicit rather than automatic: it writes to their
  * account, and silently uploading someone's data is not a decision to make on

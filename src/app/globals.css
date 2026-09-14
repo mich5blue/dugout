@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
-  Dugout design tokens — "Broadcast".
+  InningGrid design tokens — "Broadcast".
 
   Dark-first and high-contrast, built to read like a sports broadcast graphic:
   a near-black base, one electric accent, and position groups that are loud
@@ -97,6 +97,21 @@
   --accent: #d4ff3d;
   --accent-soft: #26300a;
 
+  /*
+    Brand green, from the logo — and deliberately NOT a functional colour.
+
+    It sits 0.3 dE from --critical under protanopia and deuteranopia, where red
+    and green both collapse toward yellow, so a green control beside a red one
+    is a coin flip for a colourblind coach; it is also 2-5 dE from --positive,
+    which is already green. Lime keeps the action role because it holds 19 dE
+    or more from every other colour in the palette.
+
+    So this appears in the mark and the wordmark, and nowhere that means
+    anything. The palette validator does not check it, because it is not part
+    of any categorical set.
+  */
+  --brand-green: #22c55e;
+
   /* Shadows do not read on near-black. Depth comes from surface steps and
      hairlines instead, so the ambient layer is dropped and only a contact
      shadow remains to keep modals off the page. */
@@ -178,6 +193,8 @@
        white; the pill keeps the bright value via --ink-inverse. */
     --accent: #5f7800;
     --accent-soft: #eaf5c4;
+    /* Stepped down so the wordmark holds on white. */
+    --brand-green: #15803d;
 
     --card-shadow:
       0 1px 2px 0 rgb(10 14 17 / 0.05),

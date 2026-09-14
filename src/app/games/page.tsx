@@ -59,7 +59,7 @@ export default function SchedulePage() {
         <Card>
           <EmptyState
             title="No games yet"
-            description="Add a game and Dugout will build the lineup."
+            description="Add a game and InningGrid will build the lineup."
             action={
               can('game:create') ? (
                 <Link href="/games/new">

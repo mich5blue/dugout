@@ -172,7 +172,7 @@ export default function SharedLineupPage() {
       <footer className="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-4">
         <Badge tone="neutral">Read-only</Badge>
         <p className="text-sm text-ink-subtle">
-          Shared from Dugout. This link contains the lineup itself, so it keeps working
+          Shared from InningGrid. This link contains the lineup itself, so it keeps working
           without an account.
         </p>
       </footer>

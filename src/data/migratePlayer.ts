@@ -4,7 +4,7 @@ import type { Player } from '@/domain/types';
 /**
  * Brings a stored player forward to the current shape.
  *
- * Dugout used to store a full surname. It no longer does — see the note on
+ * InningGrid used to store a full surname. It no longer does — see the note on
  * `Player.lastInitial` — so a player saved before that change carries a
  * `lastName` this app has no field for.
  *

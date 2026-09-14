@@ -252,7 +252,7 @@ export function RulesPanel({
     <Card>
       <CardHeader
         title="How do you want to coach this game?"
-        description="Pick how you want to coach and Dugout sets the rest. Change anything and you're on Custom."
+        description="Pick how you want to coach and InningGrid sets the rest. Change anything and you're on Custom."
       />
       <div className="space-y-6 px-5 py-5">
         <div>
@@ -315,7 +315,7 @@ export function RulesPanel({
             {settings.minDefensiveInningsMode === 'REQUIRED' &&
             settings.minDefensiveInnings > 0 ? (
               <p className="mt-1.5 text-xs text-ink-subtle">
-                Dugout will tell you before generating if this is impossible.
+                InningGrid will tell you before generating if this is impossible.
               </p>
             ) : null}
           </div>
@@ -481,7 +481,7 @@ export function RulesPanel({
             */}
             <p className="mt-1.5 text-xs text-ink-subtle">
               {(settings.positionContinuityInnings ?? 0) > 1
-                ? `Dugout tries to hold players at one spot for ${settings.positionContinuityInnings} innings before moving them — good for learning a position, and for doubleheaders. Fair playing time still comes first.`
+                ? `InningGrid tries to hold players at one spot for ${settings.positionContinuityInnings} innings before moving them — good for learning a position, and for doubleheaders. Fair playing time still comes first.`
                 : 'Players can move position every inning.'}
             </p>
           </div>
@@ -683,7 +683,7 @@ export function PitchingPlanPanel({
     <Card>
       <CardHeader
         title="Pitching plan"
-        description="Set the innings you've decided. Leave the rest blank and Dugout picks eligible pitchers."
+        description="Set the innings you've decided. Leave the rest blank and InningGrid picks eligible pitchers."
       />
       <div className="px-5 py-5">
         {eligible.length === 0 ? (
@@ -710,7 +710,7 @@ export function PitchingPlanPanel({
                     value={current ?? ''}
                     onChange={(event) => set(inning, event.target.value || null)}
                   >
-                    <option value="">Dugout chooses</option>
+                    <option value="">InningGrid chooses</option>
                     {availableThisInning.map((player) => (
                       <option key={player.id} value={player.id}>
                         {playerName(player)}

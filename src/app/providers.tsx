@@ -59,7 +59,7 @@ interface DugoutContextValue {
    *
    * A configured project otherwise gates the whole app behind sign-in, which
    * made the demo team unreachable in production: someone deciding whether to
-   * try Dugout had only "Continue with Google". Demo mode runs the app against
+   * try InningGrid had only "Continue with Google". Demo mode runs the app against
    * browser storage on that one device, so a visitor gets a full sandbox with
    * no account, nothing shared, and nothing they can damage.
    */

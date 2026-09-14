@@ -288,7 +288,7 @@ export default function SettingsPage() {
             </Notice>
           ) : (
             <Notice tone="caution">
-              This copy of Dugout has no account attached, so your team lives in this
+              This copy of InningGrid has no account attached, so your team lives in this
               browser only — clearing browser data deletes it, and no other device can
               see it. Print anything you would not want to lose.
             </Notice>

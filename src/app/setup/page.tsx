@@ -431,7 +431,7 @@ export default function SetupPage() {
                     ? `With ${roster.length} players and ${positionCount} on defense, nobody sits — everyone plays all ${innings} innings.`
                     : `With ${roster.length} players and ${positionCount} on defense, ${benchPerInning} ${
                         benchPerInning === 1 ? 'player sits' : 'players sit'
-                      } each inning. Dugout rotates that fairly and remembers it across the season.`}
+                      } each inning. InningGrid rotates that fairly and remembers it across the season.`}
                 </Notice>
               )}
             </div>
@@ -441,7 +441,7 @@ export default function SetupPage() {
         {step === 3 ? (
           <Step
             title="Who can pitch and catch?"
-            hint="This is the one thing worth getting right — Dugout needs a pitcher and a catcher for every inning."
+            hint="This is the one thing worth getting right — InningGrid needs a pitcher and a catcher for every inning."
           >
             <div className="space-y-6">
               <BatteryPicker
@@ -459,12 +459,12 @@ export default function SetupPage() {
 
               {pitchers.length === 0 || catchers.length === 0 ? (
                 <Notice tone="critical" title="Pick at least one of each">
-                  Without a pitcher and a catcher, Dugout can&apos;t fill the field.
+                  Without a pitcher and a catcher, InningGrid can&apos;t fill the field.
                 </Notice>
               ) : pitchers.length < 2 || catchers.length < 2 ? (
                 <Notice tone="caution" title="That will work, but it's tight">
                   {pitchers.length < 2 ? 'One pitcher' : 'One catcher'} means the same
-                  player covers every inning there. Two or three each gives Dugout room
+                  player covers every inning there. Two or three each gives InningGrid room
                   to rotate and keeps playing time fair.
                 </Notice>
               ) : (
@@ -518,7 +518,7 @@ export default function SetupPage() {
             hint={
               adding
                 ? "Here's the new team. Switch between teams from the header."
-                : "Here's what Dugout will start with."
+                : "Here's what InningGrid will start with."
             }
           >
             <dl className="divide-y divide-border rounded-card border border-border">
@@ -548,7 +548,7 @@ export default function SetupPage() {
             <Notice tone="brand" className="mt-4">
               Next: create a game, toggle anyone who isn&apos;t there, and hit Generate.
               After the game, record how many innings were actually played — that&apos;s
-              what lets Dugout even out playing time across the season.
+              what lets InningGrid even out playing time across the season.
             </Notice>
           </Step>
         ) : null}

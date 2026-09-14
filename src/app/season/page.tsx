@@ -64,7 +64,7 @@ export default function SeasonPage() {
         <Card>
           <EmptyState
             title="No completed games yet"
-            description="Record a game's results and Dugout starts tracking playing time, positions and fairness across the season."
+            description="Record a game's results and InningGrid starts tracking playing time, positions and fairness across the season."
             action={
               <Link href="/">
                 <Button variant="primary">Back to dashboard</Button>
@@ -134,7 +134,7 @@ export default function SeasonPage() {
         <Card>
           <CardHeader
             title="Fairness alerts"
-            description="Tap Prioritize and Dugout will lean toward that player when it builds the next lineup."
+            description="Tap Prioritize and InningGrid will lean toward that player when it builds the next lineup."
           />
           <ul className="divide-y divide-border">
             {fairness.alerts.slice(0, 6).map((alert) => (
@@ -217,7 +217,7 @@ export default function SeasonPage() {
                             ? 'text-ink-subtle'
                             : 'text-ink-muted',
                       )}
-                      title="Positive means Dugout owes this player more innings"
+                      title="Positive means InningGrid owes this player more innings"
                     >
                       {formatSigned(debt?.defensiveDebt ?? 0)}
                     </td>

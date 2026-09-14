@@ -1,6 +1,7 @@
 'use client';
 
 import { useDugout } from '@/app/providers';
+import { BrandMark, BrandWordmark } from '@/components/BrandMark';
 import { Button, Card, Input, Label, Notice, Spinner } from '@/components/ui';
 import {
   completeEmailLink,
@@ -76,9 +77,17 @@ export function SignInScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-12">
-      <p className="eyebrow text-ink-subtle">Dugout</p>
-      <h1 className="display mt-1 text-4xl text-ink sm:text-5xl">
-        Smart lineups, every inning.
+      {/*
+        The one place the full nine-cell mark gets shown: it needs 64px to read,
+        which the header does not have but this screen does, and this is where
+        a visitor meets the brand.
+      */}
+      <div className="flex flex-col items-start gap-3">
+        <BrandMark detail="full" className="size-16 text-ink" />
+        <BrandWordmark className="text-3xl" />
+      </div>
+      <h1 className="display mt-4 text-4xl text-ink sm:text-5xl">
+        Smart lineups. More play time.
       </h1>
       <p className="mt-3 text-sm text-ink-muted">
         Sign in to reach your team from any phone, and to share it with your assistant
@@ -153,7 +162,7 @@ export function SignInScreen() {
 
         A configured project gates the whole app behind this screen, so the
         demo team was unreachable in production — somebody deciding whether to
-        try Dugout had only "Continue with Google". This seeds the demo into
+        try InningGrid had only "Continue with Google". This seeds the demo into
         browser storage on this device: a full sandbox, instantly, with nothing
         shared and nothing they can break.
 
@@ -190,7 +199,7 @@ export function SignInScreen() {
       </div>
 
       <p className="mt-6 text-xs text-ink-subtle">
-        Dugout stores your roster so you can build lineups. Player names stay on your
+        InningGrid stores your roster so you can build lineups. Player names stay on your
         team and are never shared with anyone you have not invited.
       </p>
     </div>

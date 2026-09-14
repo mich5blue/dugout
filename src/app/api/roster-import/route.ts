@@ -15,7 +15,7 @@ import {
 /**
  * Reads a roster out of a photo or screenshot.
  *
- * This is the only server-side endpoint in Dugout and the only point at which
+ * This is the only server-side endpoint in InningGrid and the only point at which
  * anything leaves the device. The image is forwarded to the Claude API to be
  * read and is not written to disk, cached, or logged, and neither are the names
  * that come back — the response goes straight to the browser, where the coach
@@ -55,7 +55,7 @@ function isSameOrigin(request: Request): boolean {
 
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) {
-    return fail('This endpoint only accepts requests from the Dugout app.', 403);
+    return fail('This endpoint only accepts requests from the InningGrid app.', 403);
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {

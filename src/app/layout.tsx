@@ -4,7 +4,7 @@ import { DugoutProvider } from './providers';
 import { AppShell } from '@/components/AppShell';
 
 export const metadata: Metadata = {
-  title: 'Dugout — Smart lineups for youth baseball & softball',
+  title: 'InningGrid — Smart lineups. More play time.',
   description:
     'Build fair, optimized batting orders and inning-by-inning defensive lineups in seconds.',
 };

@@ -245,7 +245,7 @@ export function FormationEditor({
 
       <p className="text-sm text-ink-muted">
         {draft.positions.length} defensive{' '}
-        {draft.positions.length === 1 ? 'position' : 'positions'} — Dugout will field
+        {draft.positions.length === 1 ? 'position' : 'positions'} — InningGrid will field
         exactly this many players each inning.
       </p>
 

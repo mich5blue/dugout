@@ -18,7 +18,7 @@ import { useState } from 'react';
  * previous spot inline so the list reads as instructions to call out rather
  * than a table to cross-reference.
  *
- * It deliberately does *not* carry a separate "what changed" panel. Dugout's
+ * It deliberately does *not* carry a separate "what changed" panel. InningGrid's
  * optimizer rotates for fairness, so in a typical game nearly every player
  * moves every inning — a changes list ends up restating the whole roster, and
  * showing it above the field list meant reading the same eleven names twice.

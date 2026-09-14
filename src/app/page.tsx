@@ -52,7 +52,7 @@ export default function DashboardPage() {
   );
 
   /**
-   * The most innings Dugout currently owes any player.
+   * The most innings InningGrid currently owes any player.
    *
    * Deliberately not the spread of raw innings totals: a player who missed a
    * game has fewer innings without having been treated unfairly, which is the
@@ -88,7 +88,7 @@ export default function DashboardPage() {
         </h1>
         <p className="mt-5 text-lg text-ink-muted">
           Pick who&apos;s playing, choose how you want to coach, and generate a full
-          batting order and inning-by-inning defense. Dugout remembers what
+          batting order and inning-by-inning defense. InningGrid remembers what
           actually happened and makes the whole season fair.
         </p>
 
@@ -183,7 +183,7 @@ export default function DashboardPage() {
                 hint={
                   fairness.balanceScore >= 0.8
                     ? 'Playing time is even across the roster'
-                    : 'Dugout is still evening this out'
+                    : 'InningGrid is still evening this out'
                 }
               />
               <Meter
@@ -287,7 +287,7 @@ export default function DashboardPage() {
           ) : (
             <EmptyState
               title="No game scheduled"
-              description="Create a game and Dugout will build the lineup."
+              description="Create a game and InningGrid will build the lineup."
               action={
                 <Link href="/games/new">
                   <Button variant="primary">New game</Button>
@@ -324,7 +324,7 @@ export default function DashboardPage() {
           ) : (
             <EmptyState
               title="No completed games yet"
-              description="Once you record a game, Dugout starts balancing the season."
+              description="Once you record a game, InningGrid starts balancing the season."
             />
           )}
         </Card>
@@ -334,7 +334,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader
             title="Fairness alerts"
-            description="Imbalances Dugout will try to fix in the next game."
+            description="Imbalances InningGrid will try to fix in the next game."
             action={
               <Link href="/season">
                 <Button size="sm" variant="ghost">
@@ -381,7 +381,7 @@ export default function DashboardPage() {
             </Link>
           }
         >
-          Dugout needs a roster before it can build a lineup. Paste a list of names
+          InningGrid needs a roster before it can build a lineup. Paste a list of names
           and you&apos;ll be done in under a minute.
         </Notice>
       ) : null}

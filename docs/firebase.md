@@ -1,6 +1,6 @@
 # Backend setup (Firebase)
 
-Dugout stores teams in Firestore and signs coaches in with Firebase Auth. Both
+InningGrid stores teams in Firestore and signs coaches in with Firebase Auth. Both
 are on Firebase's free Spark plan, which needs no card on file.
 
 Until a project is configured the app falls back to browser storage, so
@@ -130,7 +130,7 @@ model is reachable.
 
 ## Moving existing data up
 
-A coach who used Dugout before this shipped has a team in browser storage. On
+A coach who used InningGrid before this shipped has a team in browser storage. On
 first sign-in the dashboard offers to move it, once, explicitly — see
 `src/components/MoveLocalData.tsx`. Silently uploading someone's roster is not a
 decision to make for them.

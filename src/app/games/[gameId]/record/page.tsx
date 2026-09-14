@@ -97,7 +97,7 @@ export default function RecordResultsPage() {
               {game.plannedInnings - actualInnings}{' '}
               {game.plannedInnings - actualInnings === 1 ? 'inning' : 'innings'} won&apos;t
               count. Players who were scheduled to play then carry that time forward, and
-              Dugout makes it up in the next game.
+              InningGrid makes it up in the next game.
             </Notice>
           ) : null}
         </div>
@@ -178,7 +178,7 @@ export default function RecordResultsPage() {
             </table>
           </div>
           <p className="border-t border-border px-5 py-3 text-xs text-ink-subtle">
-            Editing here never changes the generated plan — Dugout keeps both, so you can
+            Editing here never changes the generated plan — InningGrid keeps both, so you can
             always see what you intended alongside what happened.
           </p>
         </Card>

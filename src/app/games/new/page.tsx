@@ -61,7 +61,7 @@ export default function NewGamePage() {
     return (
       <EmptyState
         title="Add your roster first"
-        description="Dugout needs players before it can build a lineup."
+        description="InningGrid needs players before it can build a lineup."
         action={
           <Link href="/roster">
             <Button variant="primary">Add players</Button>

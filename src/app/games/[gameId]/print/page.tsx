@@ -88,7 +88,7 @@ export default function PrintPage() {
             options={[
               { value: 'full', label: 'Full page' },
               { value: 'compact', label: 'Compact' },
-              { value: 'dugout', label: 'Dugout wall' },
+              { value: 'dugout', label: 'InningGrid wall' },
             ]}
           />
           <Button size="sm" variant="primary" onClick={() => window.print()}>
@@ -117,7 +117,7 @@ export default function PrintPage() {
       </header>
 
       {/*
-        Dugout wall. One sheet, taped up, for the players rather than the coach:
+        InningGrid wall. One sheet, taped up, for the players rather than the coach:
         find your name on the left, read across to the inning.
 
         So it is only that grid — no batting order, no by-position table, no

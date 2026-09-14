@@ -13,7 +13,7 @@ import {
   type PlayerSpec,
 } from '@/test/fixtures';
 
-/** Scenarios K-N: the season-aware behaviour that makes Dugout different. */
+/** Scenarios K-N: the season-aware behaviour that makes InningGrid different. */
 
 const ELEVEN = [
   'Brody',

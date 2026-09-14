@@ -1,6 +1,7 @@
 'use client';
 
 import { useDugout } from '@/app/providers';
+import { BrandMark, BrandWordmark } from '@/components/BrandMark';
 import { SignInScreen } from '@/components/SignInScreen';
 import { TeamSwitcher } from '@/components/TeamSwitcher';
 import { cn } from '@/lib/cn';
@@ -19,20 +20,6 @@ const NAV = [
   { href: '/coaches', label: 'Coaches', short: 'Coaches' },
   { href: '/settings', label: 'Team Settings', short: 'Settings' },
 ];
-
-/**
- * The wordmark's glyph: a home plate, filled in the accent.
- *
- * Solid rather than outlined now — at 20px an outlined plate read as a generic
- * shield, and the mark has to hold its own next to condensed caps.
- */
-function HomePlateMark() {
-  return (
-    <svg viewBox="0 0 20 20" className="size-5 text-accent" aria-hidden>
-      <path d="M3 3.2h14v8.3L10 17.2 3 11.5Z" fill="currentColor" />
-    </svg>
-  );
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -68,9 +55,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur-xl print-hide">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="ring-focus flex shrink-0 items-center gap-2 rounded-md">
-            <HomePlateMark />
+            <BrandMark className="size-6 text-ink" />
             {/* The wordmark gives up its space to the team name on a phone. */}
-            <span className="scoreboard hidden text-2xl text-ink sm:inline">Dugout</span>
+            <BrandWordmark className="hidden text-2xl sm:inline" />
           </Link>
 
           <TeamSwitcher />
@@ -102,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           ) : (
             <span className="ml-auto hidden text-sm text-ink-muted sm:block">
-              Smart lineups for youth baseball &amp; softball
+              Smart lineups. More play time.
             </span>
           )}
         </div>

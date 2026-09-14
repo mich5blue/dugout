@@ -29,7 +29,7 @@ const BATTING_PHILOSOPHY_HELP: Record<BattingPhilosophy, string> = {
   COMPETITIVE:
     "Strongest hitters get the best slots, from each player's Hitting rating. Season fairness still counts, but much less.",
   MANUAL:
-    'Dugout leaves the order to you. Locked slots stay put and everyone else falls in roster order.',
+    'InningGrid leaves the order to you. Locked slots stay put and everyone else falls in roster order.',
 };
 
 /** Batting order (spec sections 28-30) with manual reordering and locks. */
@@ -139,7 +139,7 @@ export function BattingOrderPanel({
       {order.length === 0 ? (
         <EmptyState
           title="No batting order yet"
-          description="Generate the lineup and Dugout builds the order alongside the defense."
+          description="Generate the lineup and InningGrid builds the order alongside the defense."
         />
       ) : (
         <ol className="divide-y divide-border">

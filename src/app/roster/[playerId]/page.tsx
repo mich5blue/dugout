@@ -524,7 +524,7 @@ export default function PlayerDetailPage() {
                       <Row label="Bench innings" value={formatSigned(-debt.benchDebt)} />
                     </dl>
                     <p className="mt-2 text-xs text-ink-subtle">
-                      Positive means Dugout owes more of it, and will favour this player
+                      Positive means InningGrid owes more of it, and will favour this player
                       in upcoming games.
                     </p>
                   </div>

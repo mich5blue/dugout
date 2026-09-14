@@ -131,8 +131,8 @@ export function SomeoneOutSheet({
 
           <p className="mt-3 text-xs text-ink-muted">
             {doneNow > 0
-              ? `Innings 1–${doneNow} stay exactly as they were played. Dugout rebuilds the rest of the game around the change, and the season keeps track of the innings ${playerName(chosen)} missed.`
-              : `Dugout rebuilds the game without ${playerName(chosen)}, and the season keeps track of the innings they missed.`}
+              ? `Innings 1–${doneNow} stay exactly as they were played. InningGrid rebuilds the rest of the game around the change, and the season keeps track of the innings ${playerName(chosen)} missed.`
+              : `InningGrid rebuilds the game without ${playerName(chosen)}, and the season keeps track of the innings they missed.`}
           </p>
 
           <button

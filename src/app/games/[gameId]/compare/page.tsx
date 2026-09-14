@@ -155,7 +155,7 @@ export default function ComparePage() {
           <Notice tone="brand">
             All three use the same players, availability, pitching plan and locked
             assignments — and every rule you marked required still holds. The only
-            difference is what Dugout was asked to value.
+            difference is what InningGrid was asked to value.
           </Notice>
 
           {tradeoff ? (

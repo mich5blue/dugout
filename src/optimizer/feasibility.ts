@@ -4,7 +4,7 @@ import { effectiveRules } from './objective';
 import type { Conflict, RelaxationSuggestion } from './types';
 
 /**
- * Pre-flight analysis. Dugout must never say "unable to generate" without
+ * Pre-flight analysis. InningGrid must never say "unable to generate" without
  * explaining why, so every structural impossibility is detected here and
  * paired with the smallest changes that would fix it.
  */

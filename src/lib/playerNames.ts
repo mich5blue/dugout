@@ -3,7 +3,7 @@ import type { Player } from '@/domain/types';
 /**
  * What to call a player on screen and on paper.
  *
- * Dugout stores a first name and at most a last initial — never a full
+ * InningGrid stores a first name and at most a last initial — never a full
  * surname. Rosters of children end up in printed sheets, on a dugout wall and
  * inside share links that get forwarded through group chats, and a surname is
  * the field that turns a first name into an identifiable child. Nothing in the

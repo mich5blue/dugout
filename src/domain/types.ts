@@ -1,5 +1,5 @@
 /**
- * Dugout core domain types.
+ * InningGrid core domain types.
  *
  * Design rules enforced here:
  *  - NEVER assume nine defensive players. A game's defense is defined by a Formation.
