@@ -36,7 +36,8 @@ function HomePlateMark() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { team, role, setPreviewRole, backend, account, authReady } = useDugout();
+  const { team, role, setPreviewRole, backend, account, authReady, demoMode, exitDemo } =
+    useDugout();
 
   // Print and shared-lineup views own the whole screen: a parent opening a
   // share link has no team, so team navigation would be dead ends.
@@ -106,6 +107,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </header>
+
+      {/*
+        The demo must never be mistaken for a real team. A visitor can edit
+        everything in here, so the banner says plainly that it is a sandbox on
+        this device and offers the way out.
+      */}
+      {demoMode ? (
+        <div className="border-b border-accent/30 bg-accent-soft print-hide">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-2 sm:px-6">
+            <span className="text-sm text-ink">
+              You&apos;re exploring the <strong>demo team</strong> — change anything you
+              like. It stays on this device and is not saved to an account.
+            </span>
+            <button
+              type="button"
+              onClick={exitDemo}
+              className="ring-focus ml-auto rounded-md border border-accent/50 px-2.5 py-1 text-xs font-medium text-ink hover:bg-surface"
+            >
+              Sign in for real
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/*
         A restricted session must never be mistaken for a broken one: if edit

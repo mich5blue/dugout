@@ -20,10 +20,11 @@ import { useEffect, useState } from 'react';
  * children's names and does not need to be in the business of storing secrets.
  */
 export function SignInScreen() {
-  const { account, authReady } = useDugout();
+  const { account, authReady, enterDemo } = useDugout();
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'working' | 'sent' | 'needEmail'>('idle');
   const [error, setError] = useState('');
+  const [demoLoading, setDemoLoading] = useState(false);
 
   /*
     Arriving on an email link: finish the sign-in before painting anything, so
@@ -146,6 +147,47 @@ export function SignInScreen() {
           </div>
         )}
       </Card>
+
+      {/*
+        A way to look around without an account.
+
+        A configured project gates the whole app behind this screen, so the
+        demo team was unreachable in production — somebody deciding whether to
+        try Dugout had only "Continue with Google". This seeds the demo into
+        browser storage on this device: a full sandbox, instantly, with nothing
+        shared and nothing they can break.
+
+        Deliberately not a shared demo login. One password handed out publicly
+        means every visitor edits the same roster and sees each other's
+        changes, and the first person to vandalise it ruins the demo for
+        everyone.
+      */}
+      <div className="mt-5 text-center">
+        <Button
+          size="lg"
+          disabled={demoLoading}
+          onClick={async () => {
+            setDemoLoading(true);
+            try {
+              await enterDemo();
+            } finally {
+              setDemoLoading(false);
+            }
+          }}
+        >
+          {demoLoading ? (
+            <>
+              <Spinner /> Setting up the demo…
+            </>
+          ) : (
+            'Look around the demo team first'
+          )}
+        </Button>
+        <p className="mt-2 text-xs text-ink-subtle">
+          A full season to explore. Nothing is saved to an account, and it stays on
+          this device.
+        </p>
+      </div>
 
       <p className="mt-6 text-xs text-ink-subtle">
         Dugout stores your roster so you can build lineups. Player names stay on your

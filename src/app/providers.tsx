@@ -54,6 +54,20 @@ interface DugoutContextValue {
   backend: Backend;
   /** Null until sign-in, and always null on the local backend. */
   account: Account | null;
+  /**
+   * True while the visitor is looking around the demo without an account.
+   *
+   * A configured project otherwise gates the whole app behind sign-in, which
+   * made the demo team unreachable in production: someone deciding whether to
+   * try Dugout had only "Continue with Google". Demo mode runs the app against
+   * browser storage on that one device, so a visitor gets a full sandbox with
+   * no account, nothing shared, and nothing they can damage.
+   */
+  demoMode: boolean;
+  /** Seed the demo team and start looking around. */
+  enterDemo: () => Promise<void>;
+  /** Leave the demo and return to the sign-in screen. */
+  exitDemo: () => void;
   /** False until the auth state is known, so nothing flashes the wrong screen. */
   authReady: boolean;
   signOut: () => Promise<void>;
@@ -99,20 +113,45 @@ interface DugoutContextValue {
 
 const DugoutContext = createContext<DugoutContextValue | null>(null);
 
+/**
+ * Demo mode lives in sessionStorage, not localStorage: it should survive a
+ * reload while someone is looking around, and be gone when they close the tab.
+ */
+const DEMO_KEY = 'dugout.demo';
+
 export function DugoutProvider({ children }: { children: React.ReactNode }) {
-  const backend: Backend = isFirebaseConfigured() ? 'firebase' : 'local';
+  const configured = isFirebaseConfigured();
+  const [demoMode, setDemoMode] = useState(false);
+
+  /*
+    Demo mode turns the session local, which is what makes the rest of the app
+    work unchanged: AppShell only gates on `backend === 'firebase'`, and the
+    store below already falls back to browser storage with no account.
+  */
+  const backend: Backend = configured && !demoMode ? 'firebase' : 'local';
 
   const [account, setAccount] = useState<Account | null>(null);
-  const [authReady, setAuthReady] = useState(backend === 'local');
+  /* Keyed on `configured`, not `backend` — entering demo mode must not leave
+     auth permanently unresolved. */
+  const [authReady, setAuthReady] = useState(!configured);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (backend === 'local') return;
+    try {
+      if (window.sessionStorage.getItem(DEMO_KEY) === '1') setDemoMode(true);
+    } catch {
+      // Private browsing can refuse session storage; the sign-in screen is
+      // then the correct thing to show.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!configured) return;
     return watchAccount((next) => {
       setAccount(next);
       setAuthReady(true);
     });
-  }, [backend]);
+  }, [configured]);
 
   /*
     The store depends on who is signed in, because a Firestore store only knows
@@ -223,6 +262,28 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
       backend,
       account,
       authReady,
+      demoMode,
+      enterDemo: async () => {
+        /* Seeded into browser storage explicitly, not via the generic
+           seedDemoTeam below, because that writes to whichever store is
+           current — and a signed-in coach entering the demo must never
+           overwrite their real team. */
+        localStore.replaceAll(await buildDemoDatabase());
+        try {
+          window.sessionStorage.setItem(DEMO_KEY, '1');
+        } catch {
+          // Demo still works for this render; it just will not survive a reload.
+        }
+        setDemoMode(true);
+      },
+      exitDemo: () => {
+        try {
+          window.sessionStorage.removeItem(DEMO_KEY);
+        } catch {
+          // Nothing to clear.
+        }
+        setDemoMode(false);
+      },
       signOut: async () => {
         if (backend === 'firebase') await signOutNow();
       },
