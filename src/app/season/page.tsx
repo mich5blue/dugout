@@ -292,6 +292,115 @@ export default function SeasonPage() {
         </div>
       </Card>
 
+      {/*
+        Where everyone has played.
+
+        The most-read thing on the page, so it is not behind a disclosure any
+        more: a coach scanning for "who has never played infield" gets it in
+        one look, and the dots make the gaps as loud as the numbers. The
+        trailing count is the same question asked the other way round — how
+        many different spots this player has seen all season.
+      */}
+      <Card>
+        <CardHeader
+          title="Where everyone has played"
+          description="Innings at every position used this season, including formations you no longer play. A dot means never."
+        />
+        <div className="px-3 pt-1 pb-4 sm:px-5">
+          <GroupLegend groups={['BATTERY', 'INFIELD', 'OUTFIELD']} className="mb-3" />
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="eyebrow sticky left-0 bg-surface px-2 py-2 text-left text-ink-subtle">
+                    Player
+                  </th>
+                  {distribution.codes.map((code, index) => (
+                    <th
+                      key={code.code}
+                      title={code.displayName}
+                      className={cn(
+                        'px-2 py-2 text-center text-xs font-semibold uppercase',
+                        GROUP_STYLE[code.group].text,
+                        /* A hairline where the group changes, so the three
+                           blocks of the field read as blocks. */
+                        index > 0 && distribution.codes[index - 1].group !== code.group
+                          ? 'border-l border-border'
+                          : null,
+                      )}
+                    >
+                      {code.code}
+                    </th>
+                  ))}
+                  <th className="eyebrow border-l border-border px-2 py-2 text-center text-ink-subtle">
+                    Spots
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranked.map((player) => (
+                  <tr key={player.id} className="border-b border-border last:border-0">
+                    <th
+                      scope="row"
+                      className="sticky left-0 bg-surface px-2 py-1.5 text-left text-sm font-medium whitespace-nowrap text-ink"
+                    >
+                      {names.short(player.id)}
+                    </th>
+                    {distribution.codes.map((code, index) => {
+                      const count = distribution.byPlayer[player.id]?.[code.code] ?? 0;
+                      /*
+                        A neutral density ramp, not a hue ramp. The column
+                        headers already carry position-group colour, so tinting
+                        the cells with a second colour would double-encode; and
+                        mixing ink into the surface stays legible in both modes,
+                        which a --brand ramp does not (brand is near-black in
+                        light mode, so a dark cell swallowed its own label).
+                      */
+                      /* Widened from the old 0.05-0.22: a season's counts sit
+                         between one and five, and across that range the narrow
+                         ramp made every filled cell the same grey. Capped at
+                         32% so --ink still reads on top in both modes. */
+                      const intensity =
+                        count === 0 ? 0 : 0.06 + 0.26 * (count / maxPositionCount);
+                      return (
+                        <td
+                          key={code.code}
+                          className={cn(
+                            'p-0.5 text-center',
+                            index > 0 && distribution.codes[index - 1].group !== code.group
+                              ? 'border-l border-border'
+                              : null,
+                          )}
+                        >
+                          <span
+                            className="tnum block rounded-md py-1.5 text-xs font-medium"
+                            style={{
+                              backgroundColor:
+                                count === 0
+                                  ? 'transparent'
+                                  : `color-mix(in srgb, var(--ink) ${Math.round(intensity * 100)}%, transparent)`,
+                              color: count === 0 ? 'var(--ink-subtle)' : 'var(--ink)',
+                            }}
+                          >
+                            {count === 0 ? '·' : count}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className="border-l border-border p-0.5 text-center">
+                      <span className="tnum block rounded-md py-1.5 text-xs font-semibold text-ink">
+                        {usage[player.id]?.uniquePositionCodes ?? 0}
+                        <span className="text-ink-subtle">/{distribution.codes.length}</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Card>
+
       {fairness.alerts.length > 0 ? (
         <Card>
           <CardHeader
@@ -423,75 +532,6 @@ export default function SeasonPage() {
             </div>
           </div>
 
-          <div>
-            <p className="eyebrow text-ink-subtle">Position breakdown</p>
-            <p className="mt-1 mb-3 text-xs text-ink-muted">
-              Every position used this season, including formations you no longer play.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="eyebrow px-4 py-2 text-left text-ink-subtle">Player</th>
-                    {distribution.codes.map((code) => (
-                      <th
-                        key={code.code}
-                        title={code.displayName}
-                        className={cn(
-                          'px-2 py-2 text-center text-xs font-semibold uppercase',
-                          GROUP_STYLE[code.group].text,
-                        )}
-                      >
-                        {code.code}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {ranked.map((player) => (
-                    <tr key={player.id} className="border-b border-border last:border-0">
-                      <th
-                        scope="row"
-                        className="px-4 py-1.5 text-left text-sm font-medium whitespace-nowrap text-ink"
-                      >
-                        {names.short(player.id)}
-                      </th>
-                      {distribution.codes.map((code) => {
-                        const count = distribution.byPlayer[player.id]?.[code.code] ?? 0;
-                        /*
-                          A neutral density ramp, not a hue ramp. The column
-                          headers already carry position-group colour, so
-                          tinting the cells with a second colour would
-                          double-encode; and mixing ink into the surface stays
-                          legible in both modes, which a --brand ramp does not
-                          (brand is near-black in light mode, so a dark cell
-                          swallowed its own label).
-                        */
-                        const intensity =
-                          count === 0 ? 0 : 0.05 + 0.17 * (count / maxPositionCount);
-                        return (
-                          <td key={code.code} className="p-0.5 text-center">
-                            <span
-                              className="tnum block rounded-md py-1.5 text-xs font-medium"
-                              style={{
-                                backgroundColor:
-                                  count === 0
-                                    ? 'transparent'
-                                    : `color-mix(in srgb, var(--ink) ${Math.round(intensity * 100)}%, transparent)`,
-                                color: count === 0 ? 'var(--ink-subtle)' : 'var(--ink)',
-                              }}
-                            >
-                              {count === 0 ? '·' : count}
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       </details>
 
