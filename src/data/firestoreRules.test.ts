@@ -1,4 +1,5 @@
 import { ASSISTANT_EDITABLE_PLAYER_FIELDS, MAX_ASSISTANT_COACHES } from '@/domain/access';
+import { FEEDBACK_KINDS, MAX_MESSAGE } from '@/lib/feedback';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -59,6 +60,59 @@ describe('firestore rules', () => {
 
   it('lets only the owner delete a team', () => {
     expect(RULES).toContain('allow delete: if isMember() && team().ownerUid == myUid();');
+  });
+
+  /*
+    Feedback is the only collection a signed-in stranger can write to, so it
+    is the only place where an unbounded document or an unexpected key is
+    someone else's problem to clean up. These pin the shape.
+  */
+  describe('feedback', () => {
+    const start = RULES.indexOf('match /feedback/');
+    const section = RULES.slice(start, RULES.indexOf('\n    }', start));
+
+    it('can never be read back, edited or deleted by a client', () => {
+      expect(section).toContain('allow read, update, delete: if false;');
+    });
+
+    it('accepts only the kinds the form can produce', () => {
+      for (const kind of FEEDBACK_KINDS) {
+        expect(section, kind.value).toContain(`'${kind.value}'`);
+      }
+      // And nothing beyond them: the list in the rules is exactly this long.
+      const list = /kind in \[([^\]]*)\]/.exec(section)?.[1] ?? '';
+      expect(list.split(',').filter(Boolean)).toHaveLength(FEEDBACK_KINDS.length);
+    });
+
+    it('bounds the message at the same length the client enforces', () => {
+      expect(section).toContain(`message.size() <= ${MAX_MESSAGE}`);
+      expect(section).toContain('message.size() > 0');
+    });
+
+    it('allows only the fields the record actually carries', () => {
+      const allowed = hasOnlyList('match /feedback/');
+      expect(allowed.sort()).toEqual(
+        [
+          'appVersion',
+          'createdAt',
+          'demoMode',
+          'fromPath',
+          'gameCount',
+          'kind',
+          'message',
+          'playerCount',
+          'receivedAt',
+          'replyTo',
+          'teamCount',
+          'userAgent',
+          'viewport',
+        ].sort(),
+      );
+    });
+
+    it('timestamps on the server, so a wrong device clock cannot lie', () => {
+      expect(section).toContain('receivedAt == request.time');
+    });
   });
 
   it('gives games, goals and flags no assistant write path', () => {

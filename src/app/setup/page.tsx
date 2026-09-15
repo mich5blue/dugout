@@ -78,6 +78,16 @@ export default function SetupPage() {
 
   const [step, setStep] = useState<StepIndex>(0);
   const [saving, setSaving] = useState(false);
+  /*
+    A first-timer meets a "what you'll need" screen before the first question.
+
+    The wizard was already one-decision-per-screen, but it opened by asking for
+    a team name — which tells a new coach nothing about what they are in for,
+    or that the one thing worth preparing is who can pitch and catch. Kept out
+    of the step machine and off the progress bar: it is not a step, and a coach
+    adding a second team has already read it.
+  */
+  const [introDone, setIntroDone] = useState(false);
 
   // Step 1: team
   const [name, setName] = useState('');
@@ -209,6 +219,10 @@ export default function SetupPage() {
   };
 
   if (!ready) return null;
+
+  if (!adding && !introDone) {
+    return <Intro onStart={() => setIntroDone(true)} />;
+  }
 
   return (
     <div className="mx-auto max-w-xl pb-28 sm:pb-10">
@@ -396,6 +410,8 @@ export default function SetupPage() {
                 </div>
               </div>
 
+              <LearnMore href="/guide#need" what="innings and formations" />
+
               {/* Roster-aware guidance: the coach sees the consequence now, not
                   when a lineup fails to generate. */}
               {!enoughPlayers ? (
@@ -480,6 +496,8 @@ export default function SetupPage() {
                 play first base or shortstop, you can mark that on the roster page in a
                 few taps.
               </p>
+
+              <LearnMore href="/guide#roster" what="pitching, catching and eligibility" />
             </div>
           </Step>
         ) : null}
@@ -508,6 +526,8 @@ export default function SetupPage() {
                   whether or not they&apos;re on the field.
                 </p>
               </div>
+
+              <LearnMore href="/guide#options" what="every coaching option" />
             </div>
           </Step>
         ) : null}
@@ -550,6 +570,8 @@ export default function SetupPage() {
               After the game, record how many innings were actually played — that&apos;s
               what lets InningGrid even out playing time across the season.
             </Notice>
+
+            <LearnMore href="/guide#game" what="your first game, step by step" />
           </Step>
         ) : null}
       </div>
@@ -709,5 +731,112 @@ function Summary({ label, children }: { label: string; children: React.ReactNode
       </dt>
       <dd className="text-sm font-medium text-ink">{children}</dd>
     </div>
+  );
+}
+
+/**
+ * The first screen a new coach sees: what this is, and what to have ready.
+ *
+ * Two of the four things are marked as actually needed, because only two of
+ * them can block a lineup — a roster, and somebody who can pitch and catch.
+ * Saying "optional" out loud about the other two is the point: a coach who
+ * thinks they have to rate eleven children before their first game will put
+ * the phone down.
+ */
+function Intro({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="mx-auto max-w-xl py-6">
+      <p className="eyebrow text-accent">Setting up</p>
+      <h1 className="display mt-2 text-4xl text-ink sm:text-5xl">
+        About five minutes.
+      </h1>
+      <p className="mt-4 text-ink-muted">
+        You&apos;ll answer six quick questions — your roster, how your league plays,
+        and how you like to coach. Then InningGrid builds your lineups, and keeps the
+        whole season fair without you tracking it.
+      </p>
+
+      <div className="mt-7 space-y-2.5">
+        <Need title="Your players' first names" need>
+          One per line, or import a photo of your roster. Jersey numbers help when two
+          players share a name — and last names are never stored.
+        </Need>
+        <Need title="Who can pitch, and who can catch" need>
+          The one thing worth getting right. Every inning needs both, so aim for two or
+          three of each rather than one.
+        </Need>
+        <Need title="Innings, and how many take the field">
+          Six innings and ten players is the common youth setup. Changeable any time.
+        </Need>
+        <Need title="Ability ratings">
+          Skip them. Leave everyone at Regular and InningGrid treats the roster as
+          interchangeable, which is a perfectly good way to run a season.
+        </Need>
+      </div>
+
+      <Notice tone="brand" className="mt-6">
+        Nothing is saved until the last screen, so you can back out without leaving a
+        half-made team behind.
+      </Notice>
+
+      <div className="mt-7 flex flex-wrap gap-2">
+        <Button variant="primary" size="lg" onClick={onStart}>
+          Let&apos;s go
+        </Button>
+        <Link href="/guide">
+          <Button size="lg">Read the guide</Button>
+        </Link>
+        <Link href="/">
+          <Button variant="ghost" size="lg">
+            Not now
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function Need({
+  title,
+  need = false,
+  children,
+}: {
+  title: string;
+  need?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        {need ? (
+          <Badge tone="caution">Needed</Badge>
+        ) : (
+          <Badge tone="neutral">Optional</Badge>
+        )}
+      </div>
+      <p className="mt-1 text-sm leading-relaxed text-ink-muted">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * A way out to the guide, from the step that raises the question.
+ *
+ * Opens in a new tab deliberately: the wizard holds unsaved state, and
+ * navigating away from it to read about formations would throw away whatever
+ * the coach had typed.
+ */
+function LearnMore({ href, what }: { href: string; what: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="ring-focus inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-accent hover:underline"
+    >
+      More about {what}
+      <span aria-hidden>↗</span>
+    </a>
   );
 }

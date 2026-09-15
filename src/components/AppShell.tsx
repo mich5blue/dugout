@@ -37,9 +37,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     lives in the account. Shared lineups are already past this point, because a
     parent opening a link has no account and needs none.
   */
+  /*
+    The guide is readable without an account.
+
+    The landing page invites a visitor to read "How it works" before they sign
+    up, and behind the sign-in wall that invitation is a dead end. There is
+    nothing in the guide to protect: it is help text and pictures of a fixture
+    team. Feedback stays behind sign-in, because it writes to the database and
+    the rules require an account to stop anonymous submissions.
+  */
+  const publicPage = pathname?.startsWith('/guide') ?? false;
+
   if (backend === 'firebase') {
     if (!authReady) return null;
-    if (!account) return <SignInScreen />;
+    if (!account && !publicPage) return <SignInScreen />;
   }
 
   /*
@@ -92,6 +103,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Smart lineups. More play time.
             </span>
           )}
+
+          {/*
+            Help sits outside the tab set on purpose. The phone bar is already
+            six tabs at 62px each, and a seventh would shrink every one of them
+            to make room for the thing a coach needs least often — but it has
+            to be on every screen, because "where do I ask" is exactly the
+            question you have when you are lost.
+          */}
+          <Link
+            href="/guide"
+            aria-label="How to use InningGrid"
+            title="How to use InningGrid"
+            className={cn(
+              'ring-focus ml-1 flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition-colors',
+              pathname?.startsWith('/guide') || pathname?.startsWith('/feedback')
+                ? 'border-accent text-ink'
+                : 'border-border text-ink-muted hover:border-border-strong hover:text-ink',
+            )}
+          >
+            ?
+          </Link>
         </div>
       </header>
 

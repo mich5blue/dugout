@@ -215,6 +215,73 @@ are the names that come back. Because this handles pictures of children's names,
 nothing in that route should ever start logging request bodies. Coaches who would
 rather nothing left the device are told so in the dialog, and can paste instead.
 
+## Onboarding, the guide, and feedback
+
+Three surfaces that exist for the coach who has not used this before, or who
+has hit an option they do not understand.
+
+**`/setup` opens with what you'll need.** The wizard was already
+one-decision-per-screen, but it opened by asking for a team name, which tells a
+new coach nothing about what they are in for — and nothing about the one thing
+worth preparing, which is who can pitch and catch. The intro screen names four
+things and marks two of them as actually needed; the other two say "optional"
+out loud, because a coach who thinks they must rate eleven children before
+their first game will put the phone down. It is kept out of the step machine
+and off the progress bar: it is not a step, and a coach adding a second team
+never sees it.
+
+**`/guide` is the how-to**, and it is readable without an account — the landing
+page invites a visitor to read "How it works" before signing up, and behind the
+sign-in wall that invitation is a dead end. There is nothing in it to protect.
+
+Its pictures are the real components rendered against a fixture
+(`src/lib/guideSample.ts`), framed by `GuideShot` so a reader can tell a
+picture of the app from the app. Screenshots would have been quicker, and they
+rot: a help page whose pictures lag the UI teaches the wrong product. These
+cannot lag it, they follow the reader into light mode, and they stay sharp at
+any zoom. Capturing real PNGs per element was tried first — Playwright can do
+it — but the sandbox this was built in refuses to launch Chromium, and a
+screenshot pipeline nobody can run is a screenshot pipeline that goes stale on
+the first redesign.
+
+The option reference (`src/app/guide/settingsReference.ts`) is data, not prose,
+and **the defaults are read out of `defaultRuleSettings()` at render time**
+rather than written into the file. The first draft hand-copied them and got
+four wrong — minimum innings, unique positions, critical strength and infield
+spread were all documented as off when they ship on. A help page that misstates
+a default is worse than one that omits it.
+
+**`/feedback` writes to a top-level `feedback` collection.** Deliberately not a
+team repository: feedback is write-only, outbound, and read in the Firebase
+console, so putting it in the repository contract would have added a method to
+every store implementation for something nothing reads back.
+
+Three things it refuses to do, all of which are the normal way to build a
+feedback form:
+
+- No email address on the page. A `mailto:` on a public site is an address
+  handed to every scraper that visits, and it would be the maintainer's own.
+- No silent failure. The one thing the person is trying to report is that
+  something is broken, so any path that does not reach the server hands back
+  the full report as text for the clipboard.
+- Nothing about the roster. The attached context is the page, the viewport, the
+  browser and how many teams/players/games exist — counts, never names — and
+  the form says so in a disclosure before you send. These are rosters of
+  children.
+
+The rules make it create-only and unreadable by any client, including the coach
+who wrote it, with the allowed keys and the message length pinned by tests in
+`src/data/firestoreRules.test.ts`. It is the one collection a signed-in
+stranger can write to, so an unbounded document or an unexpected key there is
+somebody else's problem to clean up.
+
+**Deploying the rules is a separate step from deploying the site.** Feedback
+submissions are refused until this runs:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
 ## Four ways to read a lineup
 
 The same generated game renders four ways, because reading a lineup at a desk

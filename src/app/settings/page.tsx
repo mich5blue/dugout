@@ -369,6 +369,28 @@ export default function SettingsPage() {
           )}
         </div>
       </Card>
+
+      {/*
+        Last card on the settings page, which is where someone lands when they
+        have gone looking for an explanation of a control and not found one.
+      */}
+      <Card>
+        <CardHeader
+          title="Help and feedback"
+          description="What every option does, and where to say something is wrong."
+        />
+        <div className="flex flex-wrap gap-2 px-5 pb-5">
+          <Link href="/guide#options">
+            <Button>Every option explained</Button>
+          </Link>
+          <Link href="/guide">
+            <Button>How-to guide</Button>
+          </Link>
+          <Link href="/feedback">
+            <Button variant="primary">Send feedback</Button>
+          </Link>
+        </div>
+      </Card>
     </div>
   );
 }

@@ -184,6 +184,35 @@ service cloud.firestore {
         );
     }
 
+    /*
+      Feedback from a coach: bugs, confusions and requests.
+
+      Create-only, and unreadable by any client. A coach may send one; nobody
+      can list them, read one back, edit one or delete one — including the
+      coach who wrote it. Reading happens in the Firebase console, where the
+      person who has to act on them actually is.
+
+      The field checks are here because this is the one collection a signed-in
+      stranger can write to. Without them it is an open door: unbounded
+      documents, arbitrary keys, and someone else's uid on the record.
+    */
+    match /feedback/{feedbackId} {
+      allow read, update, delete: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+             'kind', 'message', 'replyTo', 'createdAt', 'receivedAt',
+             'fromPath', 'viewport', 'userAgent', 'appVersion',
+             'teamCount', 'playerCount', 'gameCount', 'demoMode'
+           ])
+        && request.resource.data.kind in ['BUG', 'CONFUSING', 'IDEA', 'OTHER']
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 4000
+        && request.resource.data.createdAt is string
+        && request.resource.data.receivedAt == request.time;
+    }
+
     /* Anything not named above is denied. */
     match /{document=**} {
       allow read, write: if false;

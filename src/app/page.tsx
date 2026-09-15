@@ -122,6 +122,11 @@ export default function DashboardPage() {
               'Explore the demo team'
             )}
           </Button>
+          <Link href="/guide">
+            <Button variant="ghost" size="lg" className="w-full sm:w-auto">
+              How it works
+            </Button>
+          </Link>
         </div>
 
         <div className="mt-10 grid gap-3 sm:grid-cols-3">
