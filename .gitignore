@@ -9,8 +9,14 @@ out/
 next-env.d.ts
 
 # production
-build/
-dist/
+#
+# Anchored to the repo root. Unanchored `build/` matches a directory named
+# `build` at ANY depth, which silently swallowed two directories of source —
+# src/app/games/[gameId]/build and src/components/game/build — and reported a
+# clean working tree while doing it. The deploy went out without the whole
+# lineup-building flow, and the only symptom was a 404 in production.
+/build/
+/dist/
 
 # testing
 coverage/
