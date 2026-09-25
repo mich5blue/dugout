@@ -498,7 +498,7 @@ export default function SeasonPage() {
                       <tr key={player.id} className="border-b border-border last:border-0">
                         <th scope="row" className="px-4 py-2 text-left">
                           <Link
-                            href={`/roster/${player.id}`}
+                            href={`/team/${player.id}`}
                             className="ring-focus text-sm font-medium text-ink hover:underline"
                           >
                             {names.full(player.id)}

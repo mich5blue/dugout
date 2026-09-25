@@ -39,8 +39,9 @@ export function analyzeFeasibility(ctx: SolverContext): FeasibilityReport {
         `Inning ${inning} has only ${plural(available.length, 'available player')} but the formation needs ${ctx.nPos}.`,
       );
       relaxations.push({
-        message: `Use a formation with ${available.length} defensive positions for this game.`,
+        message: `Play ${available.length} in the field for this game instead of ${ctx.nPos}.`,
         impact: 3,
+        action: { type: 'USE_SMALLER_FORMATION', positions: available.length },
       });
     }
   }

@@ -75,3 +75,26 @@ describe('demo team', () => {
     expect(usage[walter.id].games).toBe(3);
   });
 });
+
+describe('the demo stays current', () => {
+  it('always has an upcoming game, however long after release it is opened', async () => {
+    // The dates were fixed strings until Sept 2026, so the demo degraded into
+    // its own empty state four months after it was written — a visitor's first
+    // impression of the product became "No game scheduled".
+    const db = await buildDemoDatabase();
+    const today = new Date();
+    const local = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+      today.getDate(),
+    ).padStart(2, '0')}`;
+
+    const upcoming = db.games.filter((game) => game.date > local);
+    expect(upcoming.length).toBeGreaterThan(0);
+    expect(upcoming.every((game) => game.status === 'PLANNED')).toBe(true);
+  });
+
+  it('has a played season behind it, so fairness has something to say', async () => {
+    const db = await buildDemoDatabase();
+    const played = db.games.filter((game) => game.status === 'COMPLETED');
+    expect(played.length).toBeGreaterThanOrEqual(4);
+  });
+});

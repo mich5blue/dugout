@@ -2,24 +2,18 @@
 
 import { useDugout } from '@/app/providers';
 import { AssignmentPicker } from '@/components/game/AssignmentPicker';
-import { AttendanceBar } from '@/components/game/AttendanceBar';
 import { BattingOrderPanel } from '@/components/game/BattingOrderPanel';
 import { FieldView } from '@/components/game/FieldView';
+import { FairnessNotes, RuleChecks } from '@/components/game/hero/FairnessNotes';
+import { PositionPicker } from '@/components/game/hero/PositionPicker';
+import { LineupGrid, PlayerGrid } from '@/components/game/LineupGrid';
 import { LiveView } from '@/components/game/LiveView';
+import { PitchingPlanPanel } from '@/components/game/GameSetupPanels';
+import { ConflictList } from '@/components/game/QualitySummary';
 import { ShareActions } from '@/components/game/ShareActions';
 import { SomeoneOutSheet } from '@/components/game/SomeoneOutSheet';
-import { LineupGrid, PlayerGrid } from '@/components/game/LineupGrid';
 import {
-  AvailabilityPanel,
-  PitchingPlanPanel,
-  RulesPanel,
-} from '@/components/game/GameSetupPanels';
-import {
-  ConflictList,
-  QualitySummary,
-  WhyThisLineup,
-} from '@/components/game/QualitySummary';
-import {
+  Badge,
   Button,
   Card,
   CardHeader,
@@ -28,7 +22,12 @@ import {
   Select,
   Spinner,
 } from '@/components/ui';
-import type { AssignmentType, Game, PositionDefinition, TeamSettings } from '@/domain/types';
+import type {
+  AssignmentType,
+  Game,
+  PositionDefinition,
+  TeamSettings,
+} from '@/domain/types';
 import { rotateBattingOrder, type OptimizationResult, type RelaxationSuggestion } from '@/optimizer';
 import {
   generateLineup,
@@ -39,19 +38,29 @@ import {
   setBattingSlotLocked,
   toggleLock,
 } from '@/services/lineupService';
+import { getFairnessDebt } from '@/services/fairness';
 import { formatGameDate } from '@/lib/format';
 import { buildGameView } from '@/lib/gameView';
+import { nextActionFor } from '@/lib/nextAction';
 import { adjacentGames } from '@/lib/schedule';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 /**
- * The four ways to read a lineup. `field` and `live` are the two alternative
- * directions the redesign kept as first-class options: `field` puts the
- * diamond in charge, `live` is the phone-in-the-dugout surface.
+ * The lineup workspace — the hero screen of the product.
+ *
+ * Three panes on a wide screen: the batting order, the grid, and why the grid
+ * looks like that. The grid is by *player* rather than by position, because
+ * "where has this kid been all game" is the question both the coach and the
+ * parent ask, and the by-position grid can only answer it by scanning ten rows.
+ * By inning, Field and Live are all still one tap away.
+ *
+ * Game setup left this page entirely and became the build flow. What remains
+ * here is only what a coach does *to a lineup that exists*: read it, adjust it,
+ * lock what they like, rebuild the rest, and take it to the field.
  */
-type ViewMode = 'inning' | 'player' | 'field' | 'live';
+type ViewMode = 'player' | 'inning' | 'field' | 'live';
 
 export default function GamePage() {
   const params = useParams<{ gameId: string }>();
@@ -59,27 +68,37 @@ export default function GamePage() {
 
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [stale, setStale] = useState(false);
-  const [mode, setMode] = useState<ViewMode>('inning');
+  const [mode, setMode] = useState<ViewMode>('player');
   const [fieldInning, setFieldInning] = useState(1);
-  const [setupOpen, setSetupOpen] = useState(true);
+  const [liveInning, setLiveInning] = useState(1);
   const [frozenInnings, setFrozenInnings] = useState(0);
-  const [picker, setPicker] = useState<{ inning: number; position: PositionDefinition } | null>(
+  const [someoneOut, setSomeoneOut] = useState(false);
+  const [pitchingOpen, setPitchingOpen] = useState(false);
+
+  /** Which cell is being edited, in whichever of the two shapes the view uses. */
+  const [cellByPlayer, setCellByPlayer] = useState<{ playerId: string; inning: number } | null>(
     null,
   );
-  const [someoneOut, setSomeoneOut] = useState(false);
-  /** The inning the Live view is showing, so mid-game changes cut from there. */
-  const [liveInning, setLiveInning] = useState(1);
+  const [cellByPosition, setCellByPosition] = useState<{
+    inning: number;
+    position: PositionDefinition;
+  } | null>(null);
+
+  /*
+    Undo is a stack of whole games rather than a diff log.
+
+    A lineup is small enough that snapshotting it costs nothing, and a coach's
+    "undo" means "put it back how it was" — including the six other cells a
+    swap moved. Reconstructing that from inverse operations is where undo
+    implementations go wrong.
+  */
+  const [history, setHistory] = useState<Game[]>([]);
 
   const game = games.find((entry) => entry.id === params.gameId) ?? null;
 
   /*
-    Which set of rows the page reads and writes.
-
-    Once a game is completed the plan is history and the record is the truth —
-    the season counts ACTUAL rows. The page used to read and write PLANNED on a
-    completed game, so a coach who benched a player here saw the grid update and
-    the season ignore it: they had edited a plan nothing reads any more.
+    Which rows the page reads and writes. Once a game is completed the plan is
+    history and the record is the truth — the season counts ACTUAL rows.
   */
   const editType: AssignmentType = game?.status === 'COMPLETED' ? 'ACTUAL' : 'PLANNED';
 
@@ -88,6 +107,23 @@ export default function GamePage() {
     [game, players, editType],
   );
 
+  const debts = useMemo(() => getFairnessDebt(games, players), [games, players]);
+
+  const update = useCallback(
+    async (next: Game, { undoable = true }: { undoable?: boolean } = {}) => {
+      if (undoable && game) setHistory((stack) => [...stack.slice(-19), game]);
+      await saveGame(next);
+    },
+    [game, saveGame],
+  );
+
+  const undo = async () => {
+    const previous = history[history.length - 1];
+    if (!previous) return;
+    setHistory((stack) => stack.slice(0, -1));
+    await saveGame(previous);
+  };
+
   if (!ready) return null;
 
   if (!team || !game || !view) {
@@ -95,23 +131,19 @@ export default function GamePage() {
       <EmptyState
         title="Game not found"
         action={
-          <Link href="/">
-            <Button variant="primary">Back to dashboard</Button>
+          <Link href="/games">
+            <Button variant="primary">Back to the schedule</Button>
           </Link>
         }
       />
     );
   }
 
-  const update = async (next: Game) => {
-    await saveGame(next);
-    setStale(true);
-  };
-
-  const updateSettings = async (settings: TeamSettings) => {
-    await saveGame({ ...game, settingsSnapshot: settings });
-    setStale(true);
-  };
+  const editsGame = can('game:edit');
+  const hasLineup = view.hasLineup;
+  const { previous: previousGame, next: nextGame } = adjacentGames(games, game.id);
+  const action = nextActionFor(game);
+  const completed = game.status === 'COMPLETED';
 
   const run = async (seed?: number, freeze = frozenInnings) => {
     setGenerating(true);
@@ -127,128 +159,83 @@ export default function GamePage() {
         frozenInnings: freeze,
       });
       setResult(outcome.result);
-      if (outcome.result.ok) {
-        await saveGame(outcome.game);
-        setStale(false);
-        setSetupOpen(false);
-      }
+      if (outcome.result.ok) await update(outcome.game);
     } finally {
       setGenerating(false);
     }
   };
 
   const applyRelaxation = async (suggestion: RelaxationSuggestion) => {
-    const action = suggestion.action;
-    if (!action) return;
-    const settings = { ...game.settingsSnapshot };
-
-    switch (action.type) {
+    const act = suggestion.action;
+    if (!act) return;
+    const settings: TeamSettings = { ...game.settingsSnapshot };
+    switch (act.type) {
       case 'REDUCE_MIN_DEFENSIVE_INNINGS':
-        settings.minDefensiveInnings = action.to;
+        settings.minDefensiveInnings = act.to;
         break;
       case 'RELAX_INFIELD_REQUIREMENT':
-        settings.infieldOpportunity = { mode: 'TARGET', innings: action.to };
+        settings.infieldOpportunity = { mode: 'TARGET', innings: act.to };
         break;
       case 'ALLOW_CONSECUTIVE_BENCH':
         settings.noConsecutiveBench = false;
         break;
       case 'RAISE_PITCHING_CAP':
-        settings.maxPitchingInningsPerPlayer = action.to;
+        settings.maxPitchingInningsPerPlayer = act.to;
         break;
       case 'RAISE_CATCHING_CAP':
-        settings.maxCatcherInningsPerPlayer = action.to;
+        settings.maxCatcherInningsPerPlayer = act.to;
         break;
+      case 'ALLOW_POSITION':
+        await update({
+          ...game,
+          eligibilityOverrides: [
+            ...game.eligibilityOverrides,
+            { playerId: act.playerId, positionId: act.positionId },
+          ],
+        });
+        return;
       default:
         return;
     }
-
-    await saveGame({ ...game, settingsSnapshot: settings });
-    setResult(null);
+    await update({ ...game, settingsSnapshot: settings });
   };
 
-  const previousGame = games
-    .filter((entry) => entry.id !== game.id && entry.battingAssignments.length > 0)
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-
-  const hasLineup = view.hasLineup;
-  /* An assistant can read every lineup but cannot change one. */
-  const editsGame = can('game:edit');
-
-  const { previous, next, position, total } = adjacentGames(games, game.id);
-
   return (
-    <div className="space-y-6">
-      {/*
-        Season pager. A coach reviewing the week moves between games far more
-        often than they go back to the dashboard, and previously the only way
-        was dashboard → next game → back → there was no way to the one after.
-
-        It walks the whole season rather than only the upcoming games, and the
-        adjacent opponent is named so the arrow says where it goes instead of
-        making the coach press it to find out.
-      */}
-      <div className="flex items-center justify-between gap-3">
-        <Link href="/games" className="ring-focus text-sm text-ink-muted hover:text-ink">
-          ← Schedule
-        </Link>
-
-        {position !== undefined && total > 1 ? (
-          <nav aria-label="Other games" className="flex items-center gap-1.5">
-            {previous ? (
-              <Link href={`/games/${previous.id}`} className="ring-focus rounded-lg">
-                <Button
-                  size="sm"
-                  aria-label={`Previous game, vs ${previous.opponent || 'TBD'}`}
-                >
-                  <span aria-hidden>←</span>
-                  <span className="hidden max-w-28 truncate sm:inline">
-                    {previous.opponent || 'TBD'}
-                  </span>
-                </Button>
-              </Link>
-            ) : (
-              <Button size="sm" disabled aria-hidden>
-                ←
-              </Button>
-            )}
-
-            <span className="tnum px-1 text-xs whitespace-nowrap text-ink-subtle">
-              {position} of {total}
-            </span>
-
-            {next ? (
-              <Link href={`/games/${next.id}`} className="ring-focus rounded-lg">
-                <Button size="sm" aria-label={`Next game, vs ${next.opponent || 'TBD'}`}>
-                  <span className="hidden max-w-28 truncate sm:inline">
-                    {next.opponent || 'TBD'}
-                  </span>
-                  <span aria-hidden>→</span>
-                </Button>
-              </Link>
-            ) : (
-              <Button size="sm" disabled aria-hidden>
-                →
-              </Button>
-            )}
-          </nav>
-        ) : null}
-      </div>
-
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+    <div className="space-y-5">
+      {/* ---- header ---------------------------------------------------- */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href="/" className="ring-focus text-sm text-ink-muted hover:text-ink">
-            ← {team.name}
-          </Link>
-          {/*
-            The matchup as a scoreboard title: a quiet "vs" against the
-            opponent's name at display size, so the page announces which game
-            it is from across a room.
-          */}
-          {/*
-            aria-label because the visual gap between the two spans is flex
-            spacing, not whitespace: without it the accessible name computes as
-            "vsCardinals" and is announced that way.
-          */}
+          <div className="flex items-center gap-1.5">
+            <Link
+              href="/games"
+              className="ring-focus rounded text-sm text-ink-muted hover:text-ink"
+            >
+              ← Games
+            </Link>
+            {previousGame || nextGame ? (
+              <span className="ml-2 flex items-center gap-1">
+                {previousGame ? (
+                  <Link
+                    href={`/games/${previousGame.id}`}
+                    aria-label={`Previous game, vs ${previousGame.opponent || 'TBD'}`}
+                    className="ring-focus rounded border border-border px-1.5 text-sm text-ink-muted hover:text-ink"
+                  >
+                    ←
+                  </Link>
+                ) : null}
+                {nextGame ? (
+                  <Link
+                    href={`/games/${nextGame.id}`}
+                    aria-label={`Next game, vs ${nextGame.opponent || 'TBD'}`}
+                    className="ring-focus rounded border border-border px-1.5 text-sm text-ink-muted hover:text-ink"
+                  >
+                    →
+                  </Link>
+                ) : null}
+              </span>
+            ) : null}
+          </div>
+
           <h1
             aria-label={`vs ${game.opponent || 'TBD'}`}
             className="mt-1.5 flex flex-wrap items-baseline gap-2"
@@ -258,80 +245,66 @@ export default function GamePage() {
               {game.opponent || 'TBD'}
             </span>
           </h1>
+
           <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
             <span>{formatGameDate(game.date)}</span>
-            <span aria-hidden className="text-ink-subtle">
-              ·
-            </span>
+            <span aria-hidden className="text-ink-subtle">·</span>
             <span className="tnum">{game.plannedInnings} innings</span>
-            <span aria-hidden className="text-ink-subtle">
-              ·
-            </span>
-            <span className="tnum">
-              {game.formationSnapshot.positions.length} defenders
-            </span>
-            {game.status === 'COMPLETED' ? (
-              <span className="eyebrow rounded bg-positive-soft px-1.5 py-0.5 text-positive">
-                {game.actualInnings} played
-              </span>
+            <span aria-hidden className="text-ink-subtle">·</span>
+            <span className="tnum">{view.positions.length} on defense</span>
+            {completed ? (
+              <Badge tone="positive">{game.actualInnings} played</Badge>
             ) : null}
           </p>
         </div>
 
-        {/*
-          One filled action. The rest are links to other surfaces, so they read
-          as secondary — the old header gave four chips equal weight and hid
-          which one the coach was meant to press.
-        */}
         <div className="flex flex-wrap items-center gap-2">
           {hasLineup ? (
             <>
+              {/*
+                The one filled action is whatever comes next for this game —
+                unless that is this very page, which on the lineup screen it
+                usually is. A primary button that reloads the screen you are
+                looking at is worse than no primary button.
+              */}
+              {editsGame && !completed && action.href !== `/games/${game.id}` ? (
+                <Link href={action.href}>
+                  <Button variant="primary" size="md">
+                    {action.label}
+                  </Button>
+                </Link>
+              ) : null}
               <ShareActions team={team} game={game} players={players} />
-              <Link href={`/games/${game.id}/compare`}>
-                <Button size="sm">Compare</Button>
-              </Link>
               <Link href={`/games/${game.id}/print`}>
                 <Button size="sm">Print</Button>
               </Link>
+              <Link href={`/games/${game.id}/compare`}>
+                <Button size="sm">Compare</Button>
+              </Link>
               <Link href={`/games/${game.id}/record`}>
-                <Button size="sm">
-                  {game.status === 'COMPLETED' ? 'Edit results' : 'Record results'}
-                </Button>
+                <Button size="sm">{completed ? 'Edit results' : 'Record results'}</Button>
               </Link>
             </>
-          ) : null}
-          {/*
-            Once a lineup exists, Rebalance lives in the attendance bar beside
-            the change that prompts it. A second one up here just made the coach
-            choose between two identical buttons.
-          */}
-          {editsGame && !hasLineup ? (
-            <Button variant="primary" size="md" disabled={generating} onClick={() => run()}>
-              {generating ? (
-                <>
-                  <Spinner /> Working…
-                </>
-              ) : (
-                'Generate lineup'
-              )}
-            </Button>
+          ) : editsGame ? (
+            <Link href={`/games/${game.id}/build`}>
+              <Button variant="primary" size="lg">
+                Build the lineup
+              </Button>
+            </Link>
           ) : null}
         </div>
       </div>
 
       {/*
-        Say which thing an edit changes. On a completed game every change on
-        this page rewrites what happened, and that flows straight into season
-        fairness — the coach should never have to guess whether a correction
-        counted.
+        Say which thing an edit changes. On a completed game every change here
+        rewrites what happened, and that flows straight into season fairness.
       */}
-      {game.status === 'COMPLETED' ? (
+      {completed ? (
         <div className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm">
           <p className="font-semibold text-ink">Recorded result</p>
           <p className="mt-0.5 text-ink-muted">
-            This game is done, so changes here correct what actually happened and
-            update season fairness. {game.actualInnings} of {game.plannedInnings} innings
-            counted.
+            This game is done, so changes here correct what actually happened and update
+            season fairness. {game.actualInnings} of {game.plannedInnings} innings counted.
           </p>
         </div>
       ) : null}
@@ -344,319 +317,410 @@ export default function GamePage() {
         />
       ) : null}
 
-      {result && result.ok ? (
-        <ConflictList conflicts={result.conflicts} relaxations={[]} />
-      ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {editsGame ? (
-        <Button size="sm" variant="ghost" onClick={() => setSetupOpen((value) => !value)}>
-          {setupOpen ? 'Hide game setup' : 'Game setup'}
-        </Button>
-        ) : <span />}
-
-        {hasLineup ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={generating}
-              onClick={() => run(Math.floor(Date.now() % 100000))}
-            >
-              Generate another
-            </Button>
-            {game.plannedInnings > 1 ? (
-              <label className="flex items-center gap-1.5 text-xs text-ink-muted">
-                Keep innings
-                <Select
-                  className="h-8 w-16"
-                  value={frozenInnings}
-                  onChange={(event) => setFrozenInnings(Number(event.target.value))}
-                >
-                  {Array.from({ length: game.plannedInnings }, (_, i) => i).map((value) => (
-                    <option key={value} value={value}>
-                      {value === 0 ? 'None' : `1–${value}`}
-                    </option>
-                  ))}
-                </Select>
-              </label>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      {setupOpen && editsGame ? (
-        <div className="space-y-4">
-          <AvailabilityPanel game={game} players={players} onChange={update} />
-          <PitchingPlanPanel game={game} players={players} onChange={update} />
-          <RulesPanel
-            settings={game.settingsSnapshot}
-            innings={game.plannedInnings}
-            onChange={updateSettings}
+      {!hasLineup ? (
+        <Card>
+          <EmptyState
+            title="No lineup yet"
+            description="Confirm who's coming, pick how you want to coach, and InningGrid builds the rest."
+            action={
+              editsGame ? (
+                <Link href={`/games/${game.id}/build`}>
+                  <Button variant="primary" size="lg">
+                    {action.label}
+                  </Button>
+                </Link>
+              ) : null
+            }
           />
-        </div>
-      ) : null}
-
-      {hasLineup && editsGame ? (
-        <AttendanceBar
-          game={game}
-          players={players}
-          busy={generating}
-          changed={stale}
-          onChange={update}
-          onRebalance={() => run(game.optimizerSeed)}
-        />
-      ) : null}
-
-      {hasLineup ? (
+        </Card>
+      ) : (
         <>
-          <Card className="rise">
-            <CardHeader
-              title="Defensive rotation"
-              action={
-                <SegmentedControl<ViewMode>
-                  size="sm"
-                  value={mode}
-                  onChange={setMode}
-                  options={[
-                    { value: 'inning', label: 'By inning' },
-                    { value: 'player', label: 'By player' },
-                    { value: 'field', label: 'Field' },
-                    { value: 'live', label: 'Live' },
-                  ]}
-                />
-              }
-            />
-            <div className="px-2 py-3 sm:px-4">
-              {mode === 'inning' ? (
-                <LineupGrid
-                  view={view}
-                  onSelectCell={
-                    editsGame
-                      ? (inning, position) => setPicker({ inning, position })
-                      : undefined
-                  }
-                  readOnly={!editsGame}
-                  onToggleLock={async (inning, position) => {
-                    await saveGame(toggleLock(game, inning, position.id));
-                  }}
-                />
+          {/* ---- the workspace ------------------------------------------ */}
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,19rem)]">
+            {/* LEFT: batting order, then the pitching plan. */}
+            <div className="order-2 space-y-4 xl:order-1">
+              <BattingOrderPanel
+                readOnly={!editsGame}
+                game={game}
+                players={players}
+                canRotate={Boolean(previousGame)}
+                onReorder={async (playerIds) => {
+                  await update(
+                    setBattingOrder(
+                      game,
+                      playerIds.map((playerId, index) => ({
+                        playerId,
+                        battingSlot: index + 1,
+                      })),
+                    ),
+                  );
+                }}
+                onToggleLock={async (playerId) => {
+                  const current = game.battingAssignments.find(
+                    (entry) => entry.playerId === playerId,
+                  );
+                  await update(setBattingSlotLocked(game, playerId, !current?.locked));
+                }}
+                onPhilosophyChange={async (battingPhilosophy) => {
+                  await update({
+                    ...game,
+                    settingsSnapshot: { ...game.settingsSnapshot, battingPhilosophy },
+                  });
+                }}
+                onRotate={async (offset) => {
+                  if (!previousGame) return;
+                  /* Rotated from *last game's* order, which is the only thing
+                     that makes "everyone moves up two" mean anything across a
+                     season, and filtered to who is actually here today. */
+                  const rotated = rotateBattingOrder(
+                    previousGame.battingAssignments,
+                    offset,
+                    view.players
+                      .filter((player) =>
+                        game.gamePlayers.some(
+                          (gp) => gp.playerId === player.id && gp.available,
+                        ),
+                      )
+                      .map((player) => player.id),
+                  );
+                  await update(
+                    setBattingOrder(
+                      game,
+                      rotated.map((entry) => ({
+                        playerId: entry.playerId,
+                        battingSlot: entry.battingSlot,
+                        locked: entry.locked,
+                      })),
+                    ),
+                  );
+                }}
+                onRebalance={
+                  editsGame
+                    ? async () => {
+                        await update(
+                          regenerateBattingOrder({
+                            team,
+                            game,
+                            players,
+                            history: games,
+                            goals,
+                            flags,
+                            seed: game.optimizerSeed,
+                          }),
+                        );
+                      }
+                    : undefined
+                }
+              />
+
+              {editsGame && !completed ? (
+                <Card>
+                  <button
+                    type="button"
+                    onClick={() => setPitchingOpen((open) => !open)}
+                    aria-expanded={pitchingOpen}
+                    className="ring-focus flex w-full items-center justify-between gap-2 px-5 py-4 text-left"
+                  >
+                    <span>
+                      <span className="block text-sm font-semibold text-ink">
+                        Pitching plan
+                      </span>
+                      <span className="mt-0.5 block text-xs text-ink-muted">
+                        {Object.keys(game.pitchingPlan).length === 0
+                          ? 'Let InningGrid choose, or decide it yourself'
+                          : `${Object.keys(game.pitchingPlan).length} innings decided`}
+                      </span>
+                    </span>
+                    <span aria-hidden className="text-ink-subtle">
+                      {pitchingOpen ? '−' : '+'}
+                    </span>
+                  </button>
+                  {pitchingOpen ? (
+                    <div className="border-t border-border p-4">
+                      <PitchingPlanPanel
+                        game={game}
+                        players={players}
+                        onChange={(next) => update(next)}
+                      />
+                    </div>
+                  ) : null}
+                </Card>
               ) : null}
-              {mode === 'player' ? <PlayerGrid view={view} /> : null}
-              {mode === 'field' ? (
-                <div className="px-2 py-1">
+            </div>
+
+            {/* CENTER: the grid. */}
+            <Card className="order-1 rise xl:order-2">
+              <CardHeader
+                title="Defensive rotation"
+                action={
+                  <SegmentedControl<ViewMode>
+                    size="sm"
+                    value={mode}
+                    onChange={setMode}
+                    options={[
+                      { value: 'player', label: 'By player' },
+                      { value: 'inning', label: 'By inning' },
+                      { value: 'field', label: 'Field' },
+                      { value: 'live', label: 'Live' },
+                    ]}
+                  />
+                }
+              />
+
+              {/* Adjusting a lineup that exists: rebuild the unlocked rest. */}
+              {editsGame ? (
+                <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={generating}
+                    onClick={() => run(game.optimizerSeed)}
+                  >
+                    {generating ? (
+                      <>
+                        <Spinner /> Rebuilding…
+                      </>
+                    ) : (
+                      'Rebalance'
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={generating}
+                    onClick={() => run(Math.floor(Date.now() % 100000))}
+                  >
+                    Try another
+                  </Button>
+                  <Button size="sm" variant="ghost" disabled={history.length === 0} onClick={undo}>
+                    Undo
+                  </Button>
+                  {game.plannedInnings > 1 ? (
+                    <label className="ml-auto flex items-center gap-1.5 text-xs text-ink-muted">
+                      Keep innings
+                      <Select
+                        className="h-8 w-16"
+                        value={frozenInnings}
+                        onChange={(event) => setFrozenInnings(Number(event.target.value))}
+                      >
+                        {Array.from({ length: game.plannedInnings }, (_, i) => i).map(
+                          (value) => (
+                            <option key={value} value={value}>
+                              {value === 0 ? 'None' : `1–${value}`}
+                            </option>
+                          ),
+                        )}
+                      </Select>
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="px-2 py-3 sm:px-4">
+                {mode === 'player' ? (
+                  <PlayerGrid
+                    view={view}
+                    focusedPlayerId={cellByPlayer?.playerId ?? null}
+                    onSelectCell={
+                      editsGame
+                        ? (playerId, inning) => setCellByPlayer({ playerId, inning })
+                        : undefined
+                    }
+                    onToggleLock={
+                      editsGame
+                        ? async (playerId, inning) => {
+                            const slot = view.slotOf(playerId, inning);
+                            if (slot === null || typeof slot === 'string') return;
+                            await update(toggleLock(game, inning, slot.id), {
+                              undoable: false,
+                            });
+                          }
+                        : undefined
+                    }
+                  />
+                ) : null}
+
+                {mode === 'inning' ? (
+                  <LineupGrid
+                    view={view}
+                    readOnly={!editsGame}
+                    onSelectCell={
+                      editsGame
+                        ? (inning, position) => setCellByPosition({ inning, position })
+                        : undefined
+                    }
+                    onToggleLock={async (inning, position) => {
+                      await update(toggleLock(game, inning, position.id), {
+                        undoable: false,
+                      });
+                    }}
+                  />
+                ) : null}
+
+                {mode === 'field' ? (
                   <FieldView
                     view={view}
                     inning={fieldInning}
                     onInningChange={setFieldInning}
+                    readOnly={!editsGame}
                     onSelectPosition={(position) =>
-                      setPicker({ inning: fieldInning, position })
+                      setCellByPosition({ inning: fieldInning, position })
                     }
                     onAssign={async (positionId, playerId) => {
-                      await update(setAssignment(game, fieldInning, positionId, playerId, editType));
+                      await update(
+                        setAssignment(game, fieldInning, positionId, playerId, editType),
+                      );
                     }}
                     onBench={async (positionId) => {
-                      await update(setAssignment(game, fieldInning, positionId, null, editType));
+                      await update(
+                        setAssignment(game, fieldInning, positionId, null, editType),
+                      );
                     }}
                   />
-                </div>
-              ) : null}
-              {mode === 'live' ? (
-                <div className="px-2 py-1">
+                ) : null}
+
+                {mode === 'live' ? (
                   <LiveView
                     view={view}
                     onInningChange={setLiveInning}
-                    onPitchAnotherInning={
-                      editsGame
-                        ? async (plan) => {
-                            await update(
-                              setAssignment(
-                                game,
-                                plan.nextInning,
-                                plan.pitcherPositionId,
-                                plan.pitcher.id,
-                                editType,
-                              ),
-                            );
-                          }
-                        : undefined
-                    }
                     onSomeoneOut={editsGame ? () => setSomeoneOut(true) : undefined}
                   />
-                </div>
-              ) : null}
-            </div>
-            {mode === 'inning' ? (
-              // The lock and pin states are explained by the legend the grid
-              // renders under itself, next to the actual controls.
-              <p className="border-t border-border px-5 py-3 text-xs text-ink-subtle">
-                {game.status === 'COMPLETED'
-                  ? 'Tap any player to correct what happened that inning.'
-                  : 'Tap any player to swap or bench them.'}
-              </p>
-            ) : null}
-          </Card>
+                ) : null}
+              </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <BattingOrderPanel
-              readOnly={!editsGame}
-              game={game}
-              players={players}
-              canRotate={Boolean(previousGame)}
-              onReorder={async (playerIds) => {
-                await update(
-                  setBattingOrder(
-                    game,
-                    playerIds.map((playerId, index) => ({ playerId, battingSlot: index + 1 })),
-                  ),
-                );
-              }}
-              onToggleLock={async (playerId) => {
-                const current = game.battingAssignments.find(
-                  (entry) => entry.playerId === playerId,
-                );
-                await saveGame(setBattingSlotLocked(game, playerId, !current?.locked));
-              }}
-              onPhilosophyChange={async (battingPhilosophy) => {
-                await updateSettings({ ...game.settingsSnapshot, battingPhilosophy });
-              }}
-              onRotate={async (offset) => {
-                if (!previousGame) return;
-                const availableIds = view.players
-                  .filter((player) => view.isAvailable(player.id, 1) || true)
-                  .filter((player) => {
-                    const gp = game.gamePlayers.find((entry) => entry.playerId === player.id);
-                    return gp?.available ?? false;
-                  })
-                  .map((player) => player.id);
-                const rotated = rotateBattingOrder(
-                  previousGame.battingAssignments,
-                  offset,
-                  availableIds,
-                );
-                await update(setBattingOrder(game, rotated));
-              }}
-              onRebalance={
-                editsGame
-                  ? async () => {
-                      await update(
-                        regenerateBattingOrder({
-                          team,
-                          game,
-                          players,
-                          history: games,
-                          goals,
-                          flags,
-                          seed: game.optimizerSeed,
-                        }),
-                      );
-                    }
-                  : undefined
-              }
-            />
-
-            <div className="space-y-4">
-              {result?.quality && result.quality.metrics.length > 0 ? (
-                <QualitySummary quality={result.quality} />
+              {mode === 'player' && editsGame ? (
+                <p className="border-t border-border px-5 py-3 text-xs text-ink-subtle">
+                  {completed
+                    ? 'Tap any cell to correct what happened that inning.'
+                    : 'Tap any cell to move a player, or the padlock to keep it through a Rebalance.'}
+                </p>
               ) : null}
-              {result ? <WhyThisLineup explanations={result.explanations} /> : null}
+            </Card>
+
+            {/* RIGHT: why, and whether it holds. */}
+            <div className="order-3 space-y-4">
+              {result?.quality ? <RuleChecks quality={result.quality} /> : null}
+              {result?.explanations ? (
+                <FairnessNotes
+                  explanations={result.explanations}
+                  onWhyAnything={() => setMode('player')}
+                />
+              ) : (
+                <Card>
+                  <CardHeader
+                    title="Why this lineup"
+                    description="Tap any cell in the grid to see why that player is there. Rebalance to see the notes for a fresh build."
+                  />
+                </Card>
+              )}
             </div>
           </div>
         </>
-      ) : (
-        <Card>
-          <EmptyState
-            title="No lineup yet"
-            description={
-              editsGame
-                ? "Check who's playing, choose how you want to coach, then generate. It takes about a second."
-                : 'The head coach builds the lineup for this game.'
-            }
-            action={editsGame ? (
-              <Button variant="primary" size="lg" disabled={generating} onClick={() => run()}>
-                {generating ? (
-                  <>
-                    <Spinner /> Building lineup…
-                  </>
-                ) : (
-                  'Generate lineup'
-                )}
-              </Button>
-            ) : null}
-          />
-        </Card>
       )}
 
-      {someoneOut ? (
-        <SomeoneOutSheet
+      {/* ---- sheets ---------------------------------------------------- */}
+      {cellByPlayer ? (
+        <PositionPicker
           view={view}
-          open={someoneOut}
-          currentInning={liveInning}
-          onClose={() => setSomeoneOut(false)}
-          onApply={async (playerId, lastInning) => {
-            /*
-              Two steps, in this order. Record that the player is gone, then
-              re-plan only what has not happened yet: innings up to and
-              including `lastInning` are frozen, so what was actually played
-              stays exactly as played and the season keeps counting it.
-            */
-            const withDeparture =
-              lastInning <= 0
-                ? setAvailability(game, playerId, { available: false })
-                : setAvailability(game, playerId, { departureInning: lastInning });
-            await saveGame(withDeparture);
-
-            setGenerating(true);
-            try {
-              const outcome = await generateLineup({
-                team,
-                game: withDeparture,
-                players,
-                history: games,
-                goals,
-                flags,
-                seed: game.optimizerSeed,
-                frozenInnings: lastInning,
-              });
-              setResult(outcome.result);
-              if (outcome.result.ok) {
-                await saveGame(outcome.game);
-                setStale(false);
-              }
-            } finally {
-              setGenerating(false);
+          playerId={cellByPlayer.playerId}
+          inning={cellByPlayer.inning}
+          debt={debts[cellByPlayer.playerId]}
+          onClose={() => setCellByPlayer(null)}
+          onPick={async (positionId) => {
+            await update(
+              setAssignment(game, cellByPlayer.inning, positionId, cellByPlayer.playerId, editType),
+            );
+            setCellByPlayer(null);
+          }}
+          onBench={async () => {
+            const slot = view.slotOf(cellByPlayer.playerId, cellByPlayer.inning);
+            if (slot && typeof slot !== 'string') {
+              await update(setAssignment(game, cellByPlayer.inning, slot.id, null, editType));
             }
+            setCellByPlayer(null);
           }}
         />
       ) : null}
 
-      {picker ? (
+      {cellByPosition ? (
         <AssignmentPicker
           view={view}
-          inning={picker.inning}
-          position={picker.position}
-          onClose={() => setPicker(null)}
+          inning={cellByPosition.inning}
+          position={cellByPosition.position}
+          onClose={() => setCellByPosition(null)}
           onAssign={async (playerId) => {
-            await update(setAssignment(game, picker.inning, picker.position.id, playerId, editType));
+            await update(
+              setAssignment(
+                game,
+                cellByPosition.inning,
+                cellByPosition.position.id,
+                playerId,
+                editType,
+              ),
+            );
+            setCellByPosition(null);
           }}
           onBench={async () => {
-            await update(setAssignment(game, picker.inning, picker.position.id, null, editType));
+            await update(
+              setAssignment(
+                game,
+                cellByPosition.inning,
+                cellByPosition.position.id,
+                null,
+                editType,
+              ),
+            );
+            setCellByPosition(null);
           }}
           onOverride={async (playerId) => {
-            const withOverride: Game = {
+            await update({
               ...game,
               eligibilityOverrides: [
                 ...game.eligibilityOverrides,
-                { playerId, positionId: picker.position.id },
+                { playerId, positionId: cellByPosition.position.id },
               ],
-            };
-            await update(
-              setAssignment(withOverride, picker.inning, picker.position.id, playerId),
-            );
-            setPicker(null);
+            });
           }}
         />
       ) : null}
+
+      <SomeoneOutSheet
+        view={view}
+        open={someoneOut}
+        currentInning={liveInning}
+        onClose={() => setSomeoneOut(false)}
+        onApply={async (playerId, lastInning) => {
+          /*
+            Two steps, in this order. Record that the player is gone, then
+            re-plan only what has not happened yet: innings up to and including
+            `lastInning` are frozen, so what was actually played stays exactly
+            as played and the season keeps counting it.
+          */
+          const withDeparture =
+            lastInning <= 0
+              ? setAvailability(game, playerId, { available: false })
+              : setAvailability(game, playerId, { departureInning: lastInning });
+          await update(withDeparture);
+
+          setGenerating(true);
+          try {
+            const outcome = await generateLineup({
+              team,
+              game: withDeparture,
+              players,
+              history: games,
+              goals,
+              flags,
+              seed: game.optimizerSeed,
+              frozenInnings: Math.max(0, lastInning),
+            });
+            setResult(outcome.result);
+            if (outcome.result.ok) await saveGame(outcome.game);
+          } finally {
+            setGenerating(false);
+            setSomeoneOut(false);
+          }
+        }}
+      />
     </div>
   );
 }

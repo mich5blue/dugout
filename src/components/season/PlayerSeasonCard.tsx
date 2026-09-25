@@ -65,7 +65,7 @@ export function PlayerSeasonCard({
 
   return (
     <Link
-      href={`/roster/${playerId}`}
+      href={`/team/${playerId}`}
       className="ring-focus group block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong"
     >
       <div className="flex items-start justify-between gap-3">

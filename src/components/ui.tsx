@@ -666,3 +666,130 @@ export function PlayerChip({
     </span>
   );
 }
+
+/**
+ * Where the coach is in a flow, and how much is left.
+ *
+ * Numbered because the steps genuinely are a sequence — you cannot pick a
+ * coaching style for players you have not confirmed are coming. Completed
+ * steps get a check rather than staying numbered, so "done" and "still to do"
+ * differ in shape and not only in colour.
+ *
+ * Steps behind the current one are links; steps ahead are not. Skipping
+ * forward past attendance produces a lineup for the wrong roster.
+ */
+export function StepHeader({
+  steps,
+  current,
+  onGoTo,
+}: {
+  steps: string[];
+  /** 0-based. */
+  current: number;
+  onGoTo?: (index: number) => void;
+}) {
+  return (
+    <nav aria-label="Progress">
+      <ol className="flex items-center gap-1.5 sm:gap-2">
+        {steps.map((label, index) => {
+          const done = index < current;
+          const active = index === current;
+          const reachable = done && Boolean(onGoTo);
+
+          const Marker = (
+            <span
+              className={cn(
+                'flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors',
+                active
+                  ? 'border-brand bg-brand text-ink-inverse'
+                  : done
+                    ? 'border-positive text-positive'
+                    : 'border-border text-ink-subtle',
+              )}
+            >
+              {done ? (
+                <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+                  <path
+                    d="M3.5 8.5l3 3 6-7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              ) : (
+                index + 1
+              )}
+            </span>
+          );
+
+          const body = (
+            <>
+              {Marker}
+              <span
+                className={cn(
+                  'truncate text-xs font-medium sm:text-sm',
+                  active ? 'text-ink' : done ? 'text-ink-muted' : 'text-ink-subtle',
+                  /* The label for the step you are on always shows; the others
+                     give up their words before the row wraps on a phone. */
+                  active ? 'inline' : 'hidden sm:inline',
+                )}
+              >
+                {label}
+              </span>
+            </>
+          );
+
+          return (
+            <li key={label} className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+              {reachable ? (
+                <button
+                  type="button"
+                  onClick={() => onGoTo?.(index)}
+                  className="ring-focus flex min-w-0 items-center gap-2 rounded-md"
+                >
+                  {body}
+                </button>
+              ) : (
+                <span
+                  className="flex min-w-0 items-center gap-2"
+                  aria-current={active ? 'step' : undefined}
+                >
+                  {body}
+                </span>
+              )}
+              {index < steps.length - 1 ? (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'h-px min-w-2 flex-1 rounded-full',
+                    done ? 'bg-positive' : 'bg-border',
+                  )}
+                />
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/**
+ * A sticky footer for a flow: back on the left, the one thing to do next on
+ * the right.
+ *
+ * Fixed on a phone because the primary action must be reachable without
+ * scrolling past a roster of fourteen; static from `sm` up, where the whole
+ * step fits on screen and a floating bar would just cover content.
+ */
+export function FlowFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:static sm:mt-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+        {children}
+      </div>
+    </div>
+  );
+}

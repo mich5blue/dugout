@@ -9,16 +9,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 /**
- * `short` is what the mobile bar uses. Six tabs at 375px leaves about 62px
- * each, which "Dashboard" and "Team Settings" do not fit without wrapping.
+ * Five destinations, down from six.
+ *
+ * Coaches was a top-level tab for a screen most coaches open once a season, and
+ * "Roster" named the object rather than the place — a coach going to check who
+ * can catch is going to their team. So Roster becomes Team and carries the link
+ * to Coaches, which is where it is looked for anyway.
+ *
+ * Six tabs at 375px left about 62px each, which is why "Dashboard" and "Team
+ * Settings" needed a separate `short`. At five they fit, and the label is the
+ * same word in both bars — one name per destination.
  */
 const NAV = [
-  { href: '/', label: 'Dashboard', short: 'Home' },
-  { href: '/games', label: 'Schedule', short: 'Games' },
-  { href: '/roster', label: 'Roster', short: 'Roster' },
-  { href: '/season', label: 'Season', short: 'Season' },
-  { href: '/coaches', label: 'Coaches', short: 'Coaches' },
-  { href: '/settings', label: 'Team Settings', short: 'Settings' },
+  { href: '/', label: 'Home' },
+  { href: '/team', label: 'Team' },
+  { href: '/games', label: 'Games' },
+  { href: '/season', label: 'Season' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -176,7 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {showNav ? (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">
-          <div className="grid grid-cols-6">
+          <div className="grid grid-cols-5">
             {NAV.map((item) => {
               const active =
                 item.href === '/' ? pathname === '/' : pathname?.startsWith(item.href);
@@ -194,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       : 'text-ink-muted before:bg-transparent',
                   )}
                 >
-                  {item.short}
+                  {item.label}
                 </Link>
               );
             })}

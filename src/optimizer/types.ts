@@ -112,6 +112,14 @@ export interface RelaxationSuggestion {
     | { type: 'ALLOW_CONSECUTIVE_BENCH' }
     | { type: 'RELAX_INFIELD_REQUIREMENT'; to: number }
     | { type: 'ADD_ELIGIBLE_PLAYER'; positionId: string }
+    /**
+     * Play fewer defenders this game.
+     *
+     * The commonest real fix and the only one that was text-only: a coach with
+     * nine bodies plays nine, and being told to "use a formation with 9
+     * positions" without a way to do it is advice, not a fix.
+     */
+    | { type: 'USE_SMALLER_FORMATION'; positions: number }
     | { type: 'RAISE_PITCHING_CAP'; to: number }
     | { type: 'RAISE_CATCHING_CAP'; to: number };
 }

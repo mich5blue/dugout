@@ -1,7 +1,6 @@
 'use client';
 
 import { GROUP_STYLE, LockToggle, PadlockIcon, PinIcon } from '@/components/ui';
-import { playerShortName } from '@/domain/factories';
 import type { PositionDefinition } from '@/domain/types';
 import { cn } from '@/lib/cn';
 import { UNAVAILABLE, type GameView } from '@/lib/gameView';
@@ -227,7 +226,39 @@ export function LineupGrid({
 }
 
 /** By-player grid (spec section 48): fairness at a glance. */
-export function PlayerGrid({ view }: { view: GameView }) {
+/**
+ * By-player grid: rows are players, columns are innings.
+ *
+ * This is the hero grid of the redesign, because it answers the question a
+ * coach and a parent both actually ask — where has this kid been all game —
+ * which the by-position grid can only answer by scanning ten rows.
+ *
+ * Editable when `onSelectCell` is passed, read-only otherwise: the guide, the
+ * print sheets and the shared link all render it with no handlers and must
+ * stay inert.
+ */
+export function PlayerGrid({
+  view,
+  onSelectCell,
+  onToggleLock,
+  /** The player row to mark as the one being inspected. */
+  focusedPlayerId,
+}: {
+  view: GameView;
+  onSelectCell?: (playerId: string, inning: number) => void;
+  onToggleLock?: (playerId: string, inning: number) => void;
+  focusedPlayerId?: string | null;
+}) {
+  const editable = Boolean(onSelectCell);
+
+  /* Which cells the coach is holding. Read per player-inning rather than per
+     position, because that is the axis this grid is on. */
+  const lockedAt = (playerId: string, inning: number): boolean => {
+    const slot = view.slotOf(playerId, inning);
+    if (slot === null || slot === UNAVAILABLE) return false;
+    return view.assignmentAt(inning, slot.id)?.locked ?? false;
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
@@ -251,9 +282,19 @@ export function PlayerGrid({ view }: { view: GameView }) {
             <tr key={player.id} className="border-t border-border">
               <th
                 scope="row"
-                className="sticky left-0 z-10 bg-surface px-3 py-1.5 text-left text-sm font-medium text-ink"
+                className={cn(
+                  'sticky left-0 z-10 px-3 py-1.5 text-left text-sm font-medium text-ink',
+                  focusedPlayerId === player.id ? 'bg-accent-soft' : 'bg-surface',
+                )}
               >
-                {playerShortName(player)}
+                <span className="flex items-center gap-2">
+                  {view.names.short(player.id)}
+                  {player.jerseyNumber ? (
+                    <span className="tnum text-xs text-ink-subtle">
+                      #{player.jerseyNumber}
+                    </span>
+                  ) : null}
+                </span>
               </th>
               {view.innings.map((inning) => {
                 const slot = view.slotOf(player.id, inning);
@@ -269,13 +310,18 @@ export function PlayerGrid({ view }: { view: GameView }) {
                 if (slot === null) {
                   return (
                     <td key={inning} className="p-1 text-center">
-                      <span className="block rounded-md bg-bench-soft px-2 py-1.5 text-xs font-medium text-bench">
-                        Bench
-                      </span>
+                      <CellButton
+                        editable={editable}
+                        label="Rest"
+                        title={`${view.names.short(player.id)} rests inning ${inning}`}
+                        onClick={() => onSelectCell?.(player.id, inning)}
+                        className="bg-bench-soft text-bench"
+                      />
                     </td>
                   );
                 }
                 const style = GROUP_STYLE[slot.group];
+                const locked = lockedAt(player.id, inning);
                 return (
                   <td key={inning} className="p-1 text-center">
                     {/*
@@ -284,18 +330,20 @@ export function PlayerGrid({ view }: { view: GameView }) {
                       protanopia — the light -soft fills sit about 1 dE apart —
                       so the fill alone can never carry the group. The
                       saturated rail and the code text do, and both are
-                      contrast-checked.
+                      contrast-checked. The position code is always spelled
+                      out, so colour is never doing the work alone.
                     */}
-                    <span
-                      className={cn(
-                        'scoreboard block rounded-md border-l-2 px-2 py-2 text-sm',
-                        style.chip,
-                        style.rail,
-                        style.text,
-                      )}
-                    >
-                      {slot.code}
-                    </span>
+                    <CellButton
+                      editable={editable}
+                      label={slot.code}
+                      locked={locked}
+                      title={`${view.names.short(player.id)} plays ${slot.displayName} in inning ${inning}`}
+                      onClick={() => onSelectCell?.(player.id, inning)}
+                      onLockToggle={
+                        onToggleLock ? () => onToggleLock(player.id, inning) : undefined
+                      }
+                      className={cn('border-l-2', style.chip, style.rail, style.text)}
+                    />
                   </td>
                 );
               })}
@@ -307,5 +355,87 @@ export function PlayerGrid({ view }: { view: GameView }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * One cell of the by-player grid.
+ *
+ * A button when the grid is editable and a plain span when it is not — rather
+ * than a disabled button — because a disabled control still reads as
+ * interactive to a screen reader walking the table, and the read-only grid
+ * appears in the guide, the print sheets and the parent's shared link.
+ *
+ * The lock is a separate hit target rather than a long-press. Long-press has no
+ * discoverable affordance, no keyboard equivalent, and fires by accident on a
+ * phone held in one hand at a fence.
+ */
+function CellButton({
+  editable,
+  label,
+  title,
+  locked = false,
+  onClick,
+  onLockToggle,
+  className,
+}: {
+  editable: boolean;
+  label: string;
+  title: string;
+  locked?: boolean;
+  onClick?: () => void;
+  onLockToggle?: () => void;
+  className?: string;
+}) {
+  const shell = cn(
+    'scoreboard block w-full rounded-md px-2 py-2 text-sm transition-all',
+    className,
+    locked && 'ring-1 ring-accent ring-inset',
+  );
+
+  if (!editable) {
+    return (
+      <span className={shell} title={title}>
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <span className="relative block">
+      <button
+        type="button"
+        onClick={onClick}
+        title={title}
+        aria-label={title}
+        className={cn(shell, 'ring-focus text-left hover:-translate-y-px hover:brightness-125')}
+      >
+        {label}
+      </button>
+      {onLockToggle ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onLockToggle();
+          }}
+          aria-pressed={locked}
+          aria-label={locked ? 'Locked — tap to unlock' : 'Tap to lock this assignment'}
+          title={
+            locked
+              ? 'Locked — Rebalance keeps this'
+              : 'Lock so Rebalance keeps this'
+          }
+          className={cn(
+            'ring-focus absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border text-[8px] transition-colors',
+            locked
+              ? 'border-accent bg-accent text-ink-inverse'
+              : 'border-border bg-surface text-transparent hover:text-ink-subtle',
+          )}
+        >
+          <PadlockIcon locked={locked} />
+        </button>
+      ) : null}
+    </span>
   );
 }

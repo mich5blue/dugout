@@ -63,7 +63,7 @@ export default function NewGamePage() {
         title="Add your roster first"
         description="InningGrid needs players before it can build a lineup."
         action={
-          <Link href="/roster">
+          <Link href="/team">
             <Button variant="primary">Add players</Button>
           </Link>
         }
@@ -93,7 +93,7 @@ export default function NewGamePage() {
         seed: Math.floor(Date.now() % 100000),
       });
       await saveGame(game);
-      router.push(`/games/${game.id}`);
+      router.push(`/games/${game.id}/build`);
     } finally {
       setSaving(false);
     }

@@ -309,3 +309,66 @@ export function getPlayerDevelopmentProgress(
     };
   });
 }
+
+/**
+ * Where a player stands, in the three words a coach would use.
+ *
+ * The product already computes `defensiveDebt` — expected minus actual innings,
+ * attendance-weighted. That number is correct and nobody wants to read it. A
+ * coach wants to know who they owe, and "0.7" is not an answer to that.
+ *
+ * One inning is the threshold, not half of one, because the inning is the atom
+ * of the whole fairness model: a coach cannot hand out 0.6 of an inning, so
+ * anybody inside a full inning of their expectation is already as square as
+ * the game allows and should read as On target rather than as a problem.
+ */
+export type FairnessStanding = 'OWED' | 'ON_TARGET' | 'AHEAD';
+
+export const STANDING_LABEL: Record<FairnessStanding, string> = {
+  OWED: 'Owed',
+  ON_TARGET: 'On target',
+  AHEAD: 'Ahead',
+};
+
+/** The inning of slack either side of the expectation that reads as square. */
+export const STANDING_THRESHOLD = 1;
+
+export function standingFor(defensiveDebt: number): FairnessStanding {
+  if (defensiveDebt >= STANDING_THRESHOLD) return 'OWED';
+  if (defensiveDebt <= -STANDING_THRESHOLD) return 'AHEAD';
+  return 'ON_TARGET';
+}
+
+export interface StandingCounts {
+  OWED: number;
+  ON_TARGET: number;
+  AHEAD: number;
+  /** Active players who have not appeared in a counted game yet. */
+  unplayed: number;
+}
+
+/**
+ * The Home snapshot: three numbers instead of a percentage.
+ *
+ * Players with no counted innings are held out rather than filed under On
+ * target. A roster that has not played yet would otherwise report everybody as
+ * square, which is true arithmetically and misleading on the page.
+ */
+export function standingCounts(
+  players: Player[],
+  debts: Record<string, FairnessDebt>,
+): StandingCounts {
+  const counts: StandingCounts = { OWED: 0, ON_TARGET: 0, AHEAD: 0, unplayed: 0 };
+
+  for (const player of players) {
+    if (!player.active) continue;
+    const debt = debts[player.id];
+    if (!debt || debt.expectedDefensiveInnings <= 0) {
+      counts.unplayed++;
+      continue;
+    }
+    counts[standingFor(debt.defensiveDebt)]++;
+  }
+
+  return counts;
+}

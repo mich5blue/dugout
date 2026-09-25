@@ -140,8 +140,17 @@ const SEED_PLAYERS: SeedPlayerSpec[] = [
   },
 ];
 
+/**
+ * Dates are offsets in days from today, never fixed strings.
+ *
+ * They used to be hardcoded to April 2026, which meant that by September the
+ * demo opened on "No game scheduled" — a visitor's first impression of the
+ * product was its empty state, and the whole point of the demo is the
+ * populated one. Offsets keep the demo a season in progress forever.
+ */
 interface HistoricalGameSpec {
-  date: string;
+  /** Days before today. */
+  daysAgo: number;
   opponent: string;
   seed: number;
   /** Innings actually played; a short game leaves fairness debt behind. */
@@ -157,14 +166,14 @@ interface HistoricalGameSpec {
 
 const HISTORY: HistoricalGameSpec[] = [
   {
-    date: '2026-04-04',
+    daysAgo: 28,
     opponent: 'Cubs',
     seed: 101,
     actualInnings: 6,
     pitchingPlan: { 1: 'Race', 2: 'Brody' },
   },
   {
-    date: '2026-04-11',
+    daysAgo: 21,
     opponent: 'Braves',
     seed: 202,
     actualInnings: 6,
@@ -174,7 +183,7 @@ const HISTORY: HistoricalGameSpec[] = [
     pitchingPlan: { 1: 'Weston', 2: 'Calvin' },
   },
   {
-    date: '2026-04-18',
+    daysAgo: 14,
     opponent: 'Cardinals',
     seed: 303,
     // Called after five innings: inning six counts for nothing.
@@ -183,7 +192,7 @@ const HISTORY: HistoricalGameSpec[] = [
     pitchingPlan: { 1: 'Brody', 2: 'Race', 3: 'Solomon' },
   },
   {
-    date: '2026-04-25',
+    daysAgo: 7,
     opponent: 'Pirates',
     seed: 404,
     actualInnings: 6,
@@ -191,6 +200,16 @@ const HISTORY: HistoricalGameSpec[] = [
     pitchingPlan: { 1: 'Emerson', 2: 'Finnegan' },
   },
 ];
+
+/** A local calendar date, `n` days from today. Local, not UTC: a coach's
+    Saturday game must not land on Friday for anyone west of Greenwich. */
+function dateOffset(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`;
+}
 
 export const DEMO_TEAM_NAME = 'Balsam Waters';
 
@@ -253,7 +272,7 @@ export async function buildDemoDatabase(): Promise<DugoutDatabase> {
     const game = createGame({
       teamId: team.id,
       opponent: spec.opponent,
-      date: spec.date,
+      date: dateOffset(-spec.daysAgo),
       plannedInnings: 6,
       formation,
       settings,
@@ -294,11 +313,18 @@ export async function buildDemoDatabase(): Promise<DugoutDatabase> {
     games.push(recordActualResults(planned, spec.actualInnings));
   }
 
-  // The upcoming game the dashboard points at.
+  /*
+    The upcoming game Home points at. Three days out, so the demo always shows
+    a game being prepared rather than one already played.
+
+    Attendance is deliberately left unconfirmed: the first thing a visitor
+    should meet is the actual workflow — confirm who is here, then generate —
+    not a lineup that already exists with no explanation of where it came from.
+  */
   const upcoming = createGame({
     teamId: team.id,
     opponent: 'Cardinals',
-    date: '2026-05-02',
+    date: dateOffset(3),
     plannedInnings: 6,
     formation,
     settings,

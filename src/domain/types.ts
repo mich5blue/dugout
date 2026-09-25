@@ -264,6 +264,21 @@ export interface Game {
   plannedInnings: number;
   /** Innings that were actually played. null until recorded. */
   actualInnings: number | null;
+  /**
+   * When the coach last confirmed who is actually coming.
+   *
+   * Needed because "everyone is available" is both the default and the most
+   * common truth, so the availability flags alone cannot say whether a coach
+   * has looked. Home asks a different question depending on the answer —
+   * Confirm attendance, or Generate lineup — and guessing it wrong sends a
+   * coach to a screen they did not need.
+   */
+  attendanceConfirmedAt?: string | null;
+  /**
+   * The coach's own note about this game. Never shown on a shared lineup or a
+   * printed sheet — those are read by parents and players.
+   */
+  note?: string;
   /** Immutable copy of the formation used, so history survives edits. */
   formationSnapshot: Formation;
   status: GameStatus;
