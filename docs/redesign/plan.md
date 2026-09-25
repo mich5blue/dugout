@@ -113,3 +113,52 @@ catching · Batting order · Bench & substitutions**, then **Advanced rules →*
 7. Season plain English + forecast
 8. Mobile / tablet polish
 9. Print & share polish
+
+---
+
+## Status — 25 Sept 2026
+
+Done and verified in the running app:
+
+1. **Design-system additions** — `StepHeader`, `FlowFooter`, editable grid cells,
+   bottom sheets with safe-area padding and a grab handle.
+2. **App shell** — five destinations. `/roster` → `/team` with redirects.
+3. **Home** — next game dominant, context-aware primary action
+   (`lib/nextAction.ts`), Owed / On target / Ahead, named alerts.
+4. **Build flow** — `/games/[gameId]/build`: Game → Who's here → How to coach →
+   Generate. Three attendance states with no model change. Philosophy cards
+   drive real engine settings.
+5. **Hero lineup** — three panes, by-player grid, fairness notes, rule checks,
+   per-cell "why this assignment?" (`lib/whyAssignment.ts`), locks, Rebalance,
+   Try another, Undo.
+6. **Game Day** — `/games/[gameId]/live`, own full-screen dark surface,
+   persisted live state, field-first, impact preview before committing.
+7. **Season** — outlook sentence, at-risk names, expected-vs-actual cards.
+8. **Mobile** — every route measured at 375px; overflow fixed, touch targets
+   ≥40px on game day, dead controls removed from read-only views.
+
+The brief's Phase 5 scenario was walked end to end: build for 10 of 11, hit an
+infeasible sixth inning, take the offered fix, start the game, keep the pitcher
+on an extra inning, finish after five. Walter (missed two games) finished +0.8
+debt; Mehki (left early) +0.4. Opportunity, not attendance.
+
+### Not built yet
+
+Listed so they are not mistaken for done:
+
+- **League rule presets** (brief §24) — Little League Minors/Majors, Travel,
+  Rec. Needs verified per-division configuration, not invented defaults.
+- **Pitch counts and rest-day eligibility** (§23) — the architecture note
+  stands: same cross-game shape as fairness debt. Nothing built.
+- **Parent-facing fairness card** (§22) — the data and the share-link mechanism
+  both exist; the surface does not.
+- **Drag in the by-player grid** (§12) — tap-to-change and locks work; drag
+  works only in the Field view. Redo is not implemented; undo is.
+- **Compare summaries** (§15) — `/games/[gameId]/compare` still shows three
+  grids rather than the one-line summaries the brief asks for.
+- **Import from GameChanger / TeamSnap, CSV** (§25) — photo and paste only.
+- **Print polish** (§26) — the three existing sheets are unchanged and still
+  good; no parent view.
+- **Tablet-specific layout** (§30) — game day goes two-column from `lg`, which
+  covers landscape, but the planning screens have had no dedicated tablet pass.
+- **Playwright e2e** — still never run; Chromium cannot launch in this sandbox.

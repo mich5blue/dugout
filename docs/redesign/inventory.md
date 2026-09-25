@@ -246,9 +246,10 @@ cannot launch in the build sandbox.
 
 ## 12. Known debt / hazards
 
-1. `src/app/games/[gameId]/page.tsx` is ~640 lines and owns setup, generation,
-   four views, batting order, pickers and two sheets. **This is the main
-   refactor target.**
+1. ~~`src/app/games/[gameId]/page.tsx` is ~640 lines and owns setup,
+   generation, four views, batting order, pickers and two sheets.~~ **Split**:
+   setup moved to `build/`, the page is now the lineup workspace, and the
+   panels live in `components/game/hero/`.
 2. `GameSetupPanels.tsx` is ~770 lines with 16 advanced keys.
 3. No native app, no export (CSV/PDF), no pitch counts, no rest-day
    eligibility, no mandatory-play check, no league presets, no import from
