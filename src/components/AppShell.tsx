@@ -33,10 +33,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { team, role, setPreviewRole, backend, account, authReady, demoMode, exitDemo } =
     useDugout();
 
-  // Print and shared-lineup views own the whole screen: a parent opening a
-  // share link has no team, so team navigation would be dead ends.
+  /*
+    Three surfaces own the whole screen.
+
+    Print and a shared lineup, because a parent opening a share link has no
+    team and team navigation would be dead ends. And game day, because a coach
+    at a fence in the sun holding a phone in one hand does not need five tabs
+    and a team switcher — everything on that screen has to be the game.
+  */
   const bare =
-    (pathname?.includes('/print') ?? false) || (pathname?.startsWith('/s/') ?? false);
+    (pathname?.includes('/print') ?? false) ||
+    (pathname?.startsWith('/s/') ?? false) ||
+    (pathname?.endsWith('/live') ?? false);
   if (bare) return <>{children}</>;
 
   /*

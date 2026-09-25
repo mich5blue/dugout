@@ -111,10 +111,20 @@ export function extraInningFor(view: GameView, inning: number): ExtraInning | nu
     };
   }
 
-  const where = pitcherNextPosition ? pitcherNextPosition.code : 'the bench';
+  /*
+    Both sides of the swap, in one sentence.
+
+    It used to name only the displaced player — "Emerson moves to 3B" — which
+    is the half a coach already suspects. What they are deciding is what it
+    costs, and that is two facts: their pitcher stays on, and somebody else
+    goes somewhere they were not going.
+  */
+  const where = pitcherNextPosition ? pitcherNextPosition.code : 'a rest';
   const summary = nextPitcher
-    ? `${playerShortName(nextPitcher)} moves to ${where}`
-    : `${playerShortName(pitcher)} stays on the mound`;
+    ? `${playerShortName(pitcher)} pitches inning ${nextInning} too. ${playerShortName(nextPitcher)}, who was down to pitch it, takes ${
+        pitcherNextPosition ? `${where} instead` : 'a rest instead'
+      }.`
+    : `${playerShortName(pitcher)} stays on the mound for inning ${nextInning}.`;
 
   // Does the displaced pitcher's new spot actually work for them?
   let warning: string | undefined;

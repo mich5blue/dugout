@@ -279,6 +279,21 @@ export interface Game {
    * printed sheet — those are read by parents and players.
    */
   note?: string;
+  /**
+   * Where the game has got to, while it is being played.
+   *
+   * Persisted rather than held in component state because the device this is
+   * read on is a phone in a dugout: it locks, it gets pocketed, the browser
+   * discards the tab. A coach who reopens InningGrid in the fourth must land
+   * back in the fourth, not at the top of a plan.
+   */
+  liveState?: {
+    /** The inning being played, 1-based. */
+    inning: number;
+    /** Index into the batting order of who is up. */
+    batterIndex: number;
+    startedAt: string;
+  } | null;
   /** Immutable copy of the formation used, so history survives edits. */
   formationSnapshot: Formation;
   status: GameStatus;

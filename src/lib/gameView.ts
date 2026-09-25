@@ -195,7 +195,7 @@ export function inningChanges(
 
     const label = (slot: typeof before): string => {
       if (slot === UNAVAILABLE) return 'Out';
-      if (slot === null) return 'Bench';
+      if (slot === null) return 'Rest';
       return slot.code;
     };
 
