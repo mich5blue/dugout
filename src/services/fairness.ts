@@ -372,3 +372,88 @@ export function standingCounts(
 
   return counts;
 }
+
+export interface SeasonOutlook {
+  /** Games still to play, from the schedule. */
+  gamesRemaining: number;
+  /** The largest gap still open, if anyone is behind. */
+  worst: { playerId: string; debt: number } | null;
+  /**
+   * Players whose gap is larger than the games left can plausibly close.
+   *
+   * The threshold is one inning per remaining game. A lineup can hand a player
+   * roughly one inning above their equal share without breaking the rules that
+   * keep it fair for everyone else — push harder and you are simply moving the
+   * unfairness onto somebody else. So a gap of four innings with two games
+   * left is not going to close, and saying so now is the only way a coach can
+   * act on it.
+   */
+  atRisk: string[];
+  headline: string;
+}
+
+/**
+ * What the season looks like from here.
+ *
+ * Deliberately not a simulation. Projecting the real finish would mean running
+ * the optimizer over every remaining game, which is both expensive and a
+ * forecast dressed up as a fact — the roster who turns up is unknowable. This
+ * reports what is true today and what today implies, and nothing else.
+ */
+export function seasonOutlook(
+  games: Game[],
+  players: Player[],
+  /* Every caller already has these — the Season page computes them for its
+     own table — so passing them in avoids recomputing the whole season, and
+     lets a test state a gap directly instead of trying to engineer one. */
+  precomputedDebts?: Record<string, FairnessDebt>,
+): SeasonOutlook {
+  const gamesRemaining = games.filter((game) => game.status !== 'COMPLETED').length;
+  const debts = precomputedDebts ?? getFairnessDebt(games, players);
+  const active = players.filter((player) => player.active);
+
+  const behind = active
+    .map((player) => ({ playerId: player.id, debt: debts[player.id]?.defensiveDebt ?? 0 }))
+    .filter((entry) => entry.debt > 0)
+    .sort((a, b) => b.debt - a.debt);
+
+  const worst = behind[0] ?? null;
+  /*
+    Two conditions, and the first one was missing.
+
+    Without it every player with any positive debt counted as at risk, so with
+    the season over the page reported "everyone finished within an inning of
+    their expectation" directly above a list of seven players needing innings.
+    A gap of 0.3 is not a risk — it is not even a gap a coach could act on,
+    because innings are indivisible. So the same whole-inning threshold that
+    decides Owed applies here, and only then does the "can the games left
+    absorb it" test matter.
+  */
+  const atRisk = behind
+    .filter((entry) => entry.debt >= STANDING_THRESHOLD && entry.debt > gamesRemaining)
+    .map((entry) => entry.playerId);
+
+  let headline: string;
+  if (gamesRemaining === 0) {
+    headline =
+      worst && worst.debt >= 1
+        ? 'No games left to even this out — the season finishes as it stands.'
+        : 'The season finished with everyone within an inning of their expectation.';
+  } else if (!worst || worst.debt < 1) {
+    headline = `Nobody is more than an inning behind, and ${gamesRemaining} ${
+      gamesRemaining === 1 ? 'game' : 'games'
+    } remain. This is on track.`;
+  } else if (atRisk.length === 0) {
+    headline = `The largest gap is ${worst.debt.toFixed(1)} innings, and ${gamesRemaining} ${
+      gamesRemaining === 1 ? 'game' : 'games'
+    } remain — enough to close it.`;
+  } else {
+    headline = `${atRisk.length} ${
+      atRisk.length === 1 ? 'player is' : 'players are'
+    } further behind than ${gamesRemaining} ${
+      gamesRemaining === 1 ? 'game' : 'games'
+    } can make up. Give them extra innings now rather than at the end.`;
+  }
+
+  return { gamesRemaining, worst, atRisk, headline };
+}

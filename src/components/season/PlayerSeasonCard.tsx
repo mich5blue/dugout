@@ -5,7 +5,8 @@ import { GROUP_STYLE, PlayerChip } from '@/components/ui';
 import type { PlayerSeasonUsage } from '@/domain/season';
 import type { PositionGroup } from '@/domain/types';
 import { cn } from '@/lib/cn';
-import { formatShortDate, formatSigned } from '@/lib/format';
+import { formatShortDate } from '@/lib/format';
+import { STANDING_LABEL, standingFor } from '@/services/fairness';
 import type { PlayerGameLine } from '@/services/seasonStatistics';
 import Link from 'next/link';
 
@@ -41,7 +42,6 @@ export function PlayerSeasonCard({
   usage,
   debt,
   log,
-  teamAverage,
 }: {
   playerId: string;
   name: string;
@@ -49,12 +49,12 @@ export function PlayerSeasonCard({
   usage: PlayerSeasonUsage | undefined;
   debt: number;
   log: PlayerGameLine[];
-  teamAverage: number;
 }) {
   const innings = usage?.defensiveInnings ?? 0;
   const rest = usage?.benchInnings ?? 0;
   const total = innings + rest;
-  const versus = innings - teamAverage;
+  const expected = innings + debt;
+  const standing = standingFor(debt);
 
   const counts: Record<PositionGroup, number> = {
     BATTERY: (usage?.pitchingInnings ?? 0) + (usage?.catchingInnings ?? 0),
@@ -152,21 +152,41 @@ export function PlayerSeasonCard({
         </div>
       ) : null}
 
-      <p className="mt-3 border-t border-border pt-2.5 text-xs">
-        <span
-          className={cn(
-            'font-medium',
-            versus <= -1.5 ? 'text-caution' : versus >= 1.5 ? 'text-ink' : 'text-ink-muted',
-          )}
-        >
-          {Math.abs(versus) < 0.5
-            ? 'Right on the team average'
-            : `${formatSigned(versus)} innings vs the team average`}
-        </span>
-        {debt >= 1 ? (
-          <span className="text-caution"> · next in line for more</span>
-        ) : null}
-      </p>
+      {/*
+        Expected versus actual, not versus the team average.
+        
+        The average was the wrong comparison and quietly unfair: a player who
+        missed two games has fewer innings than the average without having been
+        treated badly, and the card said so in red. Expectation is already
+        attendance-weighted, so this compares a player against their own share
+        of the innings they were there for.
+      */}
+      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-border pt-2.5">
+        <p className="text-xs text-ink-muted">
+          Expected <span className="tnum font-medium text-ink">{expected.toFixed(0)}</span>
+          {' · played '}
+          <span className="tnum font-medium text-ink">{innings}</span>
+        </p>
+        <p className="flex items-center gap-1.5 text-xs">
+          <span
+            aria-hidden
+            className={cn(
+              'size-2 rounded-full',
+              standing === 'OWED'
+                ? 'bg-caution'
+                : standing === 'AHEAD'
+                  ? 'bg-infield'
+                  : 'bg-positive',
+            )}
+          />
+          <span className="font-semibold text-ink">{STANDING_LABEL[standing]}</span>
+          {standing !== 'ON_TARGET' ? (
+            <span className="tnum text-ink-muted">
+              by {Math.abs(debt).toFixed(1)}
+            </span>
+          ) : null}
+        </p>
+      </div>
     </Link>
   );
 }

@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { emptyFairnessDebt, type FairnessDebt } from '@/domain/season';
 import { createPlayer } from '@/domain/factories';
-import { standingCounts, standingFor, STANDING_THRESHOLD } from '@/services/fairness';
-import type { Player } from '@/domain/types';
+import {
+  seasonOutlook,
+  standingCounts,
+  standingFor,
+  STANDING_THRESHOLD,
+} from '@/services/fairness';
+import { createGame } from '@/domain/factories';
+import { getSystemFormation } from '@/domain/formations';
+import { defaultTeamSettings } from '@/domain/weights';
+import type { Game, Player } from '@/domain/types';
 
 /**
  * The three words Home reports instead of a percentage.
@@ -81,5 +89,99 @@ describe('standingCounts', () => {
 
   it('counts a player with no debt record at all as unplayed', () => {
     expect(standingCounts([player('a')], {})).toMatchObject({ unplayed: 1 });
+  });
+});
+
+describe('seasonOutlook', () => {
+  const formation = getSystemFormation('baseball-10-lc-rc')!;
+
+  function scheduled(count: number, status: Game['status']): Game[] {
+    return Array.from({ length: count }, (_, i) => ({
+      ...createGame({
+        teamId: 't',
+        opponent: `Team ${i}`,
+        date: `2026-05-0${i + 1}`,
+        plannedInnings: 6,
+        formation,
+        settings: defaultTeamSettings(),
+        players: [],
+      }),
+      status,
+      actualInnings: status === 'COMPLETED' ? 6 : null,
+    }));
+  }
+
+  it('says nothing is wrong when nobody is behind', () => {
+    const outlook = seasonOutlook(scheduled(3, 'PLANNED'), []);
+    expect(outlook.gamesRemaining).toBe(3);
+    expect(outlook.atRisk).toEqual([]);
+    expect(outlook.headline).toContain('on track');
+  });
+
+  it('flags a gap bigger than the remaining games can close', () => {
+    // One inning per remaining game is the stated headroom, so a 3-inning gap
+    // with one game left is not closing and the coach needs to know now.
+    const games = [...scheduled(1, 'PLANNED'), ...scheduled(1, 'COMPLETED')];
+    const players = [player('a'), player('b')];
+    const outlook = seasonOutlook(games, players, {
+      a: debt('a', 3),
+      b: debt('b', 0.5),
+    });
+
+    expect(outlook.gamesRemaining).toBe(1);
+    expect(outlook.atRisk).toEqual(['a']);
+    expect(outlook.worst).toEqual({ playerId: 'a', debt: 3 });
+    expect(outlook.headline).toContain('further behind than');
+  });
+
+  it('does not flag a gap the remaining games can absorb', () => {
+    const games = [...scheduled(4, 'PLANNED'), ...scheduled(1, 'COMPLETED')];
+    const outlook = seasonOutlook(games, [player('a')], { a: debt('a', 2.2) });
+
+    expect(outlook.atRisk).toEqual([]);
+    expect(outlook.headline).toContain('enough to close it');
+  });
+
+  it('is honest when the season is over', () => {
+    const outlook = seasonOutlook(scheduled(2, 'COMPLETED'), []);
+    expect(outlook.gamesRemaining).toBe(0);
+    expect(outlook.headline).toMatch(/finish/);
+  });
+});
+
+describe('the outlook does not contradict itself', () => {
+  const formation = getSystemFormation('baseball-10-lc-rc')!;
+  const game = (status: Game['status']): Game => ({
+    ...createGame({
+      teamId: 't',
+      opponent: 'X',
+      date: '2026-05-01',
+      plannedInnings: 6,
+      formation,
+      settings: defaultTeamSettings(),
+      players: [],
+    }),
+    status,
+  });
+
+  it('never lists a sub-inning gap as at risk', () => {
+    // This is the bug: with the season over, every positive debt counted as at
+    // risk, so the page said "everyone finished within an inning of their
+    // expectation" above a list of seven players needing innings.
+    const outlook = seasonOutlook([game('COMPLETED')], [player('a'), player('b')], {
+      a: debt('a', 0.3),
+      b: debt('b', 0.9),
+    });
+
+    expect(outlook.atRisk).toEqual([]);
+    expect(outlook.headline).toContain('within an inning');
+  });
+
+  it('still lists a real gap when the season has run out of games', () => {
+    const outlook = seasonOutlook([game('COMPLETED')], [player('a')], {
+      a: debt('a', 2.5),
+    });
+    expect(outlook.atRisk).toEqual(['a']);
+    expect(outlook.headline).toContain('No games left');
   });
 });

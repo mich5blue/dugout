@@ -51,7 +51,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Coaching style',
     group: 'Playing time',
-    where: 'Team Settings, and per game under Game setup → Rules',
+    where: 'Settings, and per game under Build lineup → How to coach',
     what: 'The preset behind everything else. Equal Playing Time flattens innings hardest; Development leans toward giving weaker players the infield and the better batting slots; Balanced is the middle; Competitive lets the strongest players take the important spots more often.',
     fallback: 'Balanced',
     when: 'Set it once for the team and leave it. Change it per game only for something unusual — a tournament final, or a game where half the roster is missing.',
@@ -59,7 +59,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Minimum defensive innings',
     group: 'Playing time',
-    where: 'Game setup → Rules',
+    where: 'Build lineup → How to coach',
     what: 'Nobody plays fewer than this many innings in the field. As a Target the solver gets as close as it can; as Required it refuses to produce a lineup that breaks the rule.',
     key: 'minDefensiveInnings',
     when: "Raise it to match a league rule. Switch it to Required only if you mean it: with a short roster, Required can make a lineup impossible, and InningGrid will tell you rather than quietly ignore it.",
@@ -67,7 +67,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Playing time',
     group: 'Playing time',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'How hard to push everyone toward the same number of innings, independently of the coaching style.',
     key: 'playingTimeBalance',
     when: 'Reach for it when the style is right in every other respect but the innings spread is wider or tighter than you want.',
@@ -76,7 +76,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Even out bench innings',
     group: 'Bench',
-    where: 'Game setup → Rules',
+    where: 'Build lineup → How to coach',
     what: 'Spreads bench innings across the roster instead of letting them land on the same few players.',
     key: 'equalizeBench',
     when: 'Leave it on. Turning it off only makes sense if you are managing the bench by hand with locks.',
@@ -84,7 +84,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Nobody sits twice in a row',
     group: 'Bench',
-    where: 'Game setup → Rules',
+    where: 'Build lineup → How to coach',
     what: 'Stops a player sitting two innings in a row.',
     key: 'noConsecutiveBench',
     when: 'Leave it on — sitting twice running is the thing players and parents notice most. With a very long roster and short games it can be impossible to honour, and the solver will say so.',
@@ -92,7 +92,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Max bench innings per player',
     group: 'Bench',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'A hard ceiling on how many innings any one player sits in a game.',
     key: 'maxBenchInnings',
     when: 'Useful for a doubleheader or a long roster where a cap is easier to explain to parents than a philosophy.',
@@ -101,7 +101,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Position variety',
     group: 'Variety',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'How much the solver wants to move players around the field rather than park them in one spot.',
     key: 'variety',
     when: 'High for early-season development; Low late in the season when you want players settled where they know what to do.',
@@ -110,7 +110,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Minimum unique positions',
     group: 'Variety',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'A floor on how many distinct positions each player sees in one game.',
     key: 'minUniquePositions',
     when: 'A blunter alternative to Position variety when you want a promise you can state to a parent.',
@@ -119,7 +119,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Max innings at one position',
     group: 'Variety',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'A ceiling on innings at any single position in one game.',
     key: 'maxInningsSamePosition',
     when: 'Stops a strong shortstop playing shortstop all six innings every week.',
@@ -128,7 +128,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Max consecutive innings at one position',
     group: 'Variety',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'The same ceiling, but only for consecutive innings.',
     key: 'maxConsecutiveSamePosition',
     when: 'Gentler than the total cap: a player can still have their best position often, just not for the whole game at a stretch.',
@@ -137,7 +137,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Position continuity',
     group: 'Variety',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'The opposite of variety: keep a player in the same spot for this many innings at a time before moving them.',
     key: 'positionContinuityInnings',
     when: 'Two innings at a time helps the youngest divisions, where a player who has just worked out where to stand should not be moved. It is a preference, not a rule, so fairness can still override it.',
@@ -146,7 +146,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Infield opportunity',
     group: 'Positions',
-    where: 'Game setup → Rules',
+    where: 'Build lineup → How to coach',
     what: 'Every player gets at least this many infield innings per game — Target to aim, Required to insist.',
     key: 'infieldOpportunity',
     when: 'This is the setting that makes the season feel fair, and the one parents ask about. Raise it if your outfield is where players go to be forgotten.',
@@ -154,7 +154,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Infield ability spread',
     group: 'Positions',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'Avoids putting two developing players in the infield in the same inning, and avoids it harder two innings running.',
     key: 'infieldSpread',
     when: "Turn it up when the infield-opportunity promise is producing innings where the whole left side is still learning, and off if you would rather it never influenced who plays where. It is deliberately not the same as Critical position strength: that one pushes developing players out of the infield altogether, which is the opposite of what you want.",
@@ -163,7 +163,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Max / min outfield innings',
     group: 'Positions',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'Caps and floors on outfield innings per player in a game, including a separate cap on consecutive outfield innings.',
     fallback: 'No caps',
     when: 'The direct way to stop one player living in right field, if you would rather state a number than tune variety.',
@@ -172,7 +172,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Critical position strength',
     group: 'Positions',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'How strongly to prefer your stronger players at the positions the formation marks as important.',
     key: 'criticalStrength',
     when: 'Turn it up for a game that matters. Know the trade: it competes directly with infield opportunity and with playing-time equality, and at High the same handful of players will hold the same spots.',
@@ -181,7 +181,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Who can pitch / catch',
     group: 'Battery',
-    where: 'Roster → a player',
+    where: 'Team → a player',
     what: 'The hard constraint everything else is built on. InningGrid needs a pitcher and a catcher for every inning.',
     fallback: 'Nobody, until you say so',
     when: "Get this right before your first game. Two or three of each gives the solver room; one means that player covers every inning there, and the lineup can't be fair.",
@@ -189,7 +189,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Max pitching / catching innings per player',
     group: 'Battery',
-    where: 'Game setup → Rules → Advanced, or per player on the roster',
+    where: 'Build lineup → How to coach → Advanced rules, or per player on the Team page',
     what: 'The most innings any one player pitches or catches. Per-player caps on the roster page beat the team-wide setting.',
     fallback: 'No cap',
     when: 'Set it to match your league rule, then stop thinking about it. Use the per-player cap for a kid coming back from an injury.',
@@ -198,7 +198,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'No catching straight after pitching',
     group: 'Battery',
-    where: 'Game setup → Rules → Advanced',
+    where: 'Build lineup → How to coach → Advanced rules',
     what: 'Blocks the pitcher-to-catcher switch, and the reverse, between consecutive innings.',
     key: 'restrictPitcherCatcherTransition',
     when: 'Some leagues require it. It is also just kind — that switch means full gear on in about ninety seconds.',
@@ -207,7 +207,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Pitching plan',
     group: 'Battery',
-    where: 'Game setup → Pitching plan',
+    where: 'The lineup screen → Pitching plan',
     what: "Name who pitches which inning before generating. The plan pins that inning's pitcher, and the rest of the lineup is built around it.",
     fallback: 'Empty — the solver picks',
     when: "Fill it in when you have already decided your pitching. A pinned cell shows a pin rather than a lock in the grid, because Rebalance won't move it either.",
@@ -223,7 +223,7 @@ export const SETTINGS: SettingDoc[] = [
   {
     name: 'Continuous batting vs starters & subs',
     group: 'Batting',
-    where: 'Team Settings',
+    where: 'Settings',
     what: 'Continuous means everyone bats in turn whether or not they are on the field. Starters & subs means the batting order is the nine or ten on the field.',
     fallback: 'Continuous',
     when: 'Match your league. Most recreational leagues bat continuously, and it is what makes playing time and batting fairness separable problems.',

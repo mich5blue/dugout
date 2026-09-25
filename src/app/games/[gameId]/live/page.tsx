@@ -163,7 +163,7 @@ export default function LiveGamePage() {
         </p>
         <Link
           href={`/games/${game.id}`}
-          className="ring-focus rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80"
+          className="ring-focus flex h-11 items-center rounded-lg border border-white/20 px-4 text-sm font-semibold text-white/80"
         >
           Exit
         </Link>

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui';
 import { createId } from '@/domain/factories';
 import type { PositionGroup, PriorityFlag } from '@/domain/types';
-import { getFairnessDebt, getTeamSeasonFairness } from '@/services/fairness';
+import { getFairnessDebt, getTeamSeasonFairness, seasonOutlook } from '@/services/fairness';
 import {
   getPlayerGameLog,
   getPlayerSeasonUsage,
@@ -66,6 +66,10 @@ export default function SeasonPage() {
   );
   const distribution = useMemo(() => getPositionDistribution(games), [games]);
   const log = useMemo(() => getPlayerGameLog(games), [games]);
+  const outlook = useMemo(
+    () => seasonOutlook(games, players, debts),
+    [games, players, debts],
+  );
 
   /* Sorted most innings first: the question is who is at each end. */
   const ranked = useMemo(
@@ -204,8 +208,30 @@ export default function SeasonPage() {
         </Badge>
       </div>
 
-      {/* The whole season in one card: the dial, then the numbers behind it. */}
+      {/*
+        The outlook, in a sentence, above the numbers.
+        
+        A coach who opens this page is asking whether the season is going to
+        come out fair. "Season balance 93" is an answer to a different
+        question — it grades the past. This says what today implies about the
+        finish, and names anyone the remaining games cannot rescue.
+      */}
       <Card className="rise">
+        <div className="border-b border-border px-5 py-4">
+          <p className="eyebrow text-ink-subtle">Season outlook</p>
+          <p className="mt-1.5 text-[15px] leading-relaxed text-ink">{outlook.headline}</p>
+          {outlook.atRisk.length > 0 ? (
+            <p className="mt-2 flex flex-wrap items-center gap-2">
+              {/* "Needs innings now" is nonsense once there are none left. */}
+              <Badge tone="caution">
+                {outlook.gamesRemaining === 0 ? 'Finished behind' : 'Needs innings now'}
+              </Badge>
+              <span className="text-sm text-ink-muted">
+                {outlook.atRisk.map((playerId) => names.short(playerId)).join(', ')}
+              </span>
+            </p>
+          ) : null}
+        </div>
         <div className="grid gap-6 p-5 sm:grid-cols-[200px_1fr] sm:items-center">
           <BalanceDial value={fairness.balanceScore} label="Season balance" />
           <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
@@ -453,7 +479,6 @@ export default function SeasonPage() {
               usage={usage[player.id]}
               debt={debts[player.id]?.defensiveDebt ?? 0}
               log={log[player.id] ?? []}
-              teamAverage={fairness.averageDefensiveInnings}
             />
           ))}
         </div>

@@ -520,11 +520,21 @@ export function Modal({
         onClick={onClose}
         className="absolute inset-0 bg-black/40"
       />
+      {/*
+        A bottom sheet on a phone, a centred dialog from `sm` up — thumb reach
+        is the constraint on the small screen, and these sheets are used
+        one-handed at a fence. The bottom padding clears the home bar, or the
+        last button in a sheet sits under it and cannot be pressed.
+      */}
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-10 max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface sm:rounded-2xl"
+        className="relative z-10 max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface pb-[max(0px,env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-0"
       >
+        {/* Grab handle: the affordance that says this sheet came from below. */}
+        <div aria-hidden className="flex justify-center pt-2 sm:hidden">
+          <span className="h-1 w-9 rounded-full bg-border-strong" />
+        </div>
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-base font-semibold text-ink">{title}</h2>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close">

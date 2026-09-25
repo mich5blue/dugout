@@ -336,9 +336,17 @@ export default function GamePage() {
       ) : (
         <>
           {/* ---- the workspace ------------------------------------------ */}
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,19rem)]">
+          {/*
+            `minmax(0, 1fr)` on the single-column case matters.
+
+            Without it the implicit column is `auto`, which sizes to its widest
+            child — the batting-order row, with its handle, name, lock and two
+            arrows — and the page overflowed 240px on a 375px phone. A grid
+            column only lets its children shrink when told it may.
+          */}
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,19rem)]">
             {/* LEFT: batting order, then the pitching plan. */}
-            <div className="order-2 space-y-4 xl:order-1">
+            <div className="order-2 min-w-0 space-y-4 xl:order-1">
               <BattingOrderPanel
                 readOnly={!editsGame}
                 game={game}
@@ -449,7 +457,7 @@ export default function GamePage() {
             </div>
 
             {/* CENTER: the grid. */}
-            <Card className="order-1 rise xl:order-2">
+            <Card className="order-1 min-w-0 rise xl:order-2">
               <CardHeader
                 title="Defensive rotation"
                 action={
@@ -597,7 +605,7 @@ export default function GamePage() {
             </Card>
 
             {/* RIGHT: why, and whether it holds. */}
-            <div className="order-3 space-y-4">
+            <div className="order-3 min-w-0 space-y-4">
               {result?.quality ? <RuleChecks quality={result.quality} /> : null}
               {result?.explanations ? (
                 <FairnessNotes

@@ -172,7 +172,7 @@ export default function GuidePage() {
         lede="Where the detail lives, and what is safe to ignore."
       >
         <p>
-          Open a player from the Roster page. Everything on that page is optional
+          Open a player from the Team page. Everything on that page is optional
           except who can pitch and catch — but three fields change lineups noticeably:
         </p>
         <Definitions
@@ -207,9 +207,10 @@ export default function GuidePage() {
       >
         <Steps
           items={[
-            'Schedule → New game. Opponent, date, innings.',
-            "Who's playing — tap anyone who is missing. If a player arrives late or leaves early, set the innings they are there for.",
-            'Generate lineup. A couple of seconds, and you have a full defense and batting order.',
+            'Games → New game. Opponent, date, innings — then InningGrid walks you through the rest.',
+            "Who's here — tap anyone who isn't coming. Three states: here, out, or here for part of the game, which sets the innings they're available for.",
+            'How to coach — pick Balanced, Development or Competitive. That is enough. Everything under it is optional, and Advanced holds the full set.',
+            'Generate. A couple of seconds, and you have a full defense and batting order.',
             'Something wrong? Tap any cell to swap or bench a player, then Rebalance to rebuild the rest around your change.',
           ]}
         />
@@ -226,26 +227,27 @@ export default function GuidePage() {
         lede="Same game, four questions."
       >
         <p>
-          <strong className="text-ink">By inning</strong> — the classic grid. Positions
-          down the side, innings across. This is the one to print.
-        </p>
-        <GuideShot
-          label="Games → By inning"
-          caption="A locked cell shows a padlock; the bench rows at the bottom are who is resting that inning."
-        >
-          <LineupGrid view={sample.view} readOnly />
-        </GuideShot>
-
-        <p>
-          <strong className="text-ink">By player</strong> — one row per player, so you
-          can answer &ldquo;where has Ada been all game?&rdquo; in one look. The
-          coloured rails show which group of the field each inning was.
+          <strong className="text-ink">By player</strong> — the one the lineup screen
+          opens on. One row per player, one column per inning, so &ldquo;where has Ada
+          been all game&rdquo; is one look. Tap any cell to move somebody, or the padlock
+          to hold it through a Rebalance.
         </p>
         <GuideShot
           label="Games → By player"
-          caption="Pink is pitcher or catcher, cyan infield, purple outfield. Rest innings are blank."
+          caption="Pink is pitcher or catcher, cyan infield, purple outfield. A rest inning says REST."
         >
           <PlayerGrid view={sample.view} />
+        </GuideShot>
+
+        <p>
+          <strong className="text-ink">By inning</strong> — the classic grid, positions
+          down the side. This is the one to print for a clipboard.
+        </p>
+        <GuideShot
+          label="Games → By inning"
+          caption="A locked cell shows a padlock; the bench rows at the bottom are who is resting."
+        >
+          <LineupGrid view={sample.view} readOnly />
         </GuideShot>
 
         <p>
@@ -266,9 +268,9 @@ export default function GuidePage() {
         </GuideShot>
 
         <p>
-          <strong className="text-ink">Live</strong> — the dugout view. Big type, one
-          inning, and the changes from the last inning called out so you know who to
-          move. This is also where the game-day buttons live.
+          <strong className="text-ink">Live</strong> — a preview of the dugout view
+          inside the planning screen. The real thing is <strong className="text-ink">Game
+          Day</strong>: press Start game and InningGrid takes over the whole screen.
         </p>
       </Section>
 
@@ -287,7 +289,7 @@ export default function GuidePage() {
             {
               term: 'A pin on a cell',
               detail:
-                'Same effect, different reason: the pitching plan put that pitcher in that inning. Clear it in Game setup → Pitching plan.',
+                'Same effect, different reason: the pitching plan put that pitcher in that inning. Clear it in the Pitching plan panel beside the grid.',
             },
             {
               term: 'A lock in the batting order',
@@ -313,7 +315,7 @@ export default function GuidePage() {
             {
               term: 'Your pitcher is cruising — one more inning',
               detail:
-                'In the Live view, "Pitch another inning" moves them into the next inning and tells you exactly what it costs: who comes out, whether it breaks your innings cap, and whether it is blocked by a league rule.',
+                'In Game Day, "Keep them pitching" names both sides of the swap before anything changes — your pitcher stays on, and whoever was down to pitch goes somewhere else. Then you choose: update the rotation, or keep the original plan.',
             },
             {
               term: 'Someone has to come out',

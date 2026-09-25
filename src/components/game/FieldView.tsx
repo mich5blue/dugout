@@ -210,31 +210,56 @@ export function FieldView({
           <p className="mt-1 text-sm text-ink-muted">Nobody sits this inning</p>
         ) : (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {bench.map((player) => (
-              <button
-                key={player.id}
-                type="button"
-                draggable={editable}
-                onDragStart={() => setDrag({ kind: 'bench', playerId: player.id })}
-                onDragEnd={() => {
-                  setDrag(null);
-                  setHover(null);
-                }}
-                disabled={!editable}
-                className={cn(
-                  'ring-focus rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm font-medium text-ink',
-                  editable && 'cursor-grab active:cursor-grabbing hover:border-accent',
-                  drag?.kind === 'bench' && drag.playerId === player.id && 'opacity-40',
-                )}
-              >
-                {playerShortName(player)}
-                {player.jerseyNumber ? (
-                  <span className="ml-1 text-xs text-ink-subtle">
-                    #{player.jerseyNumber}
+            {bench.map((player) => {
+              const label = (
+                <>
+                  {playerShortName(player)}
+                  {player.jerseyNumber ? (
+                    <span className="ml-1 text-xs text-ink-subtle">
+                      #{player.jerseyNumber}
+                    </span>
+                  ) : null}
+                </>
+              );
+              const shell =
+                'rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm font-medium text-ink';
+
+              /*
+                A span when the view is read-only, not a disabled button.
+
+                Disabled controls still appear in the accessibility tree as
+                controls, so a screen reader walking the read-only field view —
+                on a shared lineup, in the guide, on game day — announced ten
+                dead buttons.
+              */
+              if (!editable) {
+                return (
+                  <span key={player.id} className={shell}>
+                    {label}
                   </span>
-                ) : null}
-              </button>
-            ))}
+                );
+              }
+
+              return (
+                <button
+                  key={player.id}
+                  type="button"
+                  draggable
+                  onDragStart={() => setDrag({ kind: 'bench', playerId: player.id })}
+                  onDragEnd={() => {
+                    setDrag(null);
+                    setHover(null);
+                  }}
+                  className={cn(
+                    'ring-focus cursor-grab active:cursor-grabbing hover:border-accent',
+                    shell,
+                    drag?.kind === 'bench' && drag.playerId === player.id && 'opacity-40',
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
