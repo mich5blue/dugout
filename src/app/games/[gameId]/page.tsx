@@ -337,16 +337,32 @@ export default function GamePage() {
         <>
           {/* ---- the workspace ------------------------------------------ */}
           {/*
-            `minmax(0, 1fr)` on the single-column case matters.
+            Three proportional panes, not three fixed ones.
 
-            Without it the implicit column is `auto`, which sizes to its widest
-            child — the batting-order row, with its handle, name, lock and two
-            arrows — and the page overflowed 240px on a 375px phone. A grid
-            column only lets its children shrink when told it may.
+            The side panes were 15rem and 19rem of hard width, so on a wide
+            monitor they stayed put and the middle kept whatever was left —
+            about 576px inside the old 1152px cap, which clipped a five-inning
+            grid mid-column. As fractions the grid takes the extra width, which
+            is the pane that can use it: more innings visible, wider cells.
+            The `minmax` floors stop the batting order and the notes from being
+            squeezed into uselessness at the breakpoint itself.
+
+            1440px rather than Tailwind's `xl` (1280px), because measurement
+            said so. At 1280 the three panes fit but the grid inside the middle
+            one still clipped 105px of a six-inning game, and at 1400 it
+            clipped 10px. Below the breakpoint the panes stack and the grid
+            gets the full width, which is the better trade: a stacked pane you
+            scroll past beats a grid cut off mid-column.
+
+            `minmax(0, 1fr)` on the single-column case matters too. Without it
+            the implicit column is `auto`, which sizes to its widest child —
+            the batting-order row, with its handle, name, lock and two arrows —
+            and the page overflowed 240px on a 375px phone. A grid column only
+            lets its children shrink when told it may.
           */}
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,19rem)]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 min-[1440px]:grid-cols-[minmax(13rem,0.9fr)_minmax(0,3.4fr)_minmax(16rem,1.1fr)]">
             {/* LEFT: batting order, then the pitching plan. */}
-            <div className="order-2 min-w-0 space-y-4 xl:order-1">
+            <div className="order-2 min-w-0 space-y-4 min-[1440px]:order-1">
               <BattingOrderPanel
                 readOnly={!editsGame}
                 game={game}
@@ -457,7 +473,7 @@ export default function GamePage() {
             </div>
 
             {/* CENTER: the grid. */}
-            <Card className="order-1 min-w-0 rise xl:order-2">
+            <Card className="order-1 min-w-0 rise min-[1440px]:order-2">
               <CardHeader
                 title="Defensive rotation"
                 action={
@@ -506,7 +522,7 @@ export default function GamePage() {
                     <label className="ml-auto flex items-center gap-1.5 text-xs text-ink-muted">
                       Keep innings
                       <Select
-                        className="h-8 w-16"
+                        className="h-8 w-24"
                         value={frozenInnings}
                         onChange={(event) => setFrozenInnings(Number(event.target.value))}
                       >

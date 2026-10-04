@@ -63,6 +63,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   */
   const publicPage = pathname?.startsWith('/guide') ?? false;
 
+  /*
+    The lineup workspace gets the monitor; everything else keeps a measure.
+
+    `max-w-6xl` is 1152px, which is right for reading — Home, Season, the
+    guide — and wrong for a three-pane working surface. Capped there, the
+    middle pane got about 576px once the side panes took their share, which is
+    not enough for five innings of a by-inning grid: it clipped mid-column.
+    Prose at 1500px would be unreadable, so this is per-surface rather than
+    global.
+  */
+  const workspace =
+    (pathname?.startsWith('/games/') ?? false) &&
+    !pathname?.includes('/print') &&
+    !pathname?.endsWith('/live');
+  const container = workspace ? 'max-w-[1800px]' : 'max-w-6xl';
+
   if (backend === 'firebase') {
     if (!authReady) return null;
     if (!account && !publicPage) return <SignInScreen />;
@@ -79,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur-xl print-hide">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
+        <div className={cn('mx-auto flex items-center gap-4 px-4 py-3 sm:px-6', container)}>
           <Link href="/" className="ring-focus flex shrink-0 items-center gap-2 rounded-md">
             <BrandMark className="size-6 text-ink" />
             {/* The wordmark gives up its space to the team name on a phone. */}
@@ -149,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       */}
       {demoMode ? (
         <div className="border-b border-accent/30 bg-accent-soft print-hide">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-2 sm:px-6">
+          <div className={cn('mx-auto flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6', container)}>
             <span className="text-sm text-ink">
               You&apos;re exploring the <strong>demo team</strong> — change anything you
               like. It stays on this device and is not saved to an account.
@@ -171,7 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       */}
       {team && role === 'ASSISTANT' ? (
         <div className="border-b border-caution/30 bg-caution-soft print-hide">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-2 sm:px-6">
+          <div className={cn('mx-auto flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6', container)}>
             <span className="text-sm text-ink">
               Viewing as an <strong>assistant coach</strong> — you can set positions
               and core players; everything else is read-only.
@@ -187,7 +203,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
 
-      <main className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:pb-10">{children}</main>
+      <main className={cn('mx-auto px-4 py-6 pb-24 sm:px-6 sm:pb-10', container)}>{children}</main>
 
       {showNav ? (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">
