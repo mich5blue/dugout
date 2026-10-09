@@ -8,6 +8,13 @@ struct InningGridApp: App {
 
     init() {
         let auth = AuthService()
+        #if DEBUG
+        /* A test run asking for a different test coach starts signed out. */
+        if let wanted = UserDefaults.standard.string(forKey: "uiTestSignIn"),
+           let current = auth.session?.email, current != wanted {
+            auth.signOut()
+        }
+        #endif
         let store = TeamStore(auth: auth)
         _auth = State(initialValue: auth)
         _store = State(initialValue: store)
@@ -51,7 +58,7 @@ struct RootView: View {
                         /* `-uiTestSignIn coach@inninggrid.test`: emulator only. */
                         if AppConfig.current.environment == .emulator,
                            let email = UserDefaults.standard.string(forKey: "uiTestSignIn") {
-                            try? await auth.signInAsTestCoach(email: email, name: "Test Coach")
+                            try? await auth.signInAsTestCoach(email: email, name: email.hasPrefix("assistant") ? "Test Assistant" : "Test Coach")
                         }
                     }
                     #endif
@@ -127,6 +134,7 @@ struct MainTabs: View {
                 .tag(Tab.more)
         }
         .environment(navigator)
+        .overlay(alignment: .top) { RejectionBanner() }
         #if DEBUG
         .onAppear(perform: applyTestLaunchArguments)
         #endif
@@ -156,4 +164,32 @@ struct MainTabs: View {
         if let destination { navigator.push(destination) }
     }
     #endif
+}
+
+/// The server refused an edit: say so once, plainly, then get out of the way.
+struct RejectionBanner: View {
+    @Environment(TeamStore.self) private var store
+
+    var body: some View {
+        if let message = store.rejection {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "hand.raised.fill").foregroundStyle(Theme.amber)
+                Text(message).font(.footnote.weight(.semibold)).foregroundStyle(Theme.ink)
+                Spacer()
+                Button { store.rejection = nil } label: { Image(systemName: "xmark").font(.caption.weight(.bold)) }
+                    .foregroundStyle(Theme.inkMuted)
+                    .accessibilityLabel("Dismiss")
+            }
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.amber.opacity(0.5)))
+            .padding(.horizontal, Theme.gutter)
+            .padding(.top, 4)
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .task {
+                try? await Task.sleep(for: .seconds(8))
+                store.rejection = nil
+            }
+        }
+    }
 }

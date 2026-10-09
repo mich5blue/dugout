@@ -36,6 +36,9 @@ struct FieldDiagram<Marker: View>: View {
             }
         }
         .aspectRatio(1, contentMode: .fit)
+        /* The outfield fan is drawn past the square on purpose, so the corners
+           read as foul territory; the clip keeps it inside its card. */
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 

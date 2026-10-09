@@ -1,4 +1,5 @@
 import type { Game } from '@/domain/types';
+import { recordActualResults, setAssignment, setAvailability } from '@/services/lineupService';
 
 /**
  * Running a game.
@@ -95,4 +96,40 @@ export function batterQueue(game: Game, count = 3): string[] {
   return Array.from({ length: Math.min(count, order.length) }, (_, offset) =>
     order[(start + offset) % order.length].playerId,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Game-day changes, shared by the website and the native app
+// ---------------------------------------------------------------------------
+
+/** End the game: record what was played, and leave live mode. */
+export function finishGame(game: Game, actualInnings: number): Game {
+  return { ...recordActualResults(game, actualInnings), liveState: null };
+}
+
+/**
+ * "Keep the pitcher in": put them in next inning's pitcher slot. setAssignment
+ * swaps whoever was there rather than displacing them to nowhere.
+ */
+export function keepPitching(
+  game: Game,
+  plan: { nextInning: number; pitcherPositionId: string; pitcher: { id: string } },
+): Game {
+  return setAssignment(game, plan.nextInning, plan.pitcherPositionId, plan.pitcher.id);
+}
+
+/**
+ * "Someone has to come out": record it on the game. `lastInning` is the last
+ * inning they are still available for; 0 means not at all. The caller then
+ * regenerates with `frozenInnings` = `frozenInningsFor(lastInning)`, so what
+ * already happened stays happened and only the rest is re-planned.
+ */
+export function playerOut(game: Game, playerId: string, lastInning: number): Game {
+  return lastInning <= 0
+    ? setAvailability(game, playerId, { available: false })
+    : setAvailability(game, playerId, { departureInning: lastInning });
+}
+
+export function frozenInningsFor(lastInning: number): number {
+  return Math.max(0, lastInning);
 }

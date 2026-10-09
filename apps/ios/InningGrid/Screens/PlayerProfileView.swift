@@ -20,7 +20,7 @@ struct PlayerProfileView: View {
         let usage = season?.usage[playerId]
         let standing = season?.standingByPlayer[playerId].flatMap(Standing.init)
         let editsIdentity = workspace.can("player:editIdentity")
-        let editsEligibility = workspace.can("player:editEligibility")
+        let editsEligibility = workspace.canEditPlayer("positionRatings")
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -76,9 +76,9 @@ struct PlayerProfileView: View {
                     .card()
                 }
 
-                battery(player, editable: editsEligibility)
+                battery(player)
 
-                abilities(player, editsIdentity: editsIdentity, editsAbility: workspace.can("player:editAbility"))
+                abilities(player)
 
                 if let log = season?.gameLog[playerId], !log.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -138,30 +138,29 @@ struct PlayerProfileView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func battery(_ player: PlayerView, editable: Bool) -> some View {
+    private func battery(_ player: PlayerView) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             SectionHeader("Pitching & catching")
-            Toggle("Can pitch", isOn: binding(player.canPitch) { workspace.updatePlayer(playerId, ["canPitch": .bool($0)]) })
+            toggle("Can pitch", "canPitch", player.canPitch)
             if player.canPitch {
-                Toggle("Preferred pitcher", isOn: binding(player.preferredPitcher ?? false) {
-                    workspace.updatePlayer(playerId, ["preferredPitcher": .bool($0)])
-                })
-                .padding(.leading, 12)
+                toggle("Preferred pitcher", "preferredPitcher", player.preferredPitcher ?? false).padding(.leading, 12)
             }
-            Toggle("Can catch", isOn: binding(player.canCatch) { workspace.updatePlayer(playerId, ["canCatch": .bool($0)]) })
+            toggle("Can catch", "canCatch", player.canCatch)
             if player.canCatch {
-                Toggle("Preferred catcher", isOn: binding(player.preferredCatcher ?? false) {
-                    workspace.updatePlayer(playerId, ["preferredCatcher": .bool($0)])
-                })
-                .padding(.leading, 12)
+                toggle("Preferred catcher", "preferredCatcher", player.preferredCatcher ?? false).padding(.leading, 12)
             }
         }
-        .disabled(!editable)
         .tint(Theme.lime)
         .card()
     }
 
-    private func abilities(_ player: PlayerView, editsIdentity: Bool, editsAbility: Bool) -> some View {
+    /// A player toggle, disabled when this coach's role can't change that field.
+    private func toggle(_ title: String, _ field: String, _ value: Bool) -> some View {
+        Toggle(title, isOn: binding(value) { workspace.updatePlayer(playerId, [field: .bool($0)]) })
+            .disabled(!workspace.canEditPlayer(field))
+    }
+
+    private func abilities(_ player: PlayerView) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader("Ability")
             Text("Defense").font(.subheadline.weight(.semibold))
@@ -171,7 +170,7 @@ struct PlayerProfileView: View {
                 ForEach(AbilityTier.allCases, id: \.self) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
-            .disabled(!editsAbility)
+            .disabled(!workspace.canEditPlayer("overallTier"))
             Text("Hitting").font(.subheadline.weight(.semibold))
             Picker("Hitting", selection: binding(player.offensiveTier) {
                 workspace.updatePlayer(playerId, ["offensiveTier": .string($0.rawValue)])
@@ -179,7 +178,7 @@ struct PlayerProfileView: View {
                 ForEach(AbilityTier.allCases, id: \.self) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
-            .disabled(!editsIdentity)
+            .disabled(!workspace.canEditPlayer("offensiveTier"))
             Label("For your eyes only. Never printed or shared.", systemImage: "eye.slash")
                 .font(.footnote).foregroundStyle(Theme.inkFaint)
         }

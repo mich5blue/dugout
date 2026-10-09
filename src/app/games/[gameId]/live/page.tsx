@@ -13,12 +13,16 @@ import {
   advanceInning,
   batterQueue,
   currentInning,
+  finishGame,
+  frozenInningsFor,
+  keepPitching,
   nextBatter,
+  playerOut,
   previousBatter,
   previousInning,
   startGame,
 } from '@/services/liveGame';
-import { generateLineup, recordActualResults, setAssignment, setAvailability } from '@/services/lineupService';
+import { generateLineup } from '@/services/lineupService';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -119,13 +123,7 @@ export default function LiveGamePage() {
     try {
       /* Put the pitcher in next inning's pitcher slot; setAssignment swaps
          whoever was there rather than displacing them to nowhere. */
-      const next = setAssignment(
-        game,
-        plan.nextInning,
-        plan.pitcherPositionId,
-        plan.pitcher.id,
-      );
-      await patch(next);
+      await patch(keepPitching(game, plan));
       void tap('medium');
       setImpact(null);
     } finally {
@@ -136,7 +134,7 @@ export default function LiveGamePage() {
   const finish = async (actualInnings: number) => {
     setBusy(true);
     try {
-      await saveGame({ ...recordActualResults(game, actualInnings), liveState: null });
+      await saveGame(finishGame(game, actualInnings));
       router.push(`/games/${game.id}`);
     } finally {
       setBusy(false);
@@ -413,10 +411,7 @@ export default function LiveGamePage() {
         currentInning={inning}
         onClose={() => setSomeoneOut(false)}
         onApply={async (playerId, lastInning) => {
-          const withDeparture =
-            lastInning <= 0
-              ? setAvailability(game, playerId, { available: false })
-              : setAvailability(game, playerId, { departureInning: lastInning });
+          const withDeparture = playerOut(game, playerId, lastInning);
           await patch(withDeparture);
 
           setBusy(true);
@@ -431,7 +426,7 @@ export default function LiveGamePage() {
               seed: game.optimizerSeed,
               /* Everything already played is frozen: what happened stays
                  happened, and only the remaining innings are re-planned. */
-              frozenInnings: Math.max(0, lastInning),
+              frozenInnings: frozenInningsFor(lastInning),
             });
             if (outcome.result.ok) await saveGame(outcome.game);
           } finally {

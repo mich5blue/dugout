@@ -312,6 +312,17 @@ final class TeamStore {
             } catch FirestoreClient.FirestoreError.notFound where item.kind == .delete {
                 /* Already gone — the goal of the delete is met. */
                 snapshot.outbox.removeAll { $0.path == item.path }
+            } catch FirestoreClient.FirestoreError.permissionDenied {
+                /*
+                  The server's rules refused it — this account may not make
+                  that change. Retrying can never succeed, so it must not hold
+                  up the rest of the queue. Put the server's version back so
+                  the screen shows what is really saved, and say so.
+                */
+                log.error("refused by the server: \(item.path, privacy: .public)")
+                snapshot.outbox.removeAll { $0.path == item.path }
+                await restoreFromServer(item.path)
+                rejection = "One change wasn't saved: your account can't make it on this team. It's been put back."
             } catch {
                 log.error("upload failed for \(item.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 syncState = .failed(error.localizedDescription)
@@ -339,14 +350,26 @@ final class TeamStore {
     /// Resolve a conflict by discarding this device's change.
     func takeTheirs(_ path: String) async {
         snapshot.outbox.removeAll { $0.path == path }
-        if let remote = try? await client.get(path) {
-            snapshot.documents[path] = CachedDocument(object: remote.object.objectValue ?? [:], updateTime: remote.updateTime)
-        } else {
-            snapshot.documents.removeValue(forKey: path)
-        }
+        await restoreFromServer(path)
         changed()
         await flush()
     }
+
+    /// Replace the cached copy with the server's. Removed only when the server
+    /// says it doesn't exist — being offline is not evidence of a deletion.
+    private func restoreFromServer(_ path: String) async {
+        do {
+            let remote = try await client.get(path)
+            snapshot.documents[path] = CachedDocument(object: remote.object.objectValue ?? [:], updateTime: remote.updateTime)
+        } catch FirestoreClient.FirestoreError.notFound {
+            snapshot.documents.removeValue(forKey: path)
+        } catch {
+            log.error("couldn't restore \(path, privacy: .public); the next refresh will")
+        }
+    }
+
+    /// Set when the server refused an edit; the app shows it once.
+    var rejection: String?
 
     // MARK: Persistence
 

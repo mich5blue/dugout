@@ -67,7 +67,7 @@ import {
 } from '@/lib/lineupEdits';
 import type { RelaxationSuggestion } from '@/optimizer';
 import { countChangedRules, ruleSections, setRule } from '@/domain/ruleControls';
-import { ROLE_PERMISSIONS, type TeamRole } from '@/domain/access';
+import { ASSISTANT_EDITABLE_PLAYER_FIELDS, can, ROLE_PERMISSIONS, type TeamRole } from '@/domain/access';
 import {
   getFairnessDebt,
   getTeamSeasonFairness,
@@ -78,7 +78,12 @@ import {
 import {
   advanceInning,
   batterQueue,
+  currentInning,
+  finishGame,
+  frozenInningsFor,
+  keepPitching,
   nextBatter,
+  playerOut,
   previousBatter,
   previousInning,
   startGame,
@@ -310,6 +315,9 @@ export const InningGridCore = {
   /* The same table the website reads. Showing a control is a courtesy — the
      Firestore rules are what actually refuse an edit. */
   permissions: (role: TeamRole) => [...(ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS.ASSISTANT)],
+  /** The player fields this role may change; null means all of them. */
+  editablePlayerFields: (role: TeamRole) =>
+    can(role, 'player:editIdentity') ? null : [...ASSISTANT_EDITABLE_PLAYER_FIELDS],
   updatePlayer: (player: Player, role: TeamRole, changes: Partial<Player>) =>
     updatePlayer(player, role, changes),
   cycleEligibility: (player: Player, role: TeamRole, positionId: string) =>
@@ -495,6 +503,11 @@ export const InningGridCore = {
     extraInningFor(buildGameView(game, players), inning),
   recordActualResults: (game: Game, actualInnings: number) =>
     recordActualResults(game, actualInnings),
+  currentInning: (game: Game) => currentInning(game),
+  finishGame: (game: Game, actualInnings: number) => finishGame(game, actualInnings),
+  keepPitching: (game: Game, plan: Parameters<typeof keepPitching>[1]) => keepPitching(game, plan),
+  playerOut: (game: Game, playerId: string, lastInning: number) => playerOut(game, playerId, lastInning),
+  frozenInningsFor: (lastInning: number) => frozenInningsFor(lastInning),
 
   // ---- words -------------------------------------------------------------
   /** The plain-English rule copy, so the app and the website say the same thing. */

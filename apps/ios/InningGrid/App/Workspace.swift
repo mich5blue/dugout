@@ -38,6 +38,8 @@ final class Workspace {
         /// HEAD_COACH or ASSISTANT, and what that role may do — from the core's table.
         let role: String
         let permissions: Set<String>
+        /// Player fields this role may change; nil means all of them.
+        let editablePlayerFields: Set<String>?
         let playerViews: [PlayerView]
         let gameViews: [GameView]
         let names: [String: NamesView]
@@ -93,6 +95,8 @@ final class Workspace {
                 formation: formation,
                 role: role,
                 permissions: Set(permissions),
+                editablePlayerFields: (try? core.call("editablePlayerFields", [.string(role)]).arrayValue)
+                    .map { Set($0.compactMap(\.stringValue)) },
                 playerViews: players.compactMap { try? $0.decode(PlayerView.self) },
                 gameViews: gameViews,
                 names: (try? names.decode([String: NamesView].self)) ?? [:],
@@ -140,6 +144,13 @@ final class Workspace {
     func can(_ permission: String) -> Bool { prepared?.permissions.contains(permission) ?? false }
 
     var role: String { prepared?.role ?? "ASSISTANT" }
+
+    /// Whether this coach may change one field of a player — the same list
+    /// the Firestore rules enforce.
+    func canEditPlayer(_ field: String) -> Bool {
+        guard let prepared else { return false }
+        return prepared.editablePlayerFields?.contains(field) ?? true
+    }
     var canEdit: Bool { can("game:edit") }
 
     /// The presets a coach chooses between, in order. Copy from the core.
