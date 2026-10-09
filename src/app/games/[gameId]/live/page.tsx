@@ -6,6 +6,7 @@ import { SomeoneOutSheet } from '@/components/game/SomeoneOutSheet';
 import { Button, EmptyState, Modal, Spinner } from '@/components/ui';
 import type { Game } from '@/domain/types';
 import { cn } from '@/lib/cn';
+import { tap } from '@/lib/native';
 import { extraInningFor, type ExtraInning } from '@/lib/gameDayChanges';
 import { buildGameView, inningChanges } from '@/lib/gameView';
 import {
@@ -125,6 +126,7 @@ export default function LiveGamePage() {
         plan.pitcher.id,
       );
       await patch(next);
+      void tap('medium');
       setImpact(null);
     } finally {
       setBusy(false);
@@ -155,7 +157,7 @@ export default function LiveGamePage() {
       }}
     >
       {/* ---- top bar --------------------------------------------------- */}
-      <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+      <header className="safe-x flex items-center gap-3 border-b border-white/10 py-3">
         <span className="scoreboard text-sm text-white/50">LIVE</span>
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">
           {team.name} <span className="text-white/40">vs</span>{' '}
@@ -169,7 +171,7 @@ export default function LiveGamePage() {
         </Link>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6">
+      <div className="safe-x mx-auto max-w-6xl py-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6">
         {/* ---- left: inning + field ------------------------------------ */}
         <div className="min-w-0">
           {/*
@@ -182,7 +184,7 @@ export default function LiveGamePage() {
               type="button"
               aria-label="Previous inning"
               disabled={inning <= 1}
-              onClick={() => patch(previousInning(game))}
+              onClick={() => { void tap(); void patch(previousInning(game)); }}
               className="ring-focus flex size-14 items-center justify-center rounded-xl border border-white/20 text-2xl disabled:opacity-30"
             >
               −
@@ -196,7 +198,7 @@ export default function LiveGamePage() {
               type="button"
               aria-label="Next inning"
               disabled={inning >= game.plannedInnings}
-              onClick={() => patch(advanceInning(game))}
+              onClick={() => { void tap('medium'); void patch(advanceInning(game)); }}
               className="ring-focus flex size-14 items-center justify-center rounded-xl border border-white/20 text-2xl disabled:opacity-30"
             >
               +
@@ -248,14 +250,14 @@ export default function LiveGamePage() {
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => patch(previousBatter(game))}
+                    onClick={() => { void tap(); void patch(previousBatter(game)); }}
                     className="ring-focus h-11 flex-1 rounded-xl border border-white/20 text-sm font-semibold"
                   >
                     ← Back
                   </button>
                   <button
                     type="button"
-                    onClick={() => patch(nextBatter(game))}
+                    onClick={() => { void tap(); void patch(nextBatter(game)); }}
                     className="ring-focus h-11 flex-[2] rounded-xl bg-[#d4ff3d] text-sm font-bold text-[#0a1000]"
                   >
                     Next batter →

@@ -10,6 +10,7 @@ import {
   sendEmailLink,
   signInWithGoogle,
 } from '@/lib/auth';
+import { isNativeApp } from '@/lib/native';
 import { useEffect, useState } from 'react';
 
 /**
@@ -22,6 +23,11 @@ import { useEffect, useState } from 'react';
  */
 export function SignInScreen() {
   const { account, authReady, enterDemo } = useDugout();
+  /* Read after mount rather than during render: the server has no Capacitor
+     bridge, so reading it in render would disagree with the client and break
+     hydration on the one device where this matters. */
+  const [nativeApp, setNativeApp] = useState(false);
+  useEffect(() => setNativeApp(isNativeApp()), []);
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'working' | 'sent' | 'needEmail'>('idle');
   const [error, setError] = useState('');
@@ -101,7 +107,25 @@ export function SignInScreen() {
           </Notice>
         ) : null}
 
-        {state === 'sent' ? (
+        {/*
+          Inside the native app neither web sign-in path can finish, so neither
+          is offered.
+
+          Google refuses OAuth in an embedded web view (403
+          disallowed_useragent), so the popup fails and the redirect fallback
+          lands on Google's error page inside the app. And an email link opens
+          in Safari and signs *Safari* in, not the app. Native Google Sign-In
+          fixes both — it is wired once the Firebase iOS and Android config
+          files exist (docs/native.md). Until then a broken button is worse
+          than an honest sentence.
+        */}
+        {nativeApp ? (
+          <Notice tone="brand" title="Sign-in is coming in the next build of the app">
+            For now, use your team at{' '}
+            <span className="font-semibold text-ink">dugout-lineups.netlify.app</span>, or
+            explore the demo team below — it runs fully inside the app.
+          </Notice>
+        ) : state === 'sent' ? (
           <Notice tone="positive" title="Check your email">
             We sent a sign-in link to {email}. Open it on this device and you&apos;re in.
           </Notice>

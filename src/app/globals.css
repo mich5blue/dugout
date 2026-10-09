@@ -457,3 +457,23 @@ h2 {
     border-radius: 0 !important;
   }
 }
+
+/*
+  Side gutters that respect the notch.
+
+  `viewport-fit=cover` is what lets the installed app run edge to edge, and it
+  has a cost the top inset does not show: an iPhone turned sideways stops
+  letterboxing, so the notch sits over the left or right edge of the page. A
+  plain 16px gutter puts the first column of the lineup underneath it. Each
+  side takes whichever is larger, the gutter or the inset — so in a browser,
+  where the insets are zero, nothing changes.
+*/
+@utility safe-x {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+
+  @media (min-width: 40rem) {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+}

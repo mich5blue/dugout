@@ -94,8 +94,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur-xl print-hide">
-        <div className={cn('mx-auto flex items-center gap-4 px-4 py-3 sm:px-6', container)}>
+      {/*
+        Padded by the top safe-area inset. Installed to a home screen with a
+        translucent status bar, the page draws under the clock and the notch;
+        without this the team switcher sits behind them and cannot be tapped.
+        In a browser tab the inset is zero and nothing changes.
+      */}
+      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl print-hide">
+        <div className={cn('safe-x mx-auto flex items-center gap-4 py-3', container)}>
           <Link href="/" className="ring-focus flex shrink-0 items-center gap-2 rounded-md">
             <BrandMark className="size-6 text-ink" />
             {/* The wordmark gives up its space to the team name on a phone. */}
@@ -165,7 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       */}
       {demoMode ? (
         <div className="border-b border-accent/30 bg-accent-soft print-hide">
-          <div className={cn('mx-auto flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6', container)}>
+          <div className={cn('safe-x mx-auto flex flex-wrap items-center gap-3 py-2', container)}>
             <span className="text-sm text-ink">
               You&apos;re exploring the <strong>demo team</strong> — change anything you
               like. It stays on this device and is not saved to an account.
@@ -187,7 +193,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       */}
       {team && role === 'ASSISTANT' ? (
         <div className="border-b border-caution/30 bg-caution-soft print-hide">
-          <div className={cn('mx-auto flex flex-wrap items-center gap-3 px-4 py-2 sm:px-6', container)}>
+          <div className={cn('safe-x mx-auto flex flex-wrap items-center gap-3 py-2', container)}>
             <span className="text-sm text-ink">
               Viewing as an <strong>assistant coach</strong> — you can set positions
               and core players; everything else is read-only.
@@ -203,7 +209,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
 
-      <main className={cn('mx-auto px-4 py-6 pb-24 sm:px-6 sm:pb-10', container)}>{children}</main>
+      <main className={cn('safe-x mx-auto py-6 pb-24 sm:pb-10', container)}>{children}</main>
 
       {showNav ? (
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden print-hide">

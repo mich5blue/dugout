@@ -16,10 +16,22 @@
     "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.ts\"",
     "test:all": "npm run test && npm run test:rules",
     "build:emulator": "NEXT_PUBLIC_FIREBASE_EMULATOR=1 NEXT_PUBLIC_FIREBASE_API_KEY=emulator-key NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=127.0.0.1 NEXT_PUBLIC_FIREBASE_PROJECT_ID=dugout-e2e NEXT_PUBLIC_FIREBASE_APP_ID=emulator-app next build",
-    "test:e2e:firebase": "npm run build:emulator && firebase emulators:exec --only firestore,auth --project dugout-e2e \"playwright test --config playwright.firebase.config.ts\""
+    "test:e2e:firebase": "npm run build:emulator && firebase emulators:exec --only firestore,auth --project dugout-e2e \"playwright test --config playwright.firebase.config.ts\"",
+    "icons": "node scripts/make_icons.mjs",
+    "native:sync": "cap sync",
+    "native:dev": "CAP_SERVER_URL=http://localhost:3001 cap sync",
+    "ios": "cap sync ios && cap open ios",
+    "android": "cap sync android && cap open android"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "clsx": "^2.1.1",
     "firebase": "^12.19.0",
     "next": "^15.5.4",
@@ -29,6 +41,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.13",

@@ -2,16 +2,45 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { DugoutProvider } from './providers';
 import { AppShell } from '@/components/AppShell';
+import { NativeBridge } from '@/components/NativeBridge';
 
 export const metadata: Metadata = {
   title: 'InningGrid — Smart lineups. More play time.',
   description:
     'Build fair, optimized batting orders and inning-by-inning defensive lineups in seconds.',
+  /*
+    Installed to an iPhone home screen, Safari ignores most of the manifest and
+    reads these instead. `black-translucent` lets the app draw under the status
+    bar the way a native app does — which only works because every top bar
+    pads itself by the safe-area inset (see AppShell and the Game Day header).
+  */
+  appleWebApp: {
+    capable: true,
+    title: 'InningGrid',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
+  formatDetection: {
+    /* Jersey numbers and inning counts are not phone numbers, and iOS
+       underlines runs of digits as tappable links unless told otherwise. */
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  /*
+    `cover` is what makes env(safe-area-inset-*) mean anything.
+
+    The app has padded itself by the safe-area insets since the Game Day work,
+    but without `viewport-fit=cover` those insets are always zero — the
+    browser letterboxes the page instead. Installed and full-screen, that
+    puts the header under the notch.
+  */
+  viewportFit: 'cover',
   // Matches --bg in each mode so the browser chrome does not flash white.
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#07090b' },
@@ -49,6 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        <NativeBridge />
         <DugoutProvider>
           <AppShell>{children}</AppShell>
         </DugoutProvider>

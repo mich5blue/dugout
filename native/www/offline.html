@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>InningGrid — offline</title>
+  <!--
+    Shown by the native shell when the app cannot reach the server on launch.
+    Self-contained on purpose: no fonts, no scripts, no images from the
+    network, because it only ever appears when there is no network.
+  -->
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      background: #07090b;
+      color: #f3f7f9;
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+      box-sizing: border-box;
+    }
+    main { max-width: 22rem; text-align: center; }
+    svg { width: 64px; height: 64px; }
+    h1 { font-size: 1.4rem; margin: 20px 0 8px; letter-spacing: -0.01em; }
+    p { color: #9aa9b3; margin: 0 0 24px; }
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      background: #d4ff3d;
+      color: #0a1000;
+      font: 600 1rem/1 inherit;
+      padding: 14px 22px;
+      min-height: 48px;
+      cursor: pointer;
+    }
+    button:focus-visible { outline: 2px solid #f3f7f9; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="10" fill="#0d2340" />
+      <path d="M9 8.5h30v19.5L24 41.5 9 28Z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round" />
+      <rect x="18.8" y="16.4" width="10.4" height="11.2" rx="2.2" fill="#22c55e" />
+    </svg>
+    <h1>No connection</h1>
+    <p>
+      InningGrid needs a signal to open the first time. Once it has loaded,
+      your lineups keep working in the dugout even if the signal drops.
+    </p>
+    <!-- To the app, not location.reload(): this page is a local file, so
+         reloading it just shows this page again. -->
+    <button type="button" onclick="location.href = 'https://dugout-lineups.netlify.app/'">Try again</button>
+  </main>
+</body>
+</html>
