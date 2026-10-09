@@ -20,8 +20,9 @@
     "icons": "node scripts/make_icons.mjs",
     "native:sync": "cap sync",
     "native:dev": "CAP_SERVER_URL=http://localhost:3001 cap sync",
-    "ios": "cap sync ios && cap open ios",
-    "android": "cap sync android && cap open android"
+    "android": "cap sync android && cap open android",
+    "core": "node scripts/build_core.mjs",
+    "check:parity": "node scripts/build_core.mjs && node scripts/check_parity.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
@@ -29,7 +30,6 @@
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.3",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.5.3",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
     "clsx": "^2.1.1",

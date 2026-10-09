@@ -1,7 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 /**
- * The native iOS and Android apps.
+ * The Android app.
+ *
+ * iOS is a native SwiftUI app now (apps/ios, docs/ios/architecture.md) and no
+ * longer uses this shell. Android still wraps the website until a native
+ * Android app is scoped.
  *
  * They load the deployed web app rather than a bundled copy of it, for one
  * reason that outweighs the rest: the App Router's links fetch a server payload

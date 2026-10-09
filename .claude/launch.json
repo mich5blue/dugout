@@ -7,6 +7,20 @@
       "runtimeArgs": ["run", "dev", "--", "--port", "3001"],
       "port": 3001,
       "autoPort": false
+    },
+    {
+      "name": "firebase-emulators",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "firebase",
+        "emulators:start",
+        "--only",
+        "auth,firestore",
+        "--project",
+        "demo-inninggrid"
+      ],
+      "port": 8089,
+      "autoPort": false
     }
   ]
 }

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The keys Xcode's generated Info.plist cannot express. Everything else is a
+  build setting (INFOPLIST_KEY_*) in the project.
+
+  Lives outside the synchronized InningGrid/ folder on purpose: inside it, Xcode
+  would also copy it into the bundle as a resource, and the build fails with
+  two commands producing Info.plist.
+-->
+<plist version="1.0">
+<dict>
+	<!-- inninggrid:// — where the email sign-in link hands back to the app. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.inninggrid.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>inninggrid</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Local networking only, for the Firebase emulators during development.
+	     Everything in production is HTTPS; arbitrary loads stay off. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>

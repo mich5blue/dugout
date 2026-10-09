@@ -93,8 +93,18 @@ export function buildOptimizationInput(options: GenerateOptions): OptimizationIn
 export async function generateLineup(
   options: GenerateOptions,
 ): Promise<{ result: OptimizationResult; game: Game }> {
+  return generateLineupSync(options);
+}
+
+/**
+ * The same, synchronously — for the iOS app, which runs this in JavaScriptCore
+ * where awaited promises never resolve. See DugoutOptimizer.generateSync.
+ */
+export function generateLineupSync(
+  options: GenerateOptions,
+): { result: OptimizationResult; game: Game } {
   const input = buildOptimizationInput(options);
-  const result = await optimizer.generate(input);
+  const result = optimizer.generateSync(input);
   const game = result.ok ? applyResultToGame(options.game, result, input.seed) : options.game;
   return { result, game };
 }

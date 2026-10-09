@@ -58,6 +58,20 @@ function emptyQuality(): LineupQuality {
  */
 export class DugoutOptimizer implements LineupOptimizer {
   async generate(input: OptimizationInput): Promise<OptimizationResult> {
+    return this.generateSync(input);
+  }
+
+  /**
+   * The search itself, synchronously.
+   *
+   * `generate` has never awaited anything — it was synchronous work behind a
+   * promise for the sake of the interface. The iOS app needs the plain form:
+   * it runs this exact code inside JavaScriptCore, which does not run promise
+   * callbacks when control returns to Swift, so an awaited generate there
+   * simply never finishes. Splitting it changes nothing for the web, which
+   * still calls `generate`, and keeps one body for both platforms.
+   */
+  generateSync(input: OptimizationInput): OptimizationResult {
     const started = Date.now();
     const ctx = buildContext(input);
     const feasibility = analyzeFeasibility(ctx);
@@ -237,4 +251,6 @@ function fallbackRelaxations(ctx: SolverContext) {
 }
 
 /** Single shared instance; the solver is stateless between calls. */
-export const optimizer: LineupOptimizer = new DugoutOptimizer();
+/* Typed as the concrete class so `generateSync` is reachable. Callers that
+   only need the interface still get it — DugoutOptimizer implements it. */
+export const optimizer = new DugoutOptimizer();

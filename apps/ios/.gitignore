@@ -1,0 +1,6 @@
+xcuserdata/
+DerivedData/
+*.xcuserstate
+build/
+# Generated from .env.local by scripts/ios_config.mjs — the Firebase web config.
+InningGrid/Resources/Config.json
