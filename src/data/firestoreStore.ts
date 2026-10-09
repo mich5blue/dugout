@@ -1,4 +1,5 @@
 import { migratePlayer, needsMigration } from './migratePlayer';
+import { stripAccess } from '@/lib/teamData';
 import {
   ASSISTANT_EDITABLE_PLAYER_FIELDS,
   MAX_ASSISTANT_COACHES,
@@ -65,13 +66,6 @@ interface TeamAccess {
 
 type TeamDocument = Team & TeamAccess;
 
-const ACCESS_KEYS = ['ownerUid', 'memberUids', 'assistantEmails', 'roles'] as const;
-
-function stripAccess(data: DocumentData): Team {
-  const team = { ...data } as Record<string, unknown>;
-  for (const key of ACCESS_KEYS) delete team[key];
-  return team as unknown as Team;
-}
 
 /** The session is per-device UI state, not team data, so it stays local. */
 const SESSION_KEY = 'dugout.session.v1';

@@ -25,13 +25,13 @@ import {
   getPlayerSeasonUsage,
 } from '@/services/seasonStatistics';
 import { cn } from '@/lib/cn';
+import { cycleEligibility as cyclePlayerEligibility } from '@/lib/playerEdits';
 import { formatSigned, percent } from '@/lib/format';
 import { useTeamFormation } from '@/lib/hooks';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-const ELIGIBILITY_CYCLE: Eligibility[] = ['PREFERRED', 'ALLOWED', 'AVOID', 'NEVER'];
 
 const ELIGIBILITY_STYLE: Record<Eligibility, { label: string; className: string }> = {
   PREFERRED: { label: 'Preferred', className: 'border-brand bg-brand text-ink-inverse' },
@@ -99,14 +99,7 @@ export default function PlayerDetailPage() {
   const editsIdentity = can('player:editIdentity');
 
   const cycleEligibility = (positionId: string) => {
-    const current = player.positionRatings[positionId]?.eligibility ?? 'ALLOWED';
-    const next = ELIGIBILITY_CYCLE[(ELIGIBILITY_CYCLE.indexOf(current) + 1) % 4];
-    update({
-      positionRatings: {
-        ...player.positionRatings,
-        [positionId]: { positionId, eligibility: next },
-      },
-    });
+    void savePlayer(cyclePlayerEligibility(player, role, positionId));
   };
 
   const clearExceptions = () =>

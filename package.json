@@ -22,7 +22,10 @@
     "native:dev": "CAP_SERVER_URL=http://localhost:3001 cap sync",
     "android": "cap sync android && cap open android",
     "core": "node scripts/build_core.mjs",
-    "check:parity": "node scripts/build_core.mjs && node scripts/check_parity.mjs"
+    "check:parity": "node scripts/build_core.mjs && node scripts/check_parity.mjs",
+    "ios:config": "node scripts/ios_config.mjs",
+    "emulators": "npx firebase emulators:start --only auth,firestore --project demo-inninggrid",
+    "seed:emulator": "node scripts/seed_emulator.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

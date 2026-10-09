@@ -44,7 +44,10 @@ import { buildGameView, inningChanges, UNAVAILABLE } from '@/lib/gameView';
 import { attendanceFor, nextActionFor } from '@/lib/nextAction';
 import { playerNames } from '@/lib/playerNames';
 import { awaitingResults, orderedGames, upcomingGames } from '@/lib/schedule';
+import { orderGames, orderPlayers, stripAccess } from '@/lib/teamData';
 import { whyAssignment } from '@/lib/whyAssignment';
+import { cycleEligibility, updatePlayer } from '@/lib/playerEdits';
+import { ROLE_PERMISSIONS, type TeamRole } from '@/domain/access';
 import {
   getFairnessDebt,
   getTeamSeasonFairness,
@@ -233,6 +236,11 @@ export function seasonSummary(games: Game[], players: Player[]) {
   };
 }
 
+/** A custom formation by id, else the system preset with that id. */
+function findFormation(formations: Formation[], id: string): Formation | undefined {
+  return formations.find((entry) => entry.id === id) ?? getSystemFormation(id);
+}
+
 // ---------------------------------------------------------------------------
 // The API object
 // ---------------------------------------------------------------------------
@@ -248,6 +256,21 @@ export const InningGridCore = {
   version: CORE_VERSION,
 
   // ---- reading -----------------------------------------------------------
+  /**
+   * Turn a team's stored documents into exactly what the website hands the
+   * engine: access fields stripped from the team, players migrated and in
+   * creation order, games newest first. Call this before anything that takes
+   * a roster — the optimizer breaks ties by roster order, so an app that
+   * ordered the same players differently could build a different lineup.
+   */
+  prepareTeam: (teamDocument: Record<string, unknown>, players: Player[], games: Game[]) => {
+    const team = stripAccess(teamDocument);
+    return {
+      team,
+      players: orderPlayers(players, team.id),
+      games: orderGames(games, team.id),
+    };
+  },
   /** Normalise a stored player (legacy surname → initial), as the web does on read. */
   migratePlayer: (raw: unknown) => migratePlayer(raw as Parameters<typeof migratePlayer>[0]),
   lineupView,
@@ -262,6 +285,15 @@ export const InningGridCore = {
     );
   },
   playerName: (player: Player) => playerName(player),
+
+  // ---- who may do what ---------------------------------------------------
+  /* The same table the website reads. Showing a control is a courtesy — the
+     Firestore rules are what actually refuse an edit. */
+  permissions: (role: TeamRole) => [...(ROLE_PERMISSIONS[role] ?? ROLE_PERMISSIONS.ASSISTANT)],
+  updatePlayer: (player: Player, role: TeamRole, changes: Partial<Player>) =>
+    updatePlayer(player, role, changes),
+  cycleEligibility: (player: Player, role: TeamRole, positionId: string) =>
+    cycleEligibility(player, role, positionId),
 
   // ---- schedule ----------------------------------------------------------
   orderedGames: (games: Game[]) => orderedGames(games).map((game) => game.id),
@@ -279,6 +311,34 @@ export const InningGridCore = {
   // ---- creating ----------------------------------------------------------
   createId: (prefix: string) => createId(prefix),
   createGame: (options: Parameters<typeof createGame>[0]) => createGame(options),
+  /** The team's default formation: its own custom one, else the system one. */
+  teamFormation: (team: Team, formations: Formation[]) =>
+    findFormation(formations, team.defaultFormationId) ?? null,
+  /**
+   * A new game the way the website's New Game page makes one: the team's own
+   * formation if it has a custom one by that id, otherwise the system one, and
+   * the team's settings snapshotted onto the game.
+   */
+  newGame: (
+    team: Team,
+    players: Player[],
+    formations: Formation[],
+    options: { opponent: string; date: string; plannedInnings?: number; formationId?: string; seed?: number },
+  ) => {
+    const formationId = options.formationId ?? team.defaultFormationId;
+    const formation = findFormation(formations, formationId);
+    if (!formation) throw new Error(`Unknown formation ${formationId}`);
+    return createGame({
+      teamId: team.id,
+      opponent: options.opponent,
+      date: options.date,
+      plannedInnings: options.plannedInnings ?? team.defaultInnings,
+      formation,
+      settings: team.settings,
+      players,
+      seed: options.seed,
+    });
+  },
   createPlayer: (options: Parameters<typeof createPlayer>[0]) => createPlayer(options),
   toLastInitial: (value: string) => toLastInitial(value) ?? null,
   defaultTeamSettings: () => defaultTeamSettings(),

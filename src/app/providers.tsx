@@ -1,6 +1,7 @@
 'use client';
 
 import { buildDemoDatabase } from '@/data/seed';
+import { orderGames, orderPlayers } from '@/lib/teamData';
 import { emptyDatabase, type DugoutDatabase, type DugoutStore } from '@/data/database';
 import { FirestoreStore } from '@/data/firestoreStore';
 import { getStore } from '@/data/localStore';
@@ -203,23 +204,15 @@ export function DugoutProvider({ children }: { children: React.ReactNode }) {
   const team =
     teams.find((candidate) => candidate.id === db.session?.activeTeamId) ?? teams[0] ?? null;
 
+  /* Ordered by lib/teamData, which the iOS app also uses — the engine breaks
+     ties by roster order, so both apps must hand it players the same way. */
   const players = useMemo(
-    () =>
-      team
-        ? db.players
-            .filter((player) => player.teamId === team.id)
-            .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-        : [],
+    () => (team ? orderPlayers(db.players, team.id) : []),
     [db.players, team],
   );
 
   const games = useMemo(
-    () =>
-      team
-        ? db.games
-            .filter((game) => game.teamId === team.id)
-            .sort((a, b) => b.date.localeCompare(a.date))
-        : [],
+    () => (team ? orderGames(db.games, team.id) : []),
     [db.games, team],
   );
 

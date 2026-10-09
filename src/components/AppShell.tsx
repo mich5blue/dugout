@@ -44,7 +44,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const bare =
     (pathname?.includes('/print') ?? false) ||
     (pathname?.startsWith('/s/') ?? false) ||
-    (pathname?.endsWith('/live') ?? false);
+    (pathname?.endsWith('/live') ?? false) ||
+    /* The iOS app's sign-in bridge runs in a Safari sheet for someone who is
+       by definition not signed in here — no shell, no sign-in wall. */
+    (pathname?.startsWith('/native-auth') ?? false);
   if (bare) return <>{children}</>;
 
   /*

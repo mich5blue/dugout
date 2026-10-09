@@ -433,6 +433,9 @@ export function seasonOutlook(
     .filter((entry) => entry.debt >= STANDING_THRESHOLD && entry.debt > gamesRemaining)
     .map((entry) => entry.playerId);
 
+  /* "1 game remains", "3 games remain". */
+  const remaining = `${gamesRemaining} ${gamesRemaining === 1 ? 'game remains' : 'games remain'}`;
+
   let headline: string;
   if (gamesRemaining === 0) {
     headline =
@@ -440,13 +443,9 @@ export function seasonOutlook(
         ? 'No games left to even this out — the season finishes as it stands.'
         : 'The season finished with everyone within an inning of their expectation.';
   } else if (!worst || worst.debt < 1) {
-    headline = `Nobody is more than an inning behind, and ${gamesRemaining} ${
-      gamesRemaining === 1 ? 'game' : 'games'
-    } remain. This is on track.`;
+    headline = `Nobody is more than an inning behind, and ${remaining}. This is on track.`;
   } else if (atRisk.length === 0) {
-    headline = `The largest gap is ${worst.debt.toFixed(1)} innings, and ${gamesRemaining} ${
-      gamesRemaining === 1 ? 'game' : 'games'
-    } remain — enough to close it.`;
+    headline = `The largest gap is ${worst.debt.toFixed(1)} innings, and ${remaining} — enough to close it.`;
   } else {
     headline = `${atRisk.length} ${
       atRisk.length === 1 ? 'player is' : 'players are'
