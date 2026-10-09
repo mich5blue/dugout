@@ -137,6 +137,7 @@ struct GameDetailView: View {
 struct GameHeader: View {
     let game: GameView
     @Environment(Workspace.self) private var workspace
+    @State private var recording = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -160,11 +161,26 @@ struct GameHeader: View {
                           systemImage: "pencil")
                         .font(.footnote).foregroundStyle(Theme.inkMuted)
                 } else {
+                    /* The date has passed and it was never finished on game
+                       day — the same list Home's "How did it go?" card uses. */
+                    if workspace.awaitingResults.contains(where: { $0.id == game.id }) {
+                        Button { recording = true } label: { Label("Record result", systemImage: "flag.checkered") }
+                            .buttonStyle(.primary)
+                            .sheet(isPresented: $recording) {
+                                FinishSheet(innings: game.plannedInnings) { count in
+                                    workspace.edit(game.id, "finishGame", [.number(Double(count))])
+                                    Haptics.success()
+                                    recording = false
+                                }
+                            }
+                    }
                     HStack(spacing: 10) {
-                        NavigationLink(value: Route.live(game.id)) {
-                            Label(game.status == .inProgress ? "Resume game day" : "Start game day", systemImage: "play.fill")
+                        if !workspace.awaitingResults.contains(where: { $0.id == game.id }) {
+                            NavigationLink(value: Route.live(game.id)) {
+                                Label(game.status == .inProgress ? "Resume game day" : "Start game day", systemImage: "play.fill")
+                            }
+                            .buttonStyle(.primary)
                         }
-                        .buttonStyle(.primary)
                         NavigationLink(value: Route.build(game.id)) {
                             Label("Rebuild", systemImage: "slider.horizontal.3")
                         }

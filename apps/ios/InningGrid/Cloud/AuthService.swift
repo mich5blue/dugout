@@ -145,7 +145,15 @@ final class AuthService {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = "grant_type=refresh_token&refresh_token=\(current.refreshToken)"
             .data(using: .utf8)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch is URLError {
+            /* No signal is not a refused token: stay signed in, work from the
+               cache, and refresh when the phone finds a network. */
+            throw FirestoreClient.FirestoreError.offline
+        }
         let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
 
         guard (response as? HTTPURLResponse)?.statusCode == 200,

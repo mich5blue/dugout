@@ -72,13 +72,16 @@ await png(svg(0.78), 512, 'public/icons/icon-maskable-512.png');
 await png(svg(1), 1024, 'public/icons/icon-1024.png');
 
 // ---- iOS ------------------------------------------------------------------
-const IOS = 'ios/App/App/Assets.xcassets';
-if (existsSync(IOS)) {
-  /* Xcode 14+ builds every icon size from one 1024 source. */
-  await png(svg(1), 1024, `${IOS}/AppIcon.appiconset/AppIcon-512@2x.png`);
-  for (const name of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) {
-    await splash(2732, 2732, `${IOS}/Splash.imageset/${name}`);
-  }
+/* The native app. One 1024 source; Xcode builds every size from it. Opaque:
+   App Store Connect rejects an app icon with an alpha channel. */
+const IOS_ICON = 'apps/ios/InningGrid/Assets.xcassets/AppIcon.appiconset/AppIcon.png';
+if (existsSync(path.dirname(IOS_ICON))) {
+  await sharp(svg(1), { density: 1200 })
+    .resize(1024, 1024)
+    .flatten({ background: NAVY })
+    .removeAlpha()
+    .png()
+    .toFile(IOS_ICON);
 }
 
 // ---- Android --------------------------------------------------------------
