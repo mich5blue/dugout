@@ -82,13 +82,15 @@ final class TeamStore {
     private let client: FirestoreClient
     private let log = Logger(subsystem: "app.inninggrid", category: "sync")
     private var flushing = false
+    /// Whether an upload pass is running — for tests waiting on one.
+    var isFlushing: Bool { flushing }
 
     static let collections = ["players", "games", "formations", "goals", "flags", "memberships"]
 
-    init(auth: AuthService, config: AppConfig = .current) {
+    init(auth: AuthService, config: AppConfig = .current, client: FirestoreClient? = nil) {
         self.auth = auth
         self.config = config
-        self.client = FirestoreClient(config: config) { [auth] in try await auth.idToken() }
+        self.client = client ?? FirestoreClient(config: config) { [auth] in try await auth.idToken() }
         activeTeamId = UserDefaults.standard.string(forKey: "activeTeamId")
         loadFromDisk()
     }

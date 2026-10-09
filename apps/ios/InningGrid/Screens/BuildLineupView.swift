@@ -29,7 +29,11 @@ struct BuildLineupView: View {
 
     var body: some View {
         if let game = workspace.game(gameId) {
-            if workspace.can("game:edit") {
+            if game.status == .completed {
+                EmptyCard(icon: "flag.checkered", title: "This game is final",
+                          message: "Correct what actually happened from the game screen instead.")
+                    .padding().screenBackground()
+            } else if workspace.can("game:edit") {
                 content(game)
             } else {
                 EmptyCard(icon: "lock", title: "Head coach only",

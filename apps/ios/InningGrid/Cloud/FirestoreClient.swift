@@ -40,10 +40,12 @@ actor FirestoreClient {
     private let token: @Sendable () async throws -> String
     private let session: URLSession
 
-    init(config: AppConfig, token: @escaping @Sendable () async throws -> String) {
+    /// `protocolClasses` lets tests answer requests without a network.
+    init(config: AppConfig, protocolClasses: [AnyClass]? = nil, token: @escaping @Sendable () async throws -> String) {
         self.config = config
         self.token = token
         let configuration = URLSessionConfiguration.default
+        if let protocolClasses { configuration.protocolClasses = protocolClasses }
         /* A field with one bar fails slowly; a coach waiting thirty seconds for
            a spinner is worse than being told it's offline and carrying on. */
         configuration.timeoutIntervalForRequest = 15

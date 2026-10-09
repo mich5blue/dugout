@@ -25,7 +25,8 @@
     "check:parity": "node scripts/build_core.mjs && node scripts/check_parity.mjs",
     "ios:config": "node scripts/ios_config.mjs",
     "emulators": "npx firebase emulators:start --only auth,firestore --project demo-inninggrid",
-    "seed:emulator": "node scripts/seed_emulator.mjs"
+    "seed:emulator": "node scripts/seed_emulator.mjs",
+    "ios:test": "npm run check:parity && xcodebuild test -project apps/ios/InningGrid.xcodeproj -scheme InningGrid -destination \"platform=iOS Simulator,name=iPhone 17 Pro\" -quiet"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

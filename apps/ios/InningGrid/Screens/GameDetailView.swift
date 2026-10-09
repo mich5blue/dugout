@@ -153,18 +153,24 @@ struct GameHeader: View {
                 Text(note).font(.subheadline).foregroundStyle(Theme.inkMuted)
             }
             if workspace.canEdit, game.hasLineup {
-                HStack(spacing: 10) {
-                    if game.status != .completed {
+                if game.status == .completed {
+                    /* A played game is corrected in place — each edit records
+                       what actually happened — never rebuilt from scratch. */
+                    Label("Final. Tap anyone on the field or grid to correct what actually happened.",
+                          systemImage: "pencil")
+                        .font(.footnote).foregroundStyle(Theme.inkMuted)
+                } else {
+                    HStack(spacing: 10) {
                         NavigationLink(value: Route.live(game.id)) {
                             Label(game.status == .inProgress ? "Resume game day" : "Start game day", systemImage: "play.fill")
                         }
                         .buttonStyle(.primary)
+                        NavigationLink(value: Route.build(game.id)) {
+                            Label("Rebuild", systemImage: "slider.horizontal.3")
+                        }
+                        .buttonStyle(.secondary)
+                        .frame(maxWidth: 140)
                     }
-                    NavigationLink(value: Route.build(game.id)) {
-                        Label(game.status == .completed ? "Edit" : "Rebuild", systemImage: "slider.horizontal.3")
-                    }
-                    .buttonStyle(.secondary)
-                    .frame(maxWidth: game.status == .completed ? .infinity : 140)
                 }
             }
         }
@@ -211,6 +217,7 @@ struct DefenseView: View {
     var onOpen: ((OpenTarget) -> Void)? = nil
     @State private var mode: Mode = .field
     @State private var inning = 1
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     enum Mode: String, CaseIterable, Identifiable {
         case field = "Field", grid = "Grid"
@@ -219,15 +226,23 @@ struct DefenseView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Picker("View", selection: $mode) {
-                ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 240)
+            if sizeClass == .regular {
+                /* iPad: both at once — the inning on the field, the game in the grid. */
+                HStack(alignment: .top, spacing: 16) {
+                    field.frame(maxWidth: 520)
+                    LineupGrid(lineup: lineup, onTap: onPlayer)
+                }
+            } else {
+                Picker("View", selection: $mode) {
+                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 240)
 
-            switch mode {
-            case .field: field
-            case .grid: LineupGrid(lineup: lineup, onTap: onPlayer)
+                switch mode {
+                case .field: field
+                case .grid: LineupGrid(lineup: lineup, onTap: onPlayer)
+                }
             }
         }
         .onAppear {

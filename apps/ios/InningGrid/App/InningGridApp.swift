@@ -133,6 +133,7 @@ struct MainTabs: View {
                 .tabItem { Label("More", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
         }
+        .modifier(AdaptiveTabs())
         .environment(navigator)
         .overlay(alignment: .top) { RejectionBanner() }
         #if DEBUG
@@ -191,5 +192,12 @@ struct RejectionBanner: View {
                 store.rejection = nil
             }
         }
+    }
+}
+
+/// A sidebar on iPad, the tab bar on iPhone (iOS 18 and later).
+private struct AdaptiveTabs: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) { content.tabViewStyle(.sidebarAdaptable) } else { content }
     }
 }

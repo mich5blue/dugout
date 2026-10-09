@@ -14,11 +14,12 @@
  * are allowed to round differently. Keep it that way; this test is the alarm.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const BUNDLE = 'apps/ios/InningGrid/Resources/inninggrid-core.js';
 const HARNESS = 'apps/ios/parity/harness.js';
+const EXPECTED = 'apps/ios/parity/expected.json';
 const JSC = '/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc';
 
 function onV8() {
@@ -56,6 +57,10 @@ for (const [engine, output] of [['V8', v8], ['JavaScriptCore', jsc]]) {
 const a = JSON.parse(v8);
 const b = JSON.parse(jsc);
 if (v8 === jsc) {
+  /* The Swift test target runs the same harness inside iOS's own
+     JavaScriptCore — the framework on the phone, not this jsc shell — and
+     compares against this file. */
+  writeFileSync(EXPECTED, `${v8}\n`);
   console.log(
     `PARITY OK — V8 and JavaScriptCore agree on ${a.game1.defensive.length + a.game2.defensive.length} ` +
       `defensive cells, ${a.game1.batting.length + a.game2.batting.length} batting slots, ` +

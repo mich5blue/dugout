@@ -87,6 +87,10 @@ callback, which closes the URL-scheme hijacking hole a plain `openURL` leaves.
   another phone — changed it first. Nothing is overwritten; the coach chooses.
 - **Status is always visible:** synced, pending upload, offline, or conflict.
   The app never calls an unsynced edit saved.
+- **Refused writes:** if the Firestore rules refuse an edit (an assistant
+  changing something only a head coach may), the edit is rolled back to the
+  server's version, the coach is told once, and the rest of the queue keeps
+  uploading. Retrying a refused write can never succeed, so it must not block.
 
 ## Verification without touching real data
 
@@ -94,20 +98,73 @@ Automated and manual verification run against the **Firebase emulators**
 (Auth + Firestore) with `firestore.rules` loaded, seeded with the demo team.
 Production data is read-only to anything automated.
 
+## Shared rules, not copied rules
+
+Anything that decides *what a change means* lives in TypeScript and is called
+from both platforms. When the iOS work found such logic inside a web
+component, it was moved out to a shared module and the web component was
+pointed at it:
+
+| Module | What it decides |
+| --- | --- |
+| `src/lib/attendance.ts` | Here / Part / Out, and "same as last game" |
+| `src/domain/ruleControls.ts` | which rules How-to-coach shows, their options, how a pick becomes settings |
+| `src/lib/relaxations.ts` | the engine's one-tap fixes (the game page had a second copy) |
+| `src/lib/lineupEdits.ts` | move / rest a player, reorder and rotate the batting order |
+| `src/lib/playerEdits.ts` | eligibility cycling; every player edit through the role filter |
+| `src/services/liveGame.ts` | finish, keep the pitcher in, someone has to come out |
+
+Swift holds only presentation and transport. The Swift `Codable` models are
+read-only views; a save always sends the document the core returned.
+
+## Tests
+
+- `npm test` — the TypeScript suite, including the shared modules above.
+- `npm run check:parity` — the shipped bundle on V8 and on macOS's
+  JavaScriptCore must build byte-identical lineups. Writes the V8 output to
+  `apps/ios/parity/expected.json`.
+- `npm run ios:test` — the Swift tests, on a simulator: iOS's own
+  JavaScriptCore must match that file; Firestore value encoding; and sync
+  (offline edits kept and uploaded later, another coach's newer edit becomes
+  a conflict rather than an overwrite, a refused edit is rolled back without
+  blocking the queue).
+
+## Running it
+
+```
+npm run emulators            # Auth 9099 + Firestore 8089, rules loaded
+npm run seed:emulator        # demo team for coach@ and assistant@inninggrid.test
+npm run ios:config           # writes the (gitignored) Config.json
+open apps/ios/InningGrid.xcodeproj
+```
+
+Debug builds talk to the emulators and show "Sign in as test head coach /
+assistant" buttons. To point a Debug build at the real project on your own
+phone, set `INNINGGRID_ENV=production` in the scheme. Release builds always
+use production.
+
+DEBUG-only launch arguments drive the app headlessly for screenshots and UI
+tests: `-uiTestSignIn <email>`, `-uiTestTab season`, `-uiTestRoute
+game:<id>` (also `build:`, `live:`, `player:`), `-uiTestStep 0-3`,
+`-uiTestGenerate YES`, `-uiTestSection batting`, `-uiTestCell <player>:<inning>`.
+
 ## Project layout
 
 ```
 src/core/api.ts                 the shared JSON-in/JSON-out surface
 scripts/build_core.mjs          esbuild → apps/ios/.../inninggrid-core.js
-apps/ios/InningGrid.xcodeproj   Xcode 16+ synchronized folders: a new file
-apps/ios/InningGrid/            needs no project-file edit
-  App/          entry, root navigation, environment
+apps/ios/InningGrid.xcodeproj   synchronized folders: a new file needs no
+apps/ios/InningGrid/            project-file edit
+  App/          entry, tabs and navigation, Workspace (store + engine)
   Core/         JavaScriptCore bridge to the shared engine
   Cloud/        Auth, Firestore REST, Keychain, cache, outbox
   Model/        read-only Codable views over raw documents
-  Design/       colours, type, components
-  Features/     Home, Schedule, Roster, Player, Builder, Lineup, GameDay, Season
-src/app/native-auth/            the sign-in bridge page
+  UI/           theme, components, the field diagram
+  Screens/      Home, Schedule, Roster, Player, Builder, Lineup, Game Day,
+                Season, More, Sign-in
+apps/ios/InningGridTests/       engine parity, codec, sync
+apps/ios/parity/                the cross-engine harness and its golden output
+src/app/native-auth/            the sign-in bridge pages
 ```
 
 The Capacitor iOS shell is retired in favour of this app. The Capacitor

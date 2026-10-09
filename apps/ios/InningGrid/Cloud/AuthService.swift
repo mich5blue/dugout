@@ -112,6 +112,9 @@ final class AuthService {
         let claims = #"{"sub":"\#(email)","email":"\#(email)","email_verified":true,"name":"\#(name)"}"#
         try await signIn(googleIDToken: claims)
     }
+
+    /// Tests only: be signed in as someone, without a server or the Keychain.
+    func useTestSession(_ session: AuthSession) { self.session = session }
     #endif
 
     func signOut() {

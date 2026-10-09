@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The InningGrid look: night-game dark, one electric accent, and a colour per
 /// part of the field that means the same thing on every screen.
@@ -56,12 +57,19 @@ enum Theme {
 
 extension Font {
     /// Big condensed numerals and headlines — the scoreboard voice.
+    ///
+    /// Scaled with the coach's text size like every system style, but capped:
+    /// a 76-point inning number at the largest accessibility size would no
+    /// longer fit on the screen it is there to be read from.
     static func display(_ size: CGFloat, weight: Font.Weight = .heavy) -> Font {
-        .system(size: size, weight: weight).width(.condensed)
+        let scaled = UIFontMetrics(forTextStyle: .title1).scaledValue(for: size)
+        return .system(size: min(scaled, size * 1.5), weight: weight).width(.condensed)
     }
 
     /// Small caps-style label above a section.
-    static let eyebrow = Font.system(size: 12, weight: .bold).width(.expanded)
+    static var eyebrow: Font {
+        .system(size: min(UIFontMetrics(forTextStyle: .caption1).scaledValue(for: 12), 20), weight: .bold).width(.expanded)
+    }
 }
 
 extension Color {
