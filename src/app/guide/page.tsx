@@ -209,7 +209,7 @@ export default function GuidePage() {
           items={[
             'Games → New game. Opponent, date, innings — then InningGrid walks you through the rest.',
             "Who's here — tap anyone who isn't coming. Three states: here, out, or here for part of the game, which sets the innings they're available for.",
-            'How to coach — pick Balanced, Development or Competitive. That is enough. Everything under it is optional, and Advanced holds the full set.',
+            'How to coach — pick Everyone plays, Balanced, Development or Competitive. That is enough. Everything under it is optional, and Advanced holds the full set.',
             'Generate. A couple of seconds, and you have a full defense and batting order.',
             'Something wrong? Tap any cell to swap or bench a player, then Rebalance to rebuild the rest around your change.',
           ]}

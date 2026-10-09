@@ -18,8 +18,8 @@ import type { Game, GamePlayer, TeamSettings } from '@/domain/types';
 import { formatDayAndDate } from '@/lib/format';
 import { attendanceFor } from '@/lib/nextAction';
 import { playerNames } from '@/lib/playerNames';
-import { cloneFormation, systemFormationsForSport } from '@/domain/formations';
-import { orderedGames } from '@/lib/schedule';
+import { applyRelaxation as applyRelaxationTo } from '@/lib/relaxations';
+import { previousGameFor } from '@/lib/attendance';
 import { generateLineup } from '@/services/lineupService';
 import type { OptimizationResult, RelaxationSuggestion } from '@/optimizer';
 import Link from 'next/link';
@@ -76,13 +76,7 @@ function BuildFlow() {
 
   const names = useMemo(() => playerNames(players), [players]);
 
-  const previousGame = useMemo(() => {
-    if (!game) return null;
-    const played = orderedGames(games).filter(
-      (entry) => entry.status === 'COMPLETED' && entry.date < game.date,
-    );
-    return played[played.length - 1] ?? null;
-  }, [game, games]);
+  const previousGame = useMemo(() => (game ? previousGameFor(game, games) : null), [game, games]);
 
   if (!ready) return null;
 
@@ -156,58 +150,8 @@ function BuildFlow() {
   };
 
   const applyRelaxation = async (suggestion: RelaxationSuggestion) => {
-    const action = suggestion.action;
-    if (!action) return;
-    const settings = { ...game.settingsSnapshot };
-    switch (action.type) {
-      case 'REDUCE_MIN_DEFENSIVE_INNINGS':
-        settings.minDefensiveInnings = action.to;
-        break;
-      case 'RELAX_INFIELD_REQUIREMENT':
-        settings.infieldOpportunity = { mode: 'TARGET', innings: action.to };
-        break;
-      case 'ALLOW_CONSECUTIVE_BENCH':
-        settings.noConsecutiveBench = false;
-        break;
-      case 'RAISE_PITCHING_CAP':
-        settings.maxPitchingInningsPerPlayer = action.to;
-        break;
-      case 'RAISE_CATCHING_CAP':
-        settings.maxCatcherInningsPerPlayer = action.to;
-        break;
-      case 'ALLOW_POSITION':
-        await patch({
-          eligibilityOverrides: [
-            ...game.eligibilityOverrides,
-            { playerId: action.playerId, positionId: action.positionId },
-          ],
-        });
-        return;
-      case 'USE_SMALLER_FORMATION': {
-        /*
-          Swap this game's formation for the largest one that fits, from the
-          team's own set plus the system presets for its sport. Written to the
-          game's snapshot only — the team default is untouched, because
-          playing nine today says nothing about next week.
-        */
-        const candidates = [
-          ...systemFormationsForSport(team.sport),
-          ...db.formations.filter(
-            (entry) => entry.teamId === team.id && entry.sport === team.sport,
-          ),
-        ]
-          .filter((entry) => entry.positions.length <= action.positions)
-          .sort((a, b) => b.positions.length - a.positions.length);
-
-        const fit = candidates[0];
-        if (!fit) return;
-        await patch({ formationSnapshot: cloneFormation(fit) });
-        return;
-      }
-      default:
-        return;
-    }
-    await patch({ settingsSnapshot: settings });
+    const next = applyRelaxationTo(game, team, db.formations, suggestion);
+    if (next) await saveGame(next);
   };
 
   return (

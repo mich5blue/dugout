@@ -5,6 +5,14 @@ import type { Game, GamePlayer, Player } from '@/domain/types';
 import { cn } from '@/lib/cn';
 import type { PlayerNames } from '@/lib/playerNames';
 import { attendanceFor } from '@/lib/nextAction';
+import {
+  attendanceOf,
+  copyAttendance,
+  setAllAttendance,
+  setAttendance,
+  setAttendanceWindow,
+  type Attendance,
+} from '@/lib/attendance';
 import { useState } from 'react';
 
 /**
@@ -20,7 +28,7 @@ import { useState } from 'react';
  * case, and the inning pickers appear only for the player they apply to.
  */
 
-export type Attendance = 'PRESENT' | 'LIMITED' | 'ABSENT';
+export type { Attendance };
 
 const STATES: Array<{
   value: Attendance;
@@ -33,33 +41,6 @@ const STATES: Array<{
   { value: 'LIMITED', label: 'Part', glyph: '◐', active: 'border-caution bg-caution-soft text-caution' },
   { value: 'ABSENT', label: 'Out', glyph: '✕', active: 'border-critical bg-critical-soft text-critical' },
 ];
-
-export function attendanceOf(gp: GamePlayer, innings: number): Attendance {
-  if (!gp.available) return 'ABSENT';
-  const late = (gp.arrivalInning ?? 1) > 1;
-  const early = gp.departureInning !== undefined && gp.departureInning < innings;
-  return late || early ? 'LIMITED' : 'PRESENT';
-}
-
-/** The window fields, set so that the three states round-trip cleanly. */
-function withAttendance(gp: GamePlayer, state: Attendance, innings: number): GamePlayer {
-  if (state === 'ABSENT') {
-    /* Windows are cleared: an absent player with a leftover arrival inning
-       reads as Limited the moment they are marked back in. */
-    return { ...gp, available: false, arrivalInning: undefined, departureInning: undefined };
-  }
-  if (state === 'PRESENT') {
-    return { ...gp, available: true, arrivalInning: undefined, departureInning: undefined };
-  }
-  /* Limited needs a window that actually limits something, or the state would
-     not survive a reload. Default to leaving after the second-to-last inning. */
-  const alreadyLimited =
-    (gp.arrivalInning ?? 1) > 1 ||
-    (gp.departureInning !== undefined && gp.departureInning < innings);
-  return alreadyLimited
-    ? { ...gp, available: true }
-    : { ...gp, available: true, departureInning: Math.max(1, innings - 1) };
-}
 
 export function WhosHere({
   game,
@@ -84,40 +65,18 @@ export function WhosHere({
   const byId = new Map(game.gamePlayers.map((gp) => [gp.playerId, gp]));
   const roster = players.filter((player) => player.active && byId.has(player.id));
 
-  const setAll = (state: Attendance) => {
-    onChange(game.gamePlayers.map((gp) => withAttendance(gp, state, innings)));
-  };
-
-  const setOne = (playerId: string, state: Attendance) => {
-    onChange(
-      game.gamePlayers.map((gp) =>
-        gp.playerId === playerId ? withAttendance(gp, state, innings) : gp,
-      ),
-    );
-  };
-
-  const setWindow = (playerId: string, field: 'arrivalInning' | 'departureInning', value: number | undefined) => {
-    onChange(
-      game.gamePlayers.map((gp) =>
-        gp.playerId === playerId ? { ...gp, [field]: value } : gp,
-      ),
-    );
-  };
-
+  /* Each one goes through lib/attendance, shared with the native app. */
+  const setAll = (state: Attendance) => onChange(setAllAttendance(game, state).gamePlayers);
+  const setOne = (playerId: string, state: Attendance) =>
+    onChange(setAttendance(game, playerId, state).gamePlayers);
+  const setWindow = (
+    playerId: string,
+    field: 'arrivalInning' | 'departureInning',
+    value: number | undefined,
+  ) => onChange(setAttendanceWindow(game, playerId, field, value).gamePlayers);
   const useLastGame = () => {
-    if (!previousGame) return;
-    const previous = new Map(previousGame.gamePlayers.map((gp) => [gp.playerId, gp]));
-    onChange(
-      game.gamePlayers.map((gp) => {
-        const before = previous.get(gp.playerId);
-        if (!before) return gp;
-        /* Copies who was there, not their innings windows: last week's late
-           arrival is not evidence about this week. */
-        return withAttendance(gp, before.available ? 'PRESENT' : 'ABSENT', innings);
-      }),
-    );
+    if (previousGame) onChange(copyAttendance(game, previousGame).gamePlayers);
   };
-
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">

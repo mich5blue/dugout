@@ -83,14 +83,34 @@ struct RootView: View {
     }
 }
 
+/// Which tab is showing and what each tab has pushed.
+@MainActor
+@Observable
+final class Navigator {
+    var tab: MainTabs.Tab = .home
+    var paths: [MainTabs.Tab: [Route]] = [:]
+
+    func push(_ route: Route) { paths[tab, default: []].append(route) }
+
+    /// Swap the screen on top for another — the builder becomes the lineup it built.
+    func replaceTop(with route: Route) {
+        var path = paths[tab] ?? []
+        if !path.isEmpty { path.removeLast() }
+        path.append(route)
+        paths[tab] = path
+    }
+
+    func pop() { if paths[tab]?.isEmpty == false { paths[tab]?.removeLast() } }
+}
+
 struct MainTabs: View {
     enum Tab: String, Hashable { case home, schedule, roster, season, more }
-    @State private var tab: Tab = .home
-    @State private var paths: [Tab: [Route]] = [:]
+    @State private var navigator = Navigator()
 
     var body: some View {
-        TabView(selection: $tab) {
-            stack(.home) { HomeView(tab: $tab) }
+        @Bindable var navigator = navigator
+        TabView(selection: $navigator.tab) {
+            stack(.home) { HomeView(tab: $navigator.tab) }
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(Tab.home)
             stack(.schedule) { ScheduleView() }
@@ -106,13 +126,14 @@ struct MainTabs: View {
                 .tabItem { Label("More", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
         }
+        .environment(navigator)
         #if DEBUG
         .onAppear(perform: applyTestLaunchArguments)
         #endif
     }
 
     private func stack<Content: View>(_ tab: Tab, @ViewBuilder content: () -> Content) -> some View {
-        NavigationStack(path: Binding(get: { paths[tab] ?? [] }, set: { paths[tab] = $0 })) {
+        NavigationStack(path: Binding(get: { navigator.paths[tab] ?? [] }, set: { navigator.paths[tab] = $0 })) {
             content()
         }
     }
@@ -121,7 +142,7 @@ struct MainTabs: View {
     /// `-uiTestTab season`, `-uiTestRoute game:<id>` — for headless screenshots and UI tests.
     private func applyTestLaunchArguments() {
         let defaults = UserDefaults.standard
-        if let name = defaults.string(forKey: "uiTestTab"), let target = Tab(rawValue: name) { tab = target }
+        if let name = defaults.string(forKey: "uiTestTab"), let target = Tab(rawValue: name) { navigator.tab = target }
         guard let route = defaults.string(forKey: "uiTestRoute") else { return }
         let parts = route.split(separator: ":", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return }
@@ -132,7 +153,7 @@ struct MainTabs: View {
         case "player": .player(parts[1])
         default: nil
         }
-        if let destination { paths[tab, default: []].append(destination) }
+        if let destination { navigator.push(destination) }
     }
     #endif
 }

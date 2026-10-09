@@ -4,6 +4,10 @@ struct GameDetailView: View {
     let gameId: String
     @Environment(Workspace.self) private var workspace
     @State private var section: Section = .defense
+    @State private var cellTarget: CellTarget?
+    @State private var openTarget: OpenTarget?
+    @State private var rebuilding = false
+    @State private var rebuildFailure: GenerationResult?
 
     enum Section: String, CaseIterable, Identifiable {
         case batting = "Batting", defense = "Defense", summary = "Summary"
@@ -30,9 +34,20 @@ struct GameDetailView: View {
                     }
                     .pickerStyle(.segmented)
 
+                    if let rebuildFailure {
+                        FailureCard(result: rebuildFailure) { _ in }
+                    }
+
                     switch section {
-                    case .batting: BattingList(gameId: gameId, lineup: lineup)
-                    case .defense: DefenseView(gameId: gameId, game: game, lineup: lineup)
+                    case .batting:
+                        if workspace.canEdit { BattingEditor(gameId: gameId, lineup: lineup) }
+                        else { BattingList(gameId: gameId, lineup: lineup) }
+                    case .defense:
+                        DefenseView(
+                            gameId: gameId, game: game, lineup: lineup,
+                            onPlayer: workspace.canEdit ? { cellTarget = CellTarget(playerId: $0, inning: $1) } : nil,
+                            onOpen: workspace.canEdit ? { openTarget = $0 } : nil
+                        )
                     case .summary: LineupSummary(lineup: lineup)
                     }
                 } else {
@@ -53,6 +68,69 @@ struct GameDetailView: View {
         .screenBackground()
         .navigationTitle("vs \(game.opponentLabel)")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbar(game, lineup: lineup) }
+        .sheet(item: $cellTarget) { MovePlayerSheet(gameId: gameId, target: $0) }
+        #if DEBUG
+        .onAppear {
+            /* `-uiTestSection batting`, `-uiTestCell <playerId>:<inning>` */
+            let defaults = UserDefaults.standard
+            if let name = defaults.string(forKey: "uiTestSection"),
+               let target = Section.allCases.first(where: { $0.rawValue.lowercased() == name }) { section = target }
+            if let cell = defaults.string(forKey: "uiTestCell")?.split(separator: ":"), cell.count == 2, let inning = Int(cell[1]) {
+                cellTarget = CellTarget(playerId: String(cell[0]), inning: inning)
+            }
+        }
+        #endif
+        .sheet(item: $openTarget) { FillPositionSheet(gameId: gameId, target: $0) }
+    }
+
+    @ToolbarContentBuilder
+    private func toolbar(_ game: GameView, lineup: LineupView?) -> some ToolbarContent {
+        if workspace.canEdit, lineup?.hasLineup == true {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    workspace.undo(gameId)
+                    Haptics.tap()
+                } label: { Image(systemName: "arrow.uturn.backward") }
+                .disabled(!workspace.canUndo(gameId))
+                .accessibilityLabel("Undo")
+            }
+        }
+        if lineup?.hasLineup == true {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    if let share = workspace.shareItems(gameId) {
+                        if let url = share.url {
+                            ShareLink(item: url, subject: Text("Lineup vs \(game.opponentLabel)")) {
+                                Label("Share link", systemImage: "link")
+                            }
+                        }
+                        ShareLink(item: share.text) { Label("Share as text", systemImage: "text.bubble") }
+                    }
+                    if workspace.canEdit, game.status != .completed {
+                        Divider()
+                        Button {
+                            Task { await tryAnother() }
+                        } label: { Label("Try another lineup", systemImage: "dice") }
+                        .disabled(rebuilding)
+                    }
+                } label: {
+                    if rebuilding { ProgressView() } else { Image(systemName: "ellipsis.circle") }
+                }
+                .accessibilityLabel("More actions")
+            }
+        }
+    }
+
+    /// Same rules, locks and pitching plan; a different seed.
+    private func tryAnother() async {
+        rebuilding = true
+        defer { rebuilding = false }
+        let seed = Int.random(in: 1...99_999)
+        if let result = try? await workspace.generate(gameId: gameId, seed: seed) {
+            rebuildFailure = result.ok ? nil : result
+            result.ok ? Haptics.success() : Haptics.warning()
+        }
     }
 }
 
@@ -129,6 +207,8 @@ struct DefenseView: View {
     let gameId: String
     let game: GameView
     let lineup: LineupView
+    var onPlayer: ((String, Int) -> Void)? = nil
+    var onOpen: ((OpenTarget) -> Void)? = nil
     @State private var mode: Mode = .field
     @State private var inning = 1
 
@@ -147,7 +227,7 @@ struct DefenseView: View {
 
             switch mode {
             case .field: field
-            case .grid: LineupGrid(lineup: lineup)
+            case .grid: LineupGrid(lineup: lineup, onTap: onPlayer)
             }
         }
         .onAppear {
@@ -158,10 +238,19 @@ struct DefenseView: View {
     private var field: some View {
         VStack(alignment: .leading, spacing: 12) {
             InningPicker(innings: lineup.innings, selection: $inning)
+            if onPlayer != nil {
+                Text("Tap anyone to move them. Tap an empty spot to fill it.")
+                    .font(.footnote).foregroundStyle(Theme.inkFaint)
+            }
             FieldDiagram(positions: lineup.positions) { position in
                 let cell = lineup.cell(inning, position.id)
                 PositionChip(code: position.code, name: cell.map { lineup.short($0.playerId) },
                              group: position.group, locked: cell?.locked ?? false)
+                    .onTapGesture {
+                        if let cell { onPlayer?(cell.playerId, inning) }
+                        else { onOpen?(OpenTarget(positionId: position.id, code: position.code, inning: inning)) }
+                    }
+                    .accessibilityAddTraits(onPlayer == nil ? [] : .isButton)
             }
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
@@ -171,6 +260,7 @@ struct DefenseView: View {
                     Eyebrow("Bench · inning \(inning)")
                     FlowRow(items: bench) { playerId in
                         Tag(text: lineup.short(playerId), color: Theme.inkMuted)
+                            .onTapGesture { onPlayer?(playerId, inning) }
                     }
                 }
                 .card(padding: 12)

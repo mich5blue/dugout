@@ -126,7 +126,12 @@ struct GameView: Decodable, Sendable, Identifiable, Hashable {
     let gamePlayers: [GamePlayerView]
     let formationSnapshot: Formation
     let liveState: LiveStateView?
+    let settingsSnapshot: Settings
+    /// Inning (as a string key) → the pitcher the coach chose.
+    let pitchingPlan: [String: String]?
     private let defensiveAssignments: [Assignment]
+
+    struct Settings: Decodable, Sendable, Hashable { let philosophy: String }
 
     private struct Assignment: Decodable, Sendable, Hashable { let assignmentType: String }
 
@@ -228,4 +233,58 @@ struct NextActionView: Decodable, Sendable, Hashable {
 
 struct AttendanceCount: Decodable, Sendable, Hashable {
     let expected: Int; let absent: Int; let limited: Int; let total: Int
+}
+
+// MARK: - Building a lineup
+
+/// Here / Part / Out — from `attendanceStates`.
+enum AttendanceState: String, Codable, Sendable, CaseIterable {
+    case present = "PRESENT", limited = "LIMITED", absent = "ABSENT"
+
+    var label: String {
+        switch self {
+        case .present: return "Here"
+        case .limited: return "Part"
+        case .absent: return "Out"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .present: return "checkmark"
+        case .limited: return "circle.lefthalf.filled"
+        case .absent: return "xmark"
+        }
+    }
+}
+
+/// One of the coaching presets, from `ruleCopy().philosophies`.
+struct PhilosophyCard: Decodable, Sendable, Hashable, Identifiable {
+    let philosophy: String
+    let label: String
+    let blurb: String
+    let detail: String
+    var id: String { philosophy }
+}
+
+/// A rule and its control, from `ruleSections` — drawn, never interpreted.
+struct RuleControlView: Decodable, Sendable, Hashable, Identifiable {
+    struct Option: Decodable, Sendable, Hashable { let value: String; let label: String }
+    enum Kind: String, Decodable, Sendable { case toggle, choice }
+    let key: String
+    let label: String
+    let help: String
+    let cost: String?
+    let kind: Kind
+    let value: String
+    let options: [Option]
+    var id: String { key }
+    var selectedLabel: String { options.first { $0.value == value }?.label ?? value }
+}
+
+struct RuleSectionView: Decodable, Sendable, Hashable, Identifiable {
+    let group: String
+    let label: String
+    let rules: [RuleControlView]
+    var id: String { group }
 }

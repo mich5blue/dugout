@@ -26,14 +26,12 @@ import type {
   AssignmentType,
   Game,
   PositionDefinition,
-  TeamSettings,
 } from '@/domain/types';
-import { rotateBattingOrder, type OptimizationResult, type RelaxationSuggestion } from '@/optimizer';
+import type { OptimizationResult, RelaxationSuggestion } from '@/optimizer';
 import {
   generateLineup,
   regenerateBattingOrder,
   setAssignment,
-  setBattingOrder,
   setAvailability,
   setBattingSlotLocked,
   toggleLock,
@@ -43,6 +41,8 @@ import { formatGameDate } from '@/lib/format';
 import { buildGameView } from '@/lib/gameView';
 import { nextActionFor } from '@/lib/nextAction';
 import { adjacentGames } from '@/lib/schedule';
+import { reorderBatting, rotateBattingFromPrevious } from '@/lib/lineupEdits';
+import { applyRelaxation as applyRelaxationTo } from '@/lib/relaxations';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
@@ -64,7 +64,7 @@ type ViewMode = 'player' | 'inning' | 'field' | 'live';
 
 export default function GamePage() {
   const params = useParams<{ gameId: string }>();
-  const { ready, team, players, games, saveGame, goals, flags, can } = useDugout();
+  const { ready, team, players, games, saveGame, goals, flags, can, db } = useDugout();
 
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -166,38 +166,8 @@ export default function GamePage() {
   };
 
   const applyRelaxation = async (suggestion: RelaxationSuggestion) => {
-    const act = suggestion.action;
-    if (!act) return;
-    const settings: TeamSettings = { ...game.settingsSnapshot };
-    switch (act.type) {
-      case 'REDUCE_MIN_DEFENSIVE_INNINGS':
-        settings.minDefensiveInnings = act.to;
-        break;
-      case 'RELAX_INFIELD_REQUIREMENT':
-        settings.infieldOpportunity = { mode: 'TARGET', innings: act.to };
-        break;
-      case 'ALLOW_CONSECUTIVE_BENCH':
-        settings.noConsecutiveBench = false;
-        break;
-      case 'RAISE_PITCHING_CAP':
-        settings.maxPitchingInningsPerPlayer = act.to;
-        break;
-      case 'RAISE_CATCHING_CAP':
-        settings.maxCatcherInningsPerPlayer = act.to;
-        break;
-      case 'ALLOW_POSITION':
-        await update({
-          ...game,
-          eligibilityOverrides: [
-            ...game.eligibilityOverrides,
-            { playerId: act.playerId, positionId: act.positionId },
-          ],
-        });
-        return;
-      default:
-        return;
-    }
-    await update({ ...game, settingsSnapshot: settings });
+    const next = applyRelaxationTo(game, team, db.formations, suggestion);
+    if (next) await update(next);
   };
 
   return (
@@ -369,15 +339,7 @@ export default function GamePage() {
                 players={players}
                 canRotate={Boolean(previousGame)}
                 onReorder={async (playerIds) => {
-                  await update(
-                    setBattingOrder(
-                      game,
-                      playerIds.map((playerId, index) => ({
-                        playerId,
-                        battingSlot: index + 1,
-                      })),
-                    ),
-                  );
+                  await update(reorderBatting(game, playerIds));
                 }}
                 onToggleLock={async (playerId) => {
                   const current = game.battingAssignments.find(
@@ -392,31 +354,8 @@ export default function GamePage() {
                   });
                 }}
                 onRotate={async (offset) => {
-                  if (!previousGame) return;
-                  /* Rotated from *last game's* order, which is the only thing
-                     that makes "everyone moves up two" mean anything across a
-                     season, and filtered to who is actually here today. */
-                  const rotated = rotateBattingOrder(
-                    previousGame.battingAssignments,
-                    offset,
-                    view.players
-                      .filter((player) =>
-                        game.gamePlayers.some(
-                          (gp) => gp.playerId === player.id && gp.available,
-                        ),
-                      )
-                      .map((player) => player.id),
-                  );
-                  await update(
-                    setBattingOrder(
-                      game,
-                      rotated.map((entry) => ({
-                        playerId: entry.playerId,
-                        battingSlot: entry.battingSlot,
-                        locked: entry.locked,
-                      })),
-                    ),
-                  );
+                  const next = rotateBattingFromPrevious(game, games, players, offset);
+                  if (next) await update(next);
                 }}
                 onRebalance={
                   editsGame

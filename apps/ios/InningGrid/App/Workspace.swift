@@ -142,6 +142,17 @@ final class Workspace {
     var role: String { prepared?.role ?? "ASSISTANT" }
     var canEdit: Bool { can("game:edit") }
 
+    /// The presets a coach chooses between, in order. Copy from the core.
+    @ObservationIgnored private(set) lazy var philosophies: [PhilosophyCard] =
+        (try? core.call("ruleCopy")["philosophies"]?.decode([PhilosophyCard].self)) ?? []
+
+    /// Now, as JavaScript's `toISOString()` writes it.
+    static var nowISO: String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: Date())
+    }
+
     static var todayISO: String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -234,14 +245,12 @@ final class Workspace {
     /// Replace a game with a whole new document the core produced.
     func replaceGame(_ game: JSONValue) { store.saveGame(game) }
 
-    /// Generate a lineup. Runs the engine off the main thread.
-    func generate(gameId: String, game override: JSONValue? = nil, seed: Int? = nil, frozenInnings: Int = 0) async throws -> GenerationResult {
-        guard let prepared, let raw = override ?? rawGame(gameId) else {
-            throw CoreEngine.CoreError.badResult("generate")
-        }
+    /// What every engine call is given: the same inputs the website passes.
+    private func engineOptions(_ game: JSONValue, seed: Int? = nil, frozenInnings: Int = 0) -> JSONObject? {
+        guard let prepared else { return nil }
         var options: JSONObject = [
             "team": prepared.team,
-            "game": raw,
+            "game": game,
             "players": .array(prepared.players),
             "history": .array(prepared.games),
             "goals": .array(prepared.goals),
@@ -249,11 +258,70 @@ final class Workspace {
             "frozenInnings": .number(Double(frozenInnings)),
         ]
         if let seed { options["seed"] = .number(Double(seed)) }
+        return options
+    }
+
+    /// Generate a lineup. Runs the engine off the main thread.
+    ///
+    /// Locked cells and the pitching plan are inputs, so a regenerate keeps
+    /// whatever the coach pinned. A new `seed` asks for a different lineup
+    /// that satisfies the same rules.
+    func generate(gameId: String, game override: JSONValue? = nil, seed: Int? = nil, frozenInnings: Int = 0) async throws -> GenerationResult {
+        guard let raw = override ?? rawGame(gameId),
+              let options = engineOptions(raw, seed: seed, frozenInnings: frozenInnings) else {
+            throw CoreEngine.CoreError.badResult("generate")
+        }
 
         let output = try await core.run("generate", [.object(options)])
         let result = try (output["result"] ?? .null).decode(GenerationResult.self)
         log.info("generated with core \(self.core.bundleHash, privacy: .public): ok=\(result.ok) in \(Int(result.elapsedMs))ms")
-        if result.ok, let game = output["game"] { store.saveGame(game) }
+        if result.ok, let game = output["game"] {
+            pushUndo(gameId)
+            /* Stamped only if Who's here was skipped, as the website does. */
+            let confirmed = (try? core.call("confirmAttendance", [game, .string(Self.nowISO), .bool(true)])) ?? game
+            store.saveGame(confirmed)
+        }
         return result
+    }
+
+    /// A fresh batting order from the engine, defense untouched.
+    func regenerateBattingOrder(_ gameId: String) {
+        guard let raw = rawGame(gameId), let options = engineOptions(raw) else { return }
+        if let next = try? core.call("regenerateBattingOrder", [.object(options)]) {
+            pushUndo(gameId)
+            store.saveGame(next)
+        }
+    }
+
+    // MARK: Undo
+
+    /* Whole games, not diffs: "undo" means put it back how it was, including
+       the other cells a swap moved. Twenty deep, per game, like the website. */
+    private(set) var undoStacks: [String: [JSONValue]] = [:]
+
+    func canUndo(_ gameId: String) -> Bool { !(undoStacks[gameId] ?? []).isEmpty }
+
+    private func pushUndo(_ gameId: String) {
+        guard let raw = rawGame(gameId) else { return }
+        var stack = undoStacks[gameId] ?? []
+        stack.append(raw)
+        undoStacks[gameId] = Array(stack.suffix(20))
+    }
+
+    /// A hand edit through the core, recorded for undo.
+    @discardableResult
+    func edit(_ gameId: String, _ function: String, _ arguments: [JSONValue] = []) -> Bool {
+        guard let before = rawGame(gameId) else { return false }
+        guard mutateGame(gameId, function, arguments) else { return false }
+        var stack = undoStacks[gameId] ?? []
+        stack.append(before)
+        undoStacks[gameId] = Array(stack.suffix(20))
+        return true
+    }
+
+    func undo(_ gameId: String) {
+        guard var stack = undoStacks[gameId], let previous = stack.popLast() else { return }
+        undoStacks[gameId] = stack
+        store.saveGame(previous)
     }
 }

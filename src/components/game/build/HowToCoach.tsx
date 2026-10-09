@@ -2,13 +2,8 @@
 
 import { RulesPanel } from '@/components/game/GameSetupPanels';
 import { Badge, Button, Select, Toggle } from '@/components/ui';
-import {
-  PHILOSOPHY_CARDS,
-  RULE_GROUP_LABEL,
-  RULE_GROUP_ORDER,
-  ruleCopy,
-  type RuleGroup,
-} from '@/domain/ruleCopy';
+import { PHILOSOPHY_CARDS, RULE_GROUP_LABEL, RULE_GROUP_ORDER } from '@/domain/ruleCopy';
+import { countChangedRules, FLOW_CONTROLS, ruleControl, setRule } from '@/domain/ruleControls';
 import type { Philosophy, TeamSettings } from '@/domain/types';
 import { applyPhilosophy, defaultRuleSettings } from '@/domain/weights';
 import { cn } from '@/lib/cn';
@@ -18,26 +13,13 @@ import { useState } from 'react';
  * How do you want to coach this game?
  *
  * The old game page put sixteen dials in front of a coach and expected them to
- * assemble a philosophy out of it. Most coaches want one of three answers, and
- * the three answers already exist in the engine as presets — this screen is the
+ * assemble a philosophy out of it. Most coaches want one of four answers, and
+ * the four answers already exist in the engine as presets — this screen is the
  * choice, and then the short list of things a coach actually reaches for.
  *
  * Everything else stays reachable. `RulesPanel` — the full sixteen — is behind
  * Advanced, unchanged, so no capability is lost by not showing it.
  */
-
-/** The handful of rules that belong in the flow, per group. */
-const FLOW_CONTROLS: Record<RuleGroup, Array<keyof TeamSettings>> = {
-  PLAYING_TIME: ['playingTimeBalance', 'minDefensiveInnings', 'maxBenchInnings'],
-  POSITIONS: ['infieldOpportunity', 'variety', 'maxConsecutiveSamePosition'],
-  BATTERY: [
-    'maxPitchingInningsPerPlayer',
-    'maxCatcherInningsPerPlayer',
-    'maxConsecutiveCatcherInnings',
-  ],
-  BATTING: ['battingPhilosophy'],
-  BENCH: ['noConsecutiveBench', 'equalizeBench'],
-};
 
 export function HowToCoach({
   settings,
@@ -50,7 +32,7 @@ export function HowToCoach({
 }) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const changedCount = countChanged(settings);
+  const changedCount = countChangedRules(settings, defaultRuleSettings());
 
   return (
     <div>
@@ -62,8 +44,8 @@ export function HowToCoach({
         optional.
       </p>
 
-      {/* The three cards. One filled choice, always. */}
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      {/* The four cards. One filled choice, always. */}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {PHILOSOPHY_CARDS.map((card) => {
           const active = settings.philosophy === card.philosophy;
           return (
@@ -173,25 +155,10 @@ export function HowToCoach({
   );
 }
 
-/** How many rules sit off their shipped default, for the Advanced badge. */
-function countChanged(settings: TeamSettings): number {
-  const defaults = defaultRuleSettings();
-  return (Object.keys(defaults) as Array<keyof typeof defaults>).filter((key) => {
-    const a = settings[key];
-    const b = defaults[key];
-    if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
-      return JSON.stringify(a) !== JSON.stringify(b);
-    }
-    return a !== b;
-  }).length;
-}
-
 /**
- * One rule, rendered from its copy.
- *
- * The control shape is chosen from the value's type rather than hand-wired per
- * field, so adding a rule to `FLOW_CONTROLS` is a one-line change and the
- * wording always comes from `ruleCopy`.
+ * One rule, rendered from its control in domain/ruleControls — the same
+ * description the native app draws — so the options, their wording and what
+ * a pick does are defined once.
  */
 function RuleRow({
   settingsKey,
@@ -204,140 +171,48 @@ function RuleRow({
   innings: number;
   onChange: (settings: TeamSettings) => void;
 }) {
-  const copy = ruleCopy(settingsKey);
-  if (!copy) return null;
-
-  const value = settings[settingsKey];
-  /* Any hand change means the preset no longer describes the settings. */
-  const set = (patch: Partial<TeamSettings>) =>
-    onChange({ ...settings, ...patch, philosophy: 'CUSTOM' });
+  const control = ruleControl(settings, settingsKey, innings);
+  if (!control) return null;
 
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-ink">{copy.label}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{copy.help}</p>
-        {copy.cost ? (
-          <p className="mt-1 text-xs leading-relaxed text-ink-subtle">{copy.cost}</p>
+        <p className="text-sm font-medium text-ink">{control.label}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{control.help}</p>
+        {control.cost ? (
+          <p className="mt-1 text-xs leading-relaxed text-ink-subtle">{control.cost}</p>
         ) : null}
       </div>
 
       <div className="shrink-0">
-        {typeof value === 'boolean' ? (
+        {control.kind === 'toggle' ? (
           <Toggle
-            active={value}
-            onClick={() => set({ [settingsKey]: !value } as Partial<TeamSettings>)}
+            active={control.value === 'true'}
+            onClick={() => onChange(setRule(settings, settingsKey, control.value !== 'true'))}
           >
-            <span className="text-xs font-semibold">{value ? 'On' : 'Off'}</span>
+            <span className="text-xs font-semibold">{control.value === 'true' ? 'On' : 'Off'}</span>
           </Toggle>
-        ) : null}
-
-        {settingsKey === 'playingTimeBalance' ? (
+        ) : (
           <Select
-            className="h-9 w-36"
-            value={String(value)}
-            onChange={(event) =>
-              set({ playingTimeBalance: event.target.value as TeamSettings['playingTimeBalance'] })
-            }
+            className={cn('h-9', SELECT_WIDTH[settingsKey] ?? 'w-28')}
+            value={control.value}
+            onChange={(event) => onChange(setRule(settings, settingsKey, event.target.value))}
           >
-            <option value="EQUAL">As equal as possible</option>
-            <option value="MOSTLY_EQUAL">Mostly equal</option>
-            <option value="COMPETITIVE">Strongest lineup</option>
-          </Select>
-        ) : null}
-
-        {settingsKey === 'variety' ? (
-          <Select
-            className="h-9 w-32"
-            value={String(value)}
-            onChange={(event) =>
-              set({ variety: event.target.value as TeamSettings['variety'] })
-            }
-          >
-            <option value="LOW">Settle them</option>
-            <option value="MEDIUM">Some rotation</option>
-            <option value="HIGH">Move around a lot</option>
-          </Select>
-        ) : null}
-
-        {settingsKey === 'battingPhilosophy' ? (
-          <Select
-            className="h-9 w-36"
-            value={String(value)}
-            onChange={(event) =>
-              set({
-                battingPhilosophy: event.target.value as TeamSettings['battingPhilosophy'],
-              })
-            }
-          >
-            <option value="ROTATE_FAIRLY">Rotate fairly</option>
-            <option value="BALANCED">Balanced</option>
-            <option value="COMPETITIVE">Competitive</option>
-            <option value="MANUAL">I&apos;ll do it</option>
-          </Select>
-        ) : null}
-
-        {settingsKey === 'infieldOpportunity' ? (
-          <Select
-            className="h-9 w-32"
-            value={
-              settings.infieldOpportunity.mode === 'OFF'
-                ? 'off'
-                : String(settings.infieldOpportunity.innings)
-            }
-            onChange={(event) =>
-              set({
-                infieldOpportunity:
-                  event.target.value === 'off'
-                    ? { mode: 'OFF' }
-                    : {
-                        mode: settings.infieldOpportunity.mode === 'REQUIRED'
-                          ? 'REQUIRED'
-                          : 'TARGET',
-                        innings: Number(event.target.value),
-                      },
-              })
-            }
-          >
-            <option value="off">Off</option>
-            {Array.from({ length: Math.max(1, innings - 1) }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? 'inning' : 'innings'}
+            {control.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </Select>
-        ) : null}
-
-        {/* Plain numeric caps: a count, or off. */}
-        {NUMERIC_CAPS.includes(settingsKey) ? (
-          <Select
-            className="h-9 w-28"
-            value={value === undefined ? 'off' : String(value)}
-            onChange={(event) =>
-              set({
-                [settingsKey]:
-                  event.target.value === 'off' ? undefined : Number(event.target.value),
-              } as Partial<TeamSettings>)
-            }
-          >
-            <option value="off">{settingsKey === 'minDefensiveInnings' ? 'None' : 'No cap'}</option>
-            {Array.from({ length: innings }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </Select>
-        ) : null}
+        )}
       </div>
     </div>
   );
 }
 
-const NUMERIC_CAPS: Array<keyof TeamSettings> = [
-  'minDefensiveInnings',
-  'maxBenchInnings',
-  'maxConsecutiveSamePosition',
-  'maxPitchingInningsPerPlayer',
-  'maxCatcherInningsPerPlayer',
-  'maxConsecutiveCatcherInnings',
-];
+const SELECT_WIDTH: Partial<Record<keyof TeamSettings, string>> = {
+  playingTimeBalance: 'w-36',
+  battingPhilosophy: 'w-36',
+  variety: 'w-32',
+  infieldOpportunity: 'w-32',
+};

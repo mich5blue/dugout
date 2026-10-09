@@ -247,6 +247,12 @@ export function rulesInGroup(group: RuleGroup, advanced = false): RuleCopy[] {
  */
 export const PHILOSOPHY_CARDS = [
   {
+    philosophy: 'EQUAL_PLAYING_TIME' as const,
+    label: 'Everyone plays',
+    blurb: 'Equal innings for every kid, and nobody sits twice in a row.',
+    detail: 'Strength is ignored entirely. For the youngest teams and instructional leagues.',
+  },
+  {
     philosophy: 'BALANCED' as const,
     label: 'Balanced',
     blurb: 'Keep playing time and opportunities as equal as possible.',

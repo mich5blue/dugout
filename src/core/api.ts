@@ -43,10 +43,30 @@ import { extraInningFor } from '@/lib/gameDayChanges';
 import { buildGameView, inningChanges, UNAVAILABLE } from '@/lib/gameView';
 import { attendanceFor, nextActionFor } from '@/lib/nextAction';
 import { playerNames } from '@/lib/playerNames';
-import { awaitingResults, orderedGames, upcomingGames } from '@/lib/schedule';
+import { adjacentGames, awaitingResults, orderedGames, upcomingGames } from '@/lib/schedule';
+import { buildSharePayload, lineupAsText } from '@/lib/shareLink';
 import { orderGames, orderPlayers, stripAccess } from '@/lib/teamData';
 import { whyAssignment } from '@/lib/whyAssignment';
 import { cycleEligibility, updatePlayer } from '@/lib/playerEdits';
+import {
+  attendanceOf,
+  copyAttendance,
+  previousGameFor,
+  setAllAttendance,
+  setAttendance,
+  setAttendanceWindow,
+  type Attendance,
+} from '@/lib/attendance';
+import { applyRelaxation } from '@/lib/relaxations';
+import {
+  movePlayer,
+  positionOptions,
+  reorderBatting,
+  restPlayer,
+  rotateBattingFromPrevious,
+} from '@/lib/lineupEdits';
+import type { RelaxationSuggestion } from '@/optimizer';
+import { countChangedRules, ruleSections, setRule } from '@/domain/ruleControls';
 import { ROLE_PERMISSIONS, type TeamRole } from '@/domain/access';
 import {
   getFairnessDebt,
@@ -350,6 +370,48 @@ export const InningGridCore = {
   defaultFormationId: (sport: Team['sport']) => DEFAULT_FORMATION_BY_SPORT[sport],
   cloneFormation: (formation: Formation) => cloneFormation(formation),
 
+  // ---- building a game ---------------------------------------------------
+  /* Who's here, How to coach, and the one-tap fixes — the same functions the
+     website's builder calls, so a tap means the same thing on both. */
+  attendanceStates: (game: Game) =>
+    Object.fromEntries(game.gamePlayers.map((gp) => [gp.playerId, attendanceOf(gp, game.plannedInnings)])),
+  setAttendance: (game: Game, playerId: string, state: Attendance) => setAttendance(game, playerId, state),
+  setAllAttendance: (game: Game, state: Attendance) => setAllAttendance(game, state),
+  setAttendanceWindow: (
+    game: Game,
+    playerId: string,
+    field: 'arrivalInning' | 'departureInning',
+    value: number | null,
+  ) => setAttendanceWindow(game, playerId, field, value ?? undefined),
+  previousGame: (game: Game, games: Game[]) => previousGameFor(game, games)?.id ?? null,
+  copyLastAttendance: (game: Game, games: Game[]) => {
+    const previous = previousGameFor(game, games);
+    return previous ? copyAttendance(game, previous) : game;
+  },
+  /** `keepExisting`: generating stamps it only if Who's here was skipped. */
+  confirmAttendance: (game: Game, nowIso: string, keepExisting = false) => ({
+    ...game,
+    attendanceConfirmedAt: keepExisting && game.attendanceConfirmedAt ? game.attendanceConfirmedAt : nowIso,
+  }),
+  setGameNote: (game: Game, note: string) => ({ ...game, note }),
+  setPhilosophy: (game: Game, philosophy: Philosophy) => ({
+    ...game,
+    settingsSnapshot: applyPhilosophy(game.settingsSnapshot, philosophy),
+  }),
+  ruleSections: (game: Game, advanced = false) =>
+    ruleSections(game.settingsSnapshot, game.plannedInnings, advanced),
+  setRule: (game: Game, key: keyof TeamSettings, value: string | boolean) => ({
+    ...game,
+    settingsSnapshot: setRule(game.settingsSnapshot, key, value),
+  }),
+  changedRuleCount: (game: Game) => countChangedRules(game.settingsSnapshot, defaultRuleSettings()),
+  applyRelaxation: (
+    game: Game,
+    team: Team,
+    formations: Formation[],
+    suggestion: Pick<RelaxationSuggestion, 'action'>,
+  ) => applyRelaxation(game, team, formations, suggestion),
+
   // ---- the lineup --------------------------------------------------------
   /**
    * Build a lineup. Synchronous on purpose: JavaScriptCore does not run promise
@@ -399,6 +461,26 @@ export const InningGridCore = {
     );
     return whyAssignment(view, playerId, inning, getFairnessDebt(games, players)[playerId]);
   },
+
+  // ---- hand edits --------------------------------------------------------
+  positionOptions: (game: Game, players: Player[], playerId: string, inning: number) =>
+    positionOptions(game, players, playerId, inning),
+  movePlayer: (game: Game, playerId: string, inning: number, positionId: string) =>
+    movePlayer(game, playerId, inning, positionId),
+  restPlayer: (game: Game, players: Player[], playerId: string, inning: number) =>
+    restPlayer(game, players, playerId, inning),
+  reorderBatting: (game: Game, playerIds: string[]) => reorderBatting(game, playerIds),
+  canRotateBatting: (game: Game, games: Game[]) => Boolean(adjacentGames(games, game.id).previous),
+  rotateBattingFromPrevious: (game: Game, games: Game[], players: Player[], offset: number) =>
+    rotateBattingFromPrevious(game, games, players, offset) ?? game,
+
+  // ---- sharing -----------------------------------------------------------
+  /* The group-chat text, and the payload behind a /s/ link. The app turns the
+     JSON into the link's uncompressed `u` token, which decodeShare reads. */
+  shareText: (team: Team, game: Game, players: Player[]) =>
+    lineupAsText(buildSharePayload(team, game, players)),
+  sharePayloadJson: (team: Team, game: Game, players: Player[]) =>
+    JSON.stringify(buildSharePayload(team, game, players)),
 
   // ---- game day ----------------------------------------------------------
   startGame: (game: Game, nowIso: string) => startGame(game, new Date(nowIso)),
